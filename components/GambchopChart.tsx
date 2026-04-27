@@ -2,148 +2,179 @@
 
 import type { TeamChartData, GameEntry } from '@/lib/mock-data'
 
-// ─── Cell Components ─────────────────────────────────────────────────────────
+// ─── Record Helpers ───────────────────────────────────────────────────────────
 
-function MoneylineCell({ result }: { result: GameEntry['moneylineResult'] }) {
-  if (!result) return <BlankCell />
-  const cfg = {
-    win:  { cls: 'bg-lime-400 text-black',    glow: '0 0 10px rgba(163,230,53,0.75)',  label: 'W' },
-    loss: { cls: 'bg-red-500 text-white',      glow: '0 0 10px rgba(239,68,68,0.75)',   label: 'L' },
-    push: { cls: 'bg-zinc-600 text-zinc-300',  glow: 'none',                            label: 'P' },
-  }[result]
+interface WL { w: number; l: number }
+
+const rec = {
+  ml:     (g: GameEntry[]): WL => ({ w: g.filter(x => x.moneylineResult === 'win').length,  l: g.filter(x => x.moneylineResult === 'loss').length }),
+  spread: (g: GameEntry[]): WL => ({ w: g.filter(x => x.spreadResult    === 'win').length,  l: g.filter(x => x.spreadResult    === 'loss').length }),
+  fav:    (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isFavorite)),
+  dog:    (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isFavorite)),
+  home:   (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isHome)),
+  away:   (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isHome)),
+  ou:     (g: GameEntry[])      => ({ o: g.filter(x => x.ouResult === 'over').length, u: g.filter(x => x.ouResult === 'under').length }),
+}
+
+function wlColor(r: WL) {
+  return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#52525b'
+}
+
+function RecordBadge({ r }: { r: WL }) {
   return (
-    <div className={`cell-base ${cfg.cls}`} style={{ boxShadow: cfg.glow }}>
-      {cfg.label}
+    <span style={{ color: wlColor(r), fontSize: 10, fontFamily: 'monospace', letterSpacing: 0, fontWeight: 600 }}>
+      &nbsp;({r.w}-{r.l})
+    </span>
+  )
+}
+
+function OUBadge({ o, u }: { o: number; u: number }) {
+  const color = o > u ? '#93c5fd' : o < u ? '#f87171' : '#52525b'
+  return (
+    <span style={{ color, fontSize: 10, fontFamily: 'monospace', letterSpacing: 0, fontWeight: 600 }}>
+      &nbsp;({o}-{u})
+    </span>
+  )
+}
+
+// ─── Cells ────────────────────────────────────────────────────────────────────
+
+function MoneylineCell({ r }: { r: GameEntry['moneylineResult'] }) {
+  if (!r) return <Blank />
+  const s = {
+    win:  { bg: '#65a30d', glow: '0 0 12px rgba(101,163,13,0.6)',   label: 'W' },
+    loss: { bg: '#dc2626', glow: '0 0 12px rgba(220,38,38,0.6)',    label: 'L' },
+    push: { bg: '#3f3f46', glow: 'none',                             label: 'P' },
+  }[r]
+  return (
+    <div className="cell" style={{ background: s.bg, boxShadow: s.glow, color: '#fff', fontWeight: 800 }}>
+      {s.label}
     </div>
   )
 }
 
-function SpreadCell({ result }: { result: GameEntry['spreadResult'] }) {
-  if (!result) return <BlankCell />
-  const cfg = {
-    win:  { cls: 'bg-[#15803d] text-white',   glow: '0 0 10px rgba(21,128,61,0.8)',    label: 'COV' },
-    loss: { cls: 'bg-red-500 text-white',      glow: '0 0 10px rgba(239,68,68,0.75)',   label: 'MIS' },
-    push: { cls: 'bg-zinc-600 text-zinc-300',  glow: 'none',                            label: 'PSH' },
-  }[result]
+function SpreadCell({ r }: { r: GameEntry['spreadResult'] }) {
+  if (!r) return <Blank />
+  const s = {
+    win:  { bg: '#166534', glow: '0 0 12px rgba(22,101,52,0.7)',    label: 'COV' },
+    loss: { bg: '#dc2626', glow: '0 0 12px rgba(220,38,38,0.6)',    label: 'MIS' },
+    push: { bg: '#3f3f46', glow: 'none',                             label: 'PSH' },
+  }[r]
   return (
-    <div className={`cell-base text-[9px] tracking-widest ${cfg.cls}`} style={{ boxShadow: cfg.glow }}>
-      {cfg.label}
+    <div className="cell" style={{ background: s.bg, boxShadow: s.glow, color: '#fff', fontWeight: 800, fontSize: 9, letterSpacing: '0.08em' }}>
+      {s.label}
     </div>
   )
 }
 
-function IndicatorCell({ active, bg, glow }: { active: boolean; bg: string; glow: string }) {
+function PillCell({ active, bg, glow }: { active: boolean; bg: string; glow: string }) {
   return (
-    <div
-      className={`cell-base ${active ? bg : 'bg-[#0c0c1a]'}`}
-      style={{ boxShadow: active ? glow : 'none' }}
-    />
+    <div className="cell" style={{ background: active ? bg : '#18181f', boxShadow: active ? glow : 'none' }} />
   )
 }
 
-function OUCell({ result }: { result: GameEntry['ouResult'] }) {
-  const isOver  = result === 'over'
-  const isUnder = result === 'under'
-  const isPush  = result === 'push'
+function OUCell({ r }: { r: GameEntry['ouResult'] }) {
+  const isO = r === 'over', isU = r === 'under', isP = r === 'push'
   return (
-    <div className="flex h-8 mx-[3px] rounded overflow-hidden border border-[#1a1a2e]">
-      <div
-        className={`flex-1 flex items-center justify-center text-[9px] font-black tracking-wider
-          ${isOver  ? 'bg-blue-700 text-white' :
-            isPush  ? 'bg-blue-900/60 text-blue-500' :
-                      'bg-[#0a0a20] text-[#1a2040]'}`}
-        style={{ boxShadow: isOver ? 'inset 0 0 8px rgba(29,78,216,0.6)' : 'none' }}
-      >
-        O
-      </div>
-      <div className="w-px bg-[#1a1a2e]" />
-      <div
-        className={`flex-1 flex items-center justify-center text-[9px] font-black tracking-wider
-          ${isUnder ? 'bg-sky-300 text-sky-900' :
-            isPush  ? 'bg-sky-900/40 text-sky-600' :
-                      'bg-[#0a0a20] text-[#0a1530]'}`}
-        style={{ boxShadow: isUnder ? 'inset 0 0 8px rgba(125,211,252,0.4)' : 'none' }}
-      >
-        U
-      </div>
+    <div style={{ display: 'flex', height: 34, margin: '0 3px', borderRadius: 5, overflow: 'hidden', border: '1px solid #1e1e2e' }}>
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
+        background: isO ? '#1d4ed8' : isP ? 'rgba(29,78,216,0.25)' : '#0c0c1e',
+        color: isO ? '#fff' : '#1e3a6e',
+        boxShadow: isO ? 'inset 0 0 10px rgba(29,78,216,0.5)' : 'none',
+      }}>O</div>
+      <div style={{ width: 1, background: '#1e1e2e' }} />
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
+        background: isU ? '#7dd3fc' : isP ? 'rgba(125,211,252,0.15)' : '#0a1020',
+        color: isU ? '#0c4a6e' : '#0c2040',
+        boxShadow: isU ? 'inset 0 0 8px rgba(125,211,252,0.35)' : 'none',
+      }}>U</div>
     </div>
   )
 }
 
-function BlankCell() {
-  return <div className="h-8 mx-[3px] rounded bg-[#0c0c1a] opacity-40" />
+function Blank() {
+  return <div className="cell" style={{ background: '#131318', opacity: 0.5 }} />
 }
 
-// ─── Row Renderer ─────────────────────────────────────────────────────────────
+// ─── Row Config ───────────────────────────────────────────────────────────────
 
-const ROW_CONFIG = [
-  { label: 'Moneyline',   key: 'moneyline'   },
-  { label: 'Spread',      key: 'spread'      },
-  { label: 'Favorite',    key: 'favorite'    },
-  { label: 'Underdog',    key: 'underdog'    },
-  { label: 'Home',        key: 'home'        },
-  { label: 'Away',        key: 'away'        },
-  { label: 'Over / Under',key: 'ou'          },
-] as const
+type RowKey = 'moneyline' | 'spread' | 'favorite' | 'underdog' | 'home' | 'away' | 'ou'
 
-type RowKey = typeof ROW_CONFIG[number]['key']
+interface RowMeta {
+  key: RowKey
+  label: string
+  accentColor: string
+  getRecord: (g: GameEntry[]) => React.ReactNode
+}
+
+const ROWS: RowMeta[] = [
+  {
+    key: 'moneyline', label: 'Moneyline', accentColor: '#65a30d',
+    getRecord: g => <RecordBadge r={rec.ml(g)} />,
+  },
+  {
+    key: 'spread', label: 'Spread', accentColor: '#166534',
+    getRecord: g => <RecordBadge r={rec.spread(g)} />,
+  },
+  {
+    key: 'favorite', label: 'Favorite', accentColor: '#db2777',
+    getRecord: g => <RecordBadge r={rec.fav(g)} />,
+  },
+  {
+    key: 'underdog', label: 'Underdog', accentColor: '#c2410c',
+    getRecord: g => <RecordBadge r={rec.dog(g)} />,
+  },
+  {
+    key: 'home', label: 'Home', accentColor: '#b45309',
+    getRecord: g => <RecordBadge r={rec.home(g)} />,
+  },
+  {
+    key: 'away', label: 'Away', accentColor: '#475569',
+    getRecord: g => <RecordBadge r={rec.away(g)} />,
+  },
+  {
+    key: 'ou', label: 'Over / Under', accentColor: '#1d4ed8',
+    getRecord: g => { const { o, u } = rec.ou(g); return <OUBadge o={o} u={u} /> },
+  },
+]
 
 function GameCell({ rowKey, game }: { rowKey: RowKey; game: GameEntry }) {
   switch (rowKey) {
-    case 'moneyline': return <MoneylineCell result={game.moneylineResult} />
-    case 'spread':    return <SpreadCell result={game.spreadResult} />
-    case 'favorite':  return (
-      <IndicatorCell
-        active={game.isFavorite}
-        bg="bg-pink-500"
-        glow="0 0 10px rgba(236,72,153,0.7)"
-      />
-    )
-    case 'underdog':  return (
-      <IndicatorCell
-        active={!game.isFavorite}
-        bg="bg-[#c2410c]"
-        glow="0 0 10px rgba(194,65,12,0.7)"
-      />
-    )
-    case 'home':      return (
-      <IndicatorCell
-        active={game.isHome}
-        bg="bg-amber-500"
-        glow="0 0 10px rgba(245,158,11,0.7)"
-      />
-    )
-    case 'away':      return (
-      <IndicatorCell
-        active={!game.isHome}
-        bg="bg-slate-400"
-        glow="0 0 10px rgba(148,163,184,0.6)"
-      />
-    )
-    case 'ou':        return <OUCell result={game.ouResult} />
+    case 'moneyline': return <MoneylineCell r={game.moneylineResult} />
+    case 'spread':    return <SpreadCell r={game.spreadResult} />
+    case 'favorite':  return <PillCell active={game.isFavorite}   bg="#be185d" glow="0 0 10px rgba(190,24,93,0.65)" />
+    case 'underdog':  return <PillCell active={!game.isFavorite}  bg="#c2410c" glow="0 0 10px rgba(194,65,12,0.65)" />
+    case 'home':      return <PillCell active={game.isHome}       bg="#b45309" glow="0 0 10px rgba(180,83,9,0.65)" />
+    case 'away':      return <PillCell active={!game.isHome}      bg="#475569" glow="0 0 10px rgba(71,85,105,0.5)" />
+    case 'ou':        return <OUCell r={game.ouResult} />
   }
 }
 
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
+const LEGEND = [
+  { bg: '#65a30d', label: 'ML Win'       },
+  { bg: '#dc2626', label: 'ML/Spread L'  },
+  { bg: '#166534', label: 'Spread Cover' },
+  { bg: '#be185d', label: 'Favorite'     },
+  { bg: '#c2410c', label: 'Underdog'     },
+  { bg: '#b45309', label: 'Home'         },
+  { bg: '#475569', label: 'Away'         },
+  { bg: '#1d4ed8', label: 'Over'         },
+  { bg: '#7dd3fc', label: 'Under'        },
+]
+
 function Legend() {
-  const items = [
-    { color: 'bg-lime-400',   label: 'ML Win'   },
-    { color: 'bg-red-500',    label: 'ML Loss'  },
-    { color: 'bg-[#15803d]',  label: 'Covered'  },
-    { color: 'bg-pink-500',   label: 'Favorite' },
-    { color: 'bg-[#c2410c]',  label: 'Underdog' },
-    { color: 'bg-amber-500',  label: 'Home'     },
-    { color: 'bg-slate-400',  label: 'Away'     },
-    { color: 'bg-blue-700',   label: 'Over'     },
-    { color: 'bg-sky-300',    label: 'Under'    },
-  ]
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-2 px-4 pb-4 pt-1">
-      {items.map(({ color, label }) => (
-        <div key={label} className="flex items-center gap-1.5">
-          <div className={`w-3 h-3 rounded-sm ${color}`} />
-          <span className="text-[10px] text-zinc-500 tracking-widest uppercase">{label}</span>
+    <div className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-3 border-b border-[#1a1a24]">
+      {LEGEND.map(({ bg, label }) => (
+        <div key={label} className="flex items-center gap-2">
+          <div style={{ width: 10, height: 10, background: bg, borderRadius: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
         </div>
       ))}
     </div>
@@ -152,109 +183,111 @@ function Legend() {
 
 // ─── Main Chart ───────────────────────────────────────────────────────────────
 
-const LABEL_W  = 'w-[130px] min-w-[130px]'
-const COL_W    = 'w-[72px]  min-w-[72px]'
+const LABEL_W = 210
+const COL_W   = 64
 
 export default function GambchopChart({ data }: { data: TeamChartData[] }) {
   const dates = data[0]?.games.map(g => g.date) ?? []
 
   return (
-    <div className="w-full">
-      {/* Legend */}
+    <div style={{ width: '100%', fontFamily: 'var(--font-geist-mono), monospace' }}>
       <Legend />
 
-      {/* Chart */}
-      <div className="overflow-x-auto pb-4">
-        <div className="min-w-max">
+      <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
+        <div style={{ minWidth: LABEL_W + dates.length * COL_W + 24 }}>
 
-          {/* Date header row */}
-          <div className="flex items-end mb-1 border-b border-[#1a1a2e]">
-            <div className={`${LABEL_W} flex-shrink-0 sticky left-0 z-20 bg-[#05050f] px-3 pb-2`}>
-              <span className="text-[9px] tracking-[0.2em] text-zinc-600 uppercase">Team / Metric</span>
+          {/* Date header */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', paddingBottom: 10, paddingTop: 14 }}>
+            <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0c0c10', paddingLeft: 20, zIndex: 20 }}>
+              <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
             </div>
-            {dates.map(date => (
-              <div key={date} className={`${COL_W} flex-shrink-0 pb-2 text-center`}>
-                <span className="text-[10px] tracking-widest text-zinc-500 uppercase">{date}</span>
+            {dates.map(d => (
+              <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center' }}>
+                <span style={{ fontSize: 10, color: '#3f3f46', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
               </div>
             ))}
           </div>
 
-          {/* Team sections */}
+          {/* Teams */}
           {data.map((team, ti) => (
-            <div
-              key={team.abbreviation}
-              className={`mb-1 ${ti < data.length - 1 ? 'border-b border-[#12121f]' : ''}`}
-            >
+            <div key={team.teamName} style={{ borderBottom: ti < data.length - 1 ? '1px solid #16161e' : 'none', marginBottom: 4 }}>
+
               {/* Team name header */}
-              <div className="flex items-center mb-[3px]">
-                <div
-                  className={`${LABEL_W} flex-shrink-0 sticky left-0 z-20 px-3 py-2`}
-                  style={{ background: '#05050f' }}
-                >
-                  <span
-                    className="text-[11px] font-black tracking-[0.15em] uppercase"
-                    style={{ color: '#c8d6f0', textShadow: '0 0 12px rgba(148,163,220,0.4)' }}
-                  >
-                    {team.abbreviation}
-                  </span>
-                </div>
-                {/* Opponent labels */}
-                {team.games.map(game => (
-                  <div key={game.date} className={`${COL_W} flex-shrink-0 text-center py-2`}>
-                    <span className="text-[9px] tracking-widest text-zinc-600 uppercase">
-                      {game.isHome ? '' : '@'}{game.opponent}
-                    </span>
+              <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                <div style={{
+                  width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
+                  position: 'sticky', left: 0, zIndex: 20,
+                  background: '#0c0c10',
+                  display: 'flex', alignItems: 'center',
+                  paddingLeft: 0,
+                }}>
+                  <div style={{ width: 3, alignSelf: 'stretch', background: '#65a30d', marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 44 }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>
+                      {team.teamName}
+                    </div>
+                    <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
+                      2026 Season · {team.games.length} Games
+                    </div>
                   </div>
-                ))}
+                </div>
+                {/* Decorative gradient bar across columns */}
+                <div style={{
+                  flex: 1, height: 44, alignSelf: 'center',
+                  background: 'linear-gradient(to right, rgba(101,163,13,0.06) 0%, transparent 60%)',
+                  borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24',
+                  marginTop: 8,
+                }} />
               </div>
 
               {/* 7 metric rows */}
-              {ROW_CONFIG.map((row, ri) => (
-                <div key={row.key} className="flex items-center">
-                  {/* Sticky row label */}
-                  <div
-                    className={`${LABEL_W} flex-shrink-0 sticky left-0 z-20 px-3 h-8 flex items-center`}
-                    style={{
-                      background: ri % 2 === 0 ? '#06060f' : '#07071a',
-                    }}
-                  >
-                    <span className="text-[9px] tracking-[0.15em] text-zinc-600 uppercase whitespace-nowrap">
-                      {row.label}
-                    </span>
-                  </div>
+              {ROWS.map((row, ri) => {
+                const rowBg = ri % 2 === 0 ? '#0c0c10' : '#0e0e15'
+                return (
+                  <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
 
-                  {/* Game cells */}
-                  {team.games.map(game => (
-                    <div
-                      key={game.date}
-                      className={`${COL_W} flex-shrink-0 py-[3px]`}
-                      style={{ background: ri % 2 === 0 ? '#06060f' : '#07071a' }}
-                    >
-                      <GameCell rowKey={row.key} game={game} />
+                    {/* Sticky label */}
+                    <div style={{
+                      width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
+                      position: 'sticky', left: 0, zIndex: 10,
+                      background: rowBg,
+                      height: 34, display: 'flex', alignItems: 'center',
+                      paddingLeft: 19,
+                      borderLeft: `3px solid ${rowBg}`,
+                    }}>
+                      <div style={{ width: 2, height: 12, background: row.accentColor, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.8 }} />
+                      <span style={{ fontSize: 11, color: '#a1a1aa', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                        {row.label}
+                      </span>
+                      {row.getRecord(team.games)}
                     </div>
-                  ))}
-                </div>
-              ))}
 
-              {/* Spacer row between teams */}
-              <div className="h-3" />
+                    {/* Game cells */}
+                    {team.games.map(game => (
+                      <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, padding: '0 0', background: rowBg }}>
+                        <GameCell rowKey={row.key} game={game} />
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+
+              <div style={{ height: 12 }} />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Inline styles for shared cell class */}
       <style>{`
-        .cell-base {
+        .cell {
           display: flex;
           align-items: center;
           justify-content: center;
-          height: 2rem;
+          height: 34px;
           margin: 0 3px;
-          border-radius: 4px;
+          border-radius: 5px;
           font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.1em;
         }
       `}</style>
     </div>
