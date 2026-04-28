@@ -2,75 +2,71 @@
 
 import type { TeamChartData, GameEntry } from '@/lib/mock-data'
 
+// ─── Palette ──────────────────────────────────────────────────────────────────
+
+const C = {
+  green:  '#22c55e',
+  red:    '#ef4444',
+  gold:   '#eab308',
+  orange: '#f97316',
+  royal:  '#2563eb',
+  purple: '#9333ea',
+  teal:   '#14b8a6',
+  silver: '#94a3b8',
+  violet: '#8b5cf6',
+  brown:  '#b45309',
+  white:  '#f4f4f5',
+  empty:  '#131318',
+}
+
 // ─── Record Helpers ───────────────────────────────────────────────────────────
 
 interface WL { w: number; l: number }
 
 const rec = {
-  ml:     (g: GameEntry[]): WL => ({ w: g.filter(x => x.moneylineResult === 'win').length,  l: g.filter(x => x.moneylineResult === 'loss').length }),
-  spread: (g: GameEntry[]): WL => ({ w: g.filter(x => x.spreadResult    === 'win').length,  l: g.filter(x => x.spreadResult    === 'loss').length }),
-  fav:    (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isFavorite)),
-  dog:    (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isFavorite)),
-  home:   (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isHome)),
-  away:   (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isHome)),
-  ou:     (g: GameEntry[])      => ({ o: g.filter(x => x.ouResult === 'over').length, u: g.filter(x => x.ouResult === 'under').length }),
+  ml:       (g: GameEntry[]): WL => ({ w: g.filter(x => x.moneylineResult === 'win').length,   l: g.filter(x => x.moneylineResult === 'loss').length }),
+  spread:   (g: GameEntry[]): WL => ({ w: g.filter(x => x.spreadResult === 'win').length,      l: g.filter(x => x.spreadResult === 'loss').length }),
+  mlFav:    (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isFavorite)),
+  mlDog:    (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isFavorite)),
+  spFav:    (g: GameEntry[]): WL => rec.spread(g.filter(x =>  x.isSpreadFavorite)),
+  spDog:    (g: GameEntry[]): WL => rec.spread(g.filter(x => !x.isSpreadFavorite)),
+  home:     (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isHome)),
+  away:     (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isHome)),
+  ou:       (g: GameEntry[])      => ({ o: g.filter(x => x.ouResult === 'over').length,  u: g.filter(x => x.ouResult === 'under').length }),
 }
 
-function wlColor(r: WL) {
-  return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#52525b'
-}
+function wlColor(r: WL) { return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#52525b' }
 
 function RecordBadge({ r }: { r: WL }) {
-  return (
-    <span style={{ color: wlColor(r), fontSize: 10, fontFamily: 'monospace', letterSpacing: 0, fontWeight: 600 }}>
-      &nbsp;({r.w}-{r.l})
-    </span>
-  )
+  return <span style={{ color: wlColor(r), fontSize: 10, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0 }}>&nbsp;({r.w}-{r.l})</span>
 }
-
 function OUBadge({ o, u }: { o: number; u: number }) {
-  const color = o > u ? '#93c5fd' : o < u ? '#f87171' : '#52525b'
-  return (
-    <span style={{ color, fontSize: 10, fontFamily: 'monospace', letterSpacing: 0, fontWeight: 600 }}>
-      &nbsp;({o}-{u})
-    </span>
-  )
+  const color = o > u ? C.violet : o < u ? C.brown : '#52525b'
+  return <span style={{ color, fontSize: 10, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0 }}>&nbsp;({o}-{u})</span>
 }
 
 // ─── Cells ────────────────────────────────────────────────────────────────────
 
-function MoneylineCell({ r }: { r: GameEntry['moneylineResult'] }) {
-  if (!r) return <Blank />
+function Blank() {
+  return <div className="cell" style={{ background: C.empty, opacity: 0.4 }} />
+}
+
+function WLCell({ result, winLabel = 'W', lossLabel = 'L' }: { result: 'win' | 'loss' | 'push' | null; winLabel?: string; lossLabel?: string }) {
+  if (!result) return <Blank />
   const s = {
-    win:  { bg: '#65a30d', glow: '0 0 12px rgba(101,163,13,0.6)',   label: 'W' },
-    loss: { bg: '#dc2626', glow: '0 0 12px rgba(220,38,38,0.6)',    label: 'L' },
-    push: { bg: '#3f3f46', glow: 'none',                             label: 'P' },
-  }[r]
+    win:  { bg: C.green,  color: '#000', glow: `0 0 12px ${C.green}80`,  label: winLabel  },
+    loss: { bg: C.red,    color: '#fff', glow: `0 0 12px ${C.red}80`,    label: lossLabel },
+    push: { bg: C.white,  color: '#111', glow: 'none',                    label: 'P'       },
+  }[result]
   return (
-    <div className="cell" style={{ background: s.bg, boxShadow: s.glow, color: '#fff', fontWeight: 800 }}>
+    <div className="cell" style={{ background: s.bg, color: s.color, boxShadow: s.glow, fontWeight: 800, fontSize: result === 'push' ? 10 : 11 }}>
       {s.label}
     </div>
   )
 }
 
-function SpreadCell({ r }: { r: GameEntry['spreadResult'] }) {
-  if (!r) return <Blank />
-  const s = {
-    win:  { bg: '#166534', glow: '0 0 12px rgba(22,101,52,0.7)',    label: 'COV' },
-    loss: { bg: '#dc2626', glow: '0 0 12px rgba(220,38,38,0.6)',    label: 'MIS' },
-    push: { bg: '#3f3f46', glow: 'none',                             label: 'PSH' },
-  }[r]
-  return (
-    <div className="cell" style={{ background: s.bg, boxShadow: s.glow, color: '#fff', fontWeight: 800, fontSize: 9, letterSpacing: '0.08em' }}>
-      {s.label}
-    </div>
-  )
-}
-
-function PillCell({ active, bg, glow }: { active: boolean; bg: string; glow: string }) {
-  return (
-    <div className="cell" style={{ background: active ? bg : '#18181f', boxShadow: active ? glow : 'none' }} />
-  )
+function PillCell({ active, color, glow }: { active: boolean; color: string; glow: string }) {
+  return <div className="cell" style={{ background: active ? color : C.empty, boxShadow: active ? glow : 'none' }} />
 }
 
 function OUCell({ r }: { r: GameEntry['ouResult'] }) {
@@ -80,76 +76,50 @@ function OUCell({ r }: { r: GameEntry['ouResult'] }) {
       <div style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-        background: isO ? '#1d4ed8' : isP ? 'rgba(29,78,216,0.25)' : '#0c0c1e',
-        color: isO ? '#fff' : '#1e3a6e',
-        boxShadow: isO ? 'inset 0 0 10px rgba(29,78,216,0.5)' : 'none',
+        background: isO ? C.violet : isP ? '#2e1a5a' : '#110c1e',
+        color: isO ? '#fff' : '#2e1a5a',
+        boxShadow: isO ? `inset 0 0 10px ${C.violet}60` : 'none',
       }}>O</div>
       <div style={{ width: 1, background: '#1e1e2e' }} />
       <div style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-        background: isU ? '#7dd3fc' : isP ? 'rgba(125,211,252,0.15)' : '#0a1020',
-        color: isU ? '#0c4a6e' : '#0c2040',
-        boxShadow: isU ? 'inset 0 0 8px rgba(125,211,252,0.35)' : 'none',
+        background: isU ? C.brown : isP ? '#2a1500' : '#150a00',
+        color: isU ? '#fff' : '#2a1500',
+        boxShadow: isU ? `inset 0 0 8px ${C.brown}60` : 'none',
       }}>U</div>
     </div>
   )
 }
 
-function Blank() {
-  return <div className="cell" style={{ background: '#131318', opacity: 0.5 }} />
-}
-
 // ─── Row Config ───────────────────────────────────────────────────────────────
 
-type RowKey = 'moneyline' | 'spread' | 'favorite' | 'underdog' | 'home' | 'away' | 'ou'
+type RowKey = 'moneyline' | 'spread' | 'ml-fav' | 'ml-dog' | 'sp-fav' | 'sp-dog' | 'home' | 'away' | 'ou'
 
-interface RowMeta {
-  key: RowKey
-  label: string
-  accentColor: string
-  getRecord: (g: GameEntry[]) => React.ReactNode
-}
+interface RowMeta { key: RowKey; label: string; accent: string; record: (g: GameEntry[]) => React.ReactNode }
 
 const ROWS: RowMeta[] = [
-  {
-    key: 'moneyline', label: 'Moneyline', accentColor: '#65a30d',
-    getRecord: g => <RecordBadge r={rec.ml(g)} />,
-  },
-  {
-    key: 'spread', label: 'Spread', accentColor: '#166534',
-    getRecord: g => <RecordBadge r={rec.spread(g)} />,
-  },
-  {
-    key: 'favorite', label: 'Favorite', accentColor: '#db2777',
-    getRecord: g => <RecordBadge r={rec.fav(g)} />,
-  },
-  {
-    key: 'underdog', label: 'Underdog', accentColor: '#c2410c',
-    getRecord: g => <RecordBadge r={rec.dog(g)} />,
-  },
-  {
-    key: 'home', label: 'Home', accentColor: '#b45309',
-    getRecord: g => <RecordBadge r={rec.home(g)} />,
-  },
-  {
-    key: 'away', label: 'Away', accentColor: '#475569',
-    getRecord: g => <RecordBadge r={rec.away(g)} />,
-  },
-  {
-    key: 'ou', label: 'Over / Under', accentColor: '#1d4ed8',
-    getRecord: g => { const { o, u } = rec.ou(g); return <OUBadge o={o} u={u} /> },
-  },
+  { key: 'moneyline', label: 'Moneyline',      accent: C.green,  record: g => <RecordBadge r={rec.ml(g)} />     },
+  { key: 'spread',    label: 'Spread',          accent: C.green,  record: g => <RecordBadge r={rec.spread(g)} /> },
+  { key: 'ml-fav',   label: 'ML Favorite',     accent: C.gold,   record: g => <RecordBadge r={rec.mlFav(g)} />  },
+  { key: 'ml-dog',   label: 'ML Underdog',     accent: C.orange, record: g => <RecordBadge r={rec.mlDog(g)} />  },
+  { key: 'sp-fav',   label: 'Spread Favorite', accent: C.royal,  record: g => <RecordBadge r={rec.spFav(g)} />  },
+  { key: 'sp-dog',   label: 'Spread Dog',      accent: C.purple, record: g => <RecordBadge r={rec.spDog(g)} />  },
+  { key: 'home',     label: 'Home',            accent: C.teal,   record: g => <RecordBadge r={rec.home(g)} />   },
+  { key: 'away',     label: 'Away',            accent: C.silver, record: g => <RecordBadge r={rec.away(g)} />   },
+  { key: 'ou',       label: 'Over / Under',    accent: C.violet, record: g => { const {o,u} = rec.ou(g); return <OUBadge o={o} u={u} /> } },
 ]
 
 function GameCell({ rowKey, game }: { rowKey: RowKey; game: GameEntry }) {
   switch (rowKey) {
-    case 'moneyline': return <MoneylineCell r={game.moneylineResult} />
-    case 'spread':    return <SpreadCell r={game.spreadResult} />
-    case 'favorite':  return <PillCell active={game.isFavorite}   bg="#be185d" glow="0 0 10px rgba(190,24,93,0.65)" />
-    case 'underdog':  return <PillCell active={!game.isFavorite}  bg="#c2410c" glow="0 0 10px rgba(194,65,12,0.65)" />
-    case 'home':      return <PillCell active={game.isHome}       bg="#b45309" glow="0 0 10px rgba(180,83,9,0.65)" />
-    case 'away':      return <PillCell active={!game.isHome}      bg="#475569" glow="0 0 10px rgba(71,85,105,0.5)" />
+    case 'moneyline': return <WLCell result={game.moneylineResult} />
+    case 'spread':    return <WLCell result={game.spreadResult} winLabel="COV" lossLabel="MIS" />
+    case 'ml-fav':    return <PillCell active={game.isFavorite}         color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
+    case 'ml-dog':    return <PillCell active={!game.isFavorite}        color={C.orange} glow={`0 0 10px ${C.orange}80`} />
+    case 'sp-fav':    return <PillCell active={game.isSpreadFavorite}   color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
+    case 'sp-dog':    return <PillCell active={!game.isSpreadFavorite}  color={C.purple} glow={`0 0 10px ${C.purple}80`} />
+    case 'home':      return <PillCell active={game.isHome}             color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
+    case 'away':      return <PillCell active={!game.isHome}            color={C.silver} glow={`0 0 10px ${C.silver}60`} />
     case 'ou':        return <OUCell r={game.ouResult} />
   }
 }
@@ -157,22 +127,24 @@ function GameCell({ rowKey, game }: { rowKey: RowKey; game: GameEntry }) {
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 const LEGEND = [
-  { bg: '#65a30d', label: 'ML Win'       },
-  { bg: '#dc2626', label: 'ML/Spread L'  },
-  { bg: '#166534', label: 'Spread Cover' },
-  { bg: '#be185d', label: 'Favorite'     },
-  { bg: '#c2410c', label: 'Underdog'     },
-  { bg: '#b45309', label: 'Home'         },
-  { bg: '#475569', label: 'Away'         },
-  { bg: '#1d4ed8', label: 'Over'         },
-  { bg: '#7dd3fc', label: 'Under'        },
+  { bg: C.green,  label: 'ML Win / Cover'    },
+  { bg: C.red,    label: 'ML Loss / Miss'    },
+  { bg: C.white,  label: 'Push'              },
+  { bg: C.gold,   label: 'ML Favorite'       },
+  { bg: C.orange, label: 'ML Underdog'       },
+  { bg: C.royal,  label: 'Spread Favorite'   },
+  { bg: C.purple, label: 'Spread Dog'        },
+  { bg: C.teal,   label: 'Home'              },
+  { bg: C.silver, label: 'Away'              },
+  { bg: C.violet, label: 'Over'              },
+  { bg: C.brown,  label: 'Under'             },
 ]
 
 function Legend() {
   return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-3 border-b border-[#1a1a24]">
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', padding: '12px 20px 14px', borderBottom: '1px solid #1a1a24' }}>
       {LEGEND.map(({ bg, label }) => (
-        <div key={label} className="flex items-center gap-2">
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{ width: 10, height: 10, background: bg, borderRadius: 2, flexShrink: 0 }} />
           <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
         </div>
@@ -181,10 +153,27 @@ function Legend() {
   )
 }
 
-// ─── Main Chart ───────────────────────────────────────────────────────────────
+// ─── Date Header Row ─────────────────────────────────────────────────────────
 
-const LABEL_W = 210
+const LABEL_W = 220
 const COL_W   = 64
+
+function DateHeader({ dates }: { dates: string[] }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '12px 0 8px', background: '#0c0c10' }}>
+      <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0c0c10', paddingLeft: 20, zIndex: 20 }}>
+        <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
+      </div>
+      {dates.map(d => (
+        <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center' }}>
+          <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Main Chart ───────────────────────────────────────────────────────────────
 
 export default function GambchopChart({ data }: { data: TeamChartData[] }) {
   const dates = data[0]?.games.map(g => g.date) ?? []
@@ -196,75 +185,44 @@ export default function GambchopChart({ data }: { data: TeamChartData[] }) {
       <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
         <div style={{ minWidth: LABEL_W + dates.length * COL_W + 24 }}>
 
-          {/* Date header */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', paddingBottom: 10, paddingTop: 14 }}>
-            <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0c0c10', paddingLeft: 20, zIndex: 20 }}>
-              <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
-            </div>
-            {dates.map(d => (
-              <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center' }}>
-                <span style={{ fontSize: 10, color: '#3f3f46', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
-              </div>
-            ))}
-          </div>
+          {/* Initial date header */}
+          <DateHeader dates={dates} />
 
-          {/* Teams */}
           {data.map((team, ti) => (
-            <div key={team.teamName} style={{ borderBottom: ti < data.length - 1 ? '1px solid #16161e' : 'none', marginBottom: 4 }}>
+            <div key={team.teamName}>
+              {/* Repeat header every 5 teams */}
+              {ti > 0 && ti % 5 === 0 && <DateHeader dates={dates} />}
 
-              {/* Team name header */}
+              {/* Team header */}
               <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                <div style={{
-                  width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
-                  position: 'sticky', left: 0, zIndex: 20,
-                  background: '#0c0c10',
-                  display: 'flex', alignItems: 'center',
-                  paddingLeft: 0,
-                }}>
-                  <div style={{ width: 3, alignSelf: 'stretch', background: '#65a30d', marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 44 }} />
+                <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0c0c10', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: 3, alignSelf: 'stretch', background: C.green, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>
                       {team.teamName}
                     </div>
                     <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
-                      2026 Season · {team.games.length} Games
+                      2026 · {team.games.length} Games
                     </div>
                   </div>
                 </div>
-                {/* Decorative gradient bar across columns */}
-                <div style={{
-                  flex: 1, height: 44, alignSelf: 'center',
-                  background: 'linear-gradient(to right, rgba(101,163,13,0.06) 0%, transparent 60%)',
-                  borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24',
-                  marginTop: 8,
-                }} />
+                <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${C.green}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
               </div>
 
-              {/* 7 metric rows */}
+              {/* 9 metric rows */}
               {ROWS.map((row, ri) => {
                 const rowBg = ri % 2 === 0 ? '#0c0c10' : '#0e0e15'
                 return (
                   <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
-
-                    {/* Sticky label */}
-                    <div style={{
-                      width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
-                      position: 'sticky', left: 0, zIndex: 10,
-                      background: rowBg,
-                      height: 34, display: 'flex', alignItems: 'center',
-                      paddingLeft: 19,
-                      borderLeft: `3px solid ${rowBg}`,
-                    }}>
-                      <div style={{ width: 2, height: 12, background: row.accentColor, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.8 }} />
-                      <span style={{ fontSize: 11, color: '#a1a1aa', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                    <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
+                      <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
+                      <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
                         {row.label}
                       </span>
-                      {row.getRecord(team.games)}
+                      {row.record(team.games)}
                     </div>
-
-                    {/* Game cells */}
                     {team.games.map(game => (
-                      <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, padding: '0 0', background: rowBg }}>
+                      <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg }}>
                         <GameCell rowKey={row.key} game={game} />
                       </div>
                     ))}
@@ -272,7 +230,7 @@ export default function GambchopChart({ data }: { data: TeamChartData[] }) {
                 )
               })}
 
-              <div style={{ height: 12 }} />
+              <div style={{ height: 10, borderBottom: ti < data.length - 1 ? '1px solid #16161e' : 'none' }} />
             </div>
           ))}
         </div>
@@ -280,14 +238,9 @@ export default function GambchopChart({ data }: { data: TeamChartData[] }) {
 
       <style>{`
         .cell {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 34px;
-          margin: 0 3px;
-          border-radius: 5px;
-          font-size: 11px;
-          letter-spacing: 0.1em;
+          display: flex; align-items: center; justify-content: center;
+          height: 34px; margin: 0 3px; border-radius: 5px;
+          font-size: 11px; letter-spacing: 0.1em;
         }
       `}</style>
     </div>
