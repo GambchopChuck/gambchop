@@ -49,7 +49,7 @@ export default function LeagueCard({ league }: { league: League }) {
               </div>
             </div>
             <div style={{ fontSize: 10, color: league.accent, fontWeight: 700, letterSpacing: '0.1em', background: league.accent + '18', padding: '4px 8px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-              {league.teams} Teams
+              {league.id === 'tennis' ? 'ATP & WTA' : `${league.teams}+ Teams`}
             </div>
           </div>
 
