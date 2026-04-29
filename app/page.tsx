@@ -1,4 +1,5 @@
 import LeagueGrid from '@/components/LeagueGrid'
+import CommunityPreview from '@/components/CommunityPreview'
 
 // ─── YouTube Embed ────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ export default function HomePage() {
 
       <YoutubeSection />
       <LeagueGrid />
+      <CommunityPreview />
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '20px 24px', textAlign: 'center' }}>
         <p style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>

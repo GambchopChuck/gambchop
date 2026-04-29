@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context'
 
 const NAV_LINKS = [
   { label: 'Leagues',    href: '/'            },
+  { label: 'Teams',      href: '/teams'       },
   { label: 'Community',  href: '/community'   },
   { label: 'Merchandise',href: '/merchandise' },
   { label: 'News',       href: '/news'        },

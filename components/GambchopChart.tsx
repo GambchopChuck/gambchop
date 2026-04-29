@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { TeamChartData, GameEntry, BetResult } from '@/lib/leagues-data'
+import type { MemberTier } from '@/lib/auth-context'
 
 const FREE_COLS = 3
 
@@ -22,17 +23,13 @@ const C = {
   empty:  '#131318',
 }
 
-// ─── Forward-fill helpers ─────────────────────────────────────────────────────
+// ─── Forward-fill ─────────────────────────────────────────────────────────────
 
 function forwardFill<T>(values: (T | null | undefined)[]): (T | null)[] {
   let last: T | null = null
-  return values.map(v => {
-    if (v != null) last = v
-    return last
-  })
+  return values.map(v => { if (v != null) last = v; return last })
 }
 
-// For each game row, compute the filled result arrays once per team
 interface FilledRow {
   ml:    (BetResult)[]
   sp:    (BetResult)[]
@@ -81,37 +78,19 @@ function OUBadge({ o, u }: { o: number; u: number }) {
 
 // ─── Cells ────────────────────────────────────────────────────────────────────
 
-function WLCell({ result, winLabel = 'W', lossLabel = 'L' }: {
-  result: BetResult
-  winLabel?: string
-  lossLabel?: string
-}) {
+function WLCell({ result, winLabel = 'W', lossLabel = 'L' }: { result: BetResult; winLabel?: string; lossLabel?: string }) {
   if (!result) return <div className="cell" style={{ background: C.empty, opacity: 0.3 }} />
-  const s = {
-    win:  { bg: C.green,  color: '#000', glow: `0 0 12px ${C.green}80`,  label: winLabel  },
-    loss: { bg: C.red,    color: '#fff', glow: `0 0 12px ${C.red}80`,    label: lossLabel },
-    push: { bg: C.white,  color: '#111', glow: 'none',                    label: 'P'       },
-  }[result]
-  return (
-    <div className="cell" style={{ background: s.bg, color: s.color, boxShadow: s.glow, fontWeight: 800, fontSize: result === 'push' ? 10 : 11 }}>
-      {s.label}
-    </div>
-  )
+  const s = { win: { bg: C.green, color: '#000', glow: `0 0 12px ${C.green}80`, label: winLabel }, loss: { bg: C.red, color: '#fff', glow: `0 0 12px ${C.red}80`, label: lossLabel }, push: { bg: C.white, color: '#111', glow: 'none', label: 'P' } }[result]
+  return <div className="cell" style={{ background: s.bg, color: s.color, boxShadow: s.glow, fontWeight: 800, fontSize: result === 'push' ? 10 : 11 }}>{s.label}</div>
 }
 
 function PillCell({ active, color, glow }: { active: boolean | null; color: string; glow: string }) {
-  const on = active === true
-  return <div className="cell" style={{ background: on ? color : C.empty, boxShadow: on ? glow : 'none', opacity: active === null ? 0.3 : 1 }} />
+  return <div className="cell" style={{ background: active === true ? color : C.empty, boxShadow: active === true ? glow : 'none', opacity: active === null ? 0.3 : 1 }} />
 }
 
-// O/U: color only, no text label
 function OUCell({ r }: { r: 'over' | 'under' | 'push' | null }) {
   if (!r) return <div className="cell" style={{ background: C.empty, opacity: 0.3 }} />
-  const s = {
-    over:  { bg: C.violet, glow: `0 0 14px ${C.violet}90` },
-    under: { bg: C.brown,  glow: `0 0 14px ${C.brown}90`  },
-    push:  { bg: C.white,  glow: 'none'                    },
-  }[r]
+  const s = { over: { bg: C.violet, glow: `0 0 14px ${C.violet}90` }, under: { bg: C.brown, glow: `0 0 14px ${C.brown}90` }, push: { bg: C.white, glow: 'none' } }[r]
   return <div className="cell" style={{ background: s.bg, boxShadow: s.glow }} />
 }
 
@@ -133,21 +112,15 @@ const ROWS: RowMeta[] = [
   { key: 'ou',       label: 'Over / Under',    accent: C.violet, record: g => { const {o,u} = rec.ou(g); return <OUBadge o={o} u={u} /> } },
 ]
 
-// Render a single cell using forward-filled values
-function GameCellFilled({ rowKey, game, gi, filled }: {
-  rowKey: RowKey
-  game: GameEntry
-  gi: number
-  filled: FilledRow
-}) {
+function GameCellFilled({ rowKey, game, gi, filled }: { rowKey: RowKey; game: GameEntry; gi: number; filled: FilledRow }) {
   switch (rowKey) {
     case 'moneyline': return <WLCell result={filled.ml[gi]} />
     case 'spread':    return <WLCell result={filled.sp[gi]} winLabel="COV" lossLabel="MIS" />
-    case 'ml-fav':    return <PillCell active={filled.fav[gi]}          color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
+    case 'ml-fav':    return <PillCell active={filled.fav[gi]}  color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
     case 'ml-dog':    return <PillCell active={filled.fav[gi] === null ? null : !filled.fav[gi]}   color={C.orange} glow={`0 0 10px ${C.orange}80`} />
-    case 'sp-fav':    return <PillCell active={filled.spFav[gi]}        color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
+    case 'sp-fav':    return <PillCell active={filled.spFav[gi]} color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
     case 'sp-dog':    return <PillCell active={filled.spFav[gi] === null ? null : !filled.spFav[gi]} color={C.purple} glow={`0 0 10px ${C.purple}80`} />
-    case 'home':      return <PillCell active={filled.home[gi]}         color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
+    case 'home':      return <PillCell active={filled.home[gi]}  color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
     case 'away':      return <PillCell active={filled.home[gi] === null ? null : !filled.home[gi]}  color={C.silver} glow={`0 0 10px ${C.silver}60`} />
     case 'ou':        return <OUCell r={filled.ou[gi]} />
     default: return null
@@ -157,24 +130,17 @@ function GameCellFilled({ rowKey, game, gi, filled }: {
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 const LEGEND = [
-  { bg: C.green,  label: 'Win / Cover'     },
-  { bg: C.red,    label: 'Loss / Miss'     },
-  { bg: C.white,  label: 'Push'            },
-  { bg: C.gold,   label: 'ML Favorite'     },
-  { bg: C.orange, label: 'ML Underdog'     },
-  { bg: C.royal,  label: 'Spread Favorite' },
-  { bg: C.purple, label: 'Spread Dog'      },
-  { bg: C.teal,   label: 'Home'            },
-  { bg: C.silver, label: 'Away'            },
-  { bg: C.violet, label: 'Over'            },
-  { bg: C.brown,  label: 'Under'           },
+  { bg: C.green, label: 'Win / Cover' }, { bg: C.red, label: 'Loss / Miss' }, { bg: C.white, label: 'Push' },
+  { bg: C.gold, label: 'ML Fav' }, { bg: C.orange, label: 'ML Dog' }, { bg: C.royal, label: 'Sp Fav' },
+  { bg: C.purple, label: 'Sp Dog' }, { bg: C.teal, label: 'Home' }, { bg: C.silver, label: 'Away' },
+  { bg: C.violet, label: 'Over' }, { bg: C.brown, label: 'Under' },
 ]
 
 function Legend() {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', padding: '12px 20px 14px', borderBottom: '1px solid #1a1a24' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', padding: '12px 20px 14px', borderBottom: '1px solid #1a1a24' }}>
       {LEGEND.map(({ bg, label }) => (
-        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 10, height: 10, background: bg, borderRadius: 2, flexShrink: 0 }} />
           <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
         </div>
@@ -188,7 +154,7 @@ function Legend() {
 const LABEL_W = 220
 const COL_W   = 64
 
-function DateHeader({ dates }: { dates: string[] }) {
+function DateHeader({ dates, visibleCols }: { dates: string[]; visibleCols: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '12px 0 8px', background: '#0a0a0f' }}>
       <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0a0a0f', paddingLeft: 20, zIndex: 20 }}>
@@ -196,19 +162,49 @@ function DateHeader({ dates }: { dates: string[] }) {
       </div>
       {dates.map((d, i) => (
         <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center', position: 'relative' }}>
-          <span style={{ fontSize: 10, color: i < FREE_COLS ? '#52525b' : '#3a3a46', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
-          {i === FREE_COLS && (
-            <div style={{ position: 'absolute', top: -2, left: 0, width: 1, height: 28, background: '#8b5cf644' }} />
-          )}
+          <span style={{ fontSize: 10, color: i < visibleCols ? '#52525b' : '#2a2a34', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
+          {i === visibleCols && <div style={{ position: 'absolute', top: -2, left: 0, width: 1, height: 28, background: '#8b5cf644' }} />}
         </div>
       ))}
     </div>
   )
 }
 
-// ─── Pro Blur Overlay ─────────────────────────────────────────────────────────
+// ─── Paywall Overlays ─────────────────────────────────────────────────────────
 
-function ProOverlay({ onUpgrade }: { onUpgrade: () => void }) {
+function NoMemberOverlay({ onJoin, onPro }: { onJoin: () => void; onPro: () => void }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(to bottom, #0a0a0f99 0%, #0a0a0fcc 40%, #0a0a0f 100%)',
+      zIndex: 10, backdropFilter: 'blur(2px)',
+    }}>
+      <div style={{ textAlign: 'center', padding: '32px', background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 16, maxWidth: 400 }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
+        <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8 }}>Membership Required</div>
+        <h3 style={{ fontSize: 18, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', margin: '0 0 10px' }}>View Team Charts</h3>
+        <p style={{ fontSize: 11, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6 }}>
+          Free members see the last 3 games.<br />Pro members get the full season.
+        </p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={onJoin} style={{
+            background: 'none', border: '1px solid #2a2a34', borderRadius: 8,
+            color: '#a1a1aa', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase', cursor: 'pointer', padding: '10px 20px', fontFamily: 'inherit',
+          }}>Join Free — Last 3 Games</button>
+          <button onClick={onPro} style={{
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)', border: 'none', borderRadius: 8,
+            color: '#000', fontSize: 11, fontWeight: 900, letterSpacing: '0.1em',
+            textTransform: 'uppercase', cursor: 'pointer', padding: '10px 20px', fontFamily: 'inherit',
+            boxShadow: '0 0 16px #22c55e44',
+          }}>Go Pro — Full Season</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProUpgradeOverlay({ onUpgrade }: { onUpgrade: () => void }) {
   return (
     <div style={{
       position: 'absolute', top: 0, right: 0, bottom: 0,
@@ -217,21 +213,13 @@ function ProOverlay({ onUpgrade }: { onUpgrade: () => void }) {
       zIndex: 5, pointerEvents: 'none',
     }}>
       <div style={{ pointerEvents: 'all', textAlign: 'center', padding: '12px 20px', marginRight: 16 }}>
-        <button
-          onClick={onUpgrade}
-          style={{
-            background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-            border: 'none', borderRadius: 8, padding: '10px 20px',
-            color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
-            textTransform: 'uppercase', cursor: 'pointer',
-            boxShadow: '0 0 20px rgba(139,92,246,0.5)',
-            fontFamily: 'inherit',
-          }}
-        >
-          🔒 Go Pro — Unlock All Games
-        </button>
+        <button onClick={onUpgrade} style={{
+          background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', border: 'none', borderRadius: 8,
+          padding: '10px 20px', color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
+          textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 0 20px rgba(139,92,246,0.5)', fontFamily: 'inherit',
+        }}>🔒 Go Pro — Full Season</button>
         <p style={{ fontSize: 9, color: '#52525b', marginTop: 8, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Free preview: first {FREE_COLS} games only
+          Free: last {FREE_COLS} games only
         </p>
       </div>
     </div>
@@ -242,35 +230,34 @@ function ProOverlay({ onUpgrade }: { onUpgrade: () => void }) {
 
 interface Props {
   data: TeamChartData[]
-  isPro?: boolean
+  memberTier?: MemberTier
+  isPro?: boolean       // legacy — maps to memberTier='pro'
+  onJoin?: () => void
   onUpgrade?: () => void
   accent?: string
 }
 
-export default function GambchopChart({ data, isPro = false, onUpgrade, accent = C.green }: Props) {
-  const [showProBanner, setShowProBanner] = useState(false)
+export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green }: Props) {
+  const [showBanner, setShowBanner] = useState(false)
+  // Resolve tier: explicit memberTier wins, else map isPro
+  const tier: MemberTier = memberTier ?? (isPro ? 'pro' : 'free')
   const dates = data[0]?.games.map(g => g.date) ?? []
+  const visibleCols = tier === 'pro' ? dates.length : tier === 'free' ? Math.min(FREE_COLS, dates.length) : 0
 
-  const handleUpgrade = () => {
-    if (onUpgrade) onUpgrade()
-    else setShowProBanner(true)
-  }
+  const handleUpgrade = () => { if (onUpgrade) onUpgrade(); else setShowBanner(true) }
+  const handleJoin    = () => { if (onJoin) onJoin() }
 
   return (
     <div style={{ width: '100%', fontFamily: 'var(--font-geist-mono), monospace' }}>
       <Legend />
 
-      {!isPro && showProBanner && (
+      {tier !== 'pro' && showBanner && (
         <div style={{ background: '#8b5cf60d', border: '1px solid #8b5cf633', borderRadius: 10, padding: '14px 20px', margin: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#c4b5fd', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Go Pro to unlock all games</div>
-            <div style={{ fontSize: 10, color: '#52525b', marginTop: 4 }}>You&apos;re seeing the first {FREE_COLS} games. Pro unlocks full season data for every team.</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#c4b5fd', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Upgrade to unlock full season</div>
+            <div style={{ fontSize: 10, color: '#52525b', marginTop: 4 }}>Showing {tier === 'free' ? `first ${FREE_COLS} games` : 'no data'}. Pro unlocks the complete season for every team.</div>
           </div>
-          <button style={{
-            background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', border: 'none', borderRadius: 8,
-            padding: '10px 18px', color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
-            textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
-          }}>
+          <button style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
             Go Pro →
           </button>
         </div>
@@ -279,48 +266,43 @@ export default function GambchopChart({ data, isPro = false, onUpgrade, accent =
       <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
         <div style={{ minWidth: LABEL_W + dates.length * COL_W + 24, position: 'relative' }}>
 
-          <DateHeader dates={dates} />
+          {/* No-member blur: cover the whole chart */}
+          {tier === 'none' && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 10, filter: 'blur(6px)', pointerEvents: 'none' }} aria-hidden />
+          )}
+
+          <DateHeader dates={dates} visibleCols={visibleCols} />
 
           {data.map((team, ti) => {
-            // Pre-compute forward-filled values once per team
             const filled = buildFilledRows(team.games)
-
             return (
               <div key={team.teamName}>
-                {ti > 0 && ti % 5 === 0 && <DateHeader dates={dates} />}
+                {ti > 0 && ti % 5 === 0 && <DateHeader dates={dates} visibleCols={visibleCols} />}
 
-                {/* Team header */}
                 <div style={{ display: 'flex', alignItems: 'stretch' }}>
                   <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0a0a0f', display: 'flex', alignItems: 'center' }}>
                     <div style={{ width: 3, alignSelf: 'stretch', background: accent, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>
-                        {team.teamName}
-                      </div>
-                      <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
-                        {team.games.length} Games
-                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>{team.teamName}</div>
+                      <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{team.games.length} Games</div>
                     </div>
                   </div>
                   <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
                 </div>
 
-                {/* 9 metric rows */}
                 {ROWS.map((row, ri) => {
                   const rowBg = ri % 2 === 0 ? '#0a0a0f' : '#0d0d14'
                   return (
                     <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
                       <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
                         <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
-                        <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                          {row.label}
-                        </span>
+                        <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
                         {row.record(team.games)}
                       </div>
                       {team.games.map((game, gi) => {
-                        const locked = !isPro && gi >= FREE_COLS
+                        const locked = gi >= visibleCols
                         return (
-                          <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg, filter: locked ? 'blur(4px)' : 'none', opacity: locked ? 0.35 : 1, pointerEvents: locked ? 'none' : 'auto' }}>
+                          <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg, filter: locked ? 'blur(4px)' : 'none', opacity: locked ? 0.3 : 1, pointerEvents: locked ? 'none' : 'auto' }}>
                             <GameCellFilled rowKey={row.key} game={game} gi={gi} filled={filled} />
                           </div>
                         )
@@ -334,21 +316,22 @@ export default function GambchopChart({ data, isPro = false, onUpgrade, accent =
             )
           })}
 
-          {/* Pro blur overlay */}
-          {!isPro && dates.length > FREE_COLS && (
+          {/* Overlays based on tier */}
+          {tier === 'none' && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}>
+              <NoMemberOverlay onJoin={handleJoin} onPro={handleUpgrade} />
+            </div>
+          )}
+          {tier === 'free' && dates.length > FREE_COLS && (
             <div style={{ position: 'absolute', top: 0, bottom: 0, left: LABEL_W + FREE_COLS * COL_W, right: 0, pointerEvents: 'none' }}>
-              <ProOverlay onUpgrade={handleUpgrade} />
+              <ProUpgradeOverlay onUpgrade={handleUpgrade} />
             </div>
           )}
         </div>
       </div>
 
       <style>{`
-        .cell {
-          display: flex; align-items: center; justify-content: center;
-          height: 34px; margin: 0 3px; border-radius: 5px;
-          font-size: 11px; letter-spacing: 0.1em;
-        }
+        .cell { display:flex; align-items:center; justify-content:center; height:34px; margin:0 3px; border-radius:5px; font-size:11px; letter-spacing:0.1em; }
       `}</style>
     </div>
   )

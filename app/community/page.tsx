@@ -361,6 +361,19 @@ function Guidelines({ open, onToggle }: { open: boolean; onToggle: () => void })
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+const LEAGUE_CATS: { label: string; tag: string | null; color: string }[] = [
+  { label: 'All',    tag: null,      color: GREEN    },
+  { label: 'MLB',    tag: '#MLB',    color: TAG_COLORS['#MLB']   },
+  { label: 'NFL',    tag: '#NFL',    color: TAG_COLORS['#NFL']   },
+  { label: 'NBA',    tag: '#NBA',    color: TAG_COLORS['#NBA']   },
+  { label: 'NHL',    tag: '#NHL',    color: TAG_COLORS['#NHL']   },
+  { label: 'NCAAF',  tag: '#NCAAF',  color: TAG_COLORS['#NCAAF'] },
+  { label: 'NCAAB',  tag: '#NCAAB',  color: TAG_COLORS['#NCAAB'] },
+  { label: 'WNBA',   tag: '#WNBA',   color: TAG_COLORS['#WNBA']  },
+  { label: 'ATP',    tag: '#ATP',    color: TAG_COLORS['#ATP']   },
+  { label: 'WTA',    tag: '#WTA',    color: '#f0abfc'            },
+]
+
 export default function CommunityPage() {
   const { isPro, setIsPro } = useAuth()
   const [user, setUser] = useState<CommunityUser | null>(null)
@@ -426,6 +439,31 @@ export default function CommunityPage() {
             </p>
           </div>
           <button onClick={() => setShowNew(true)} style={btnGreen}>+ New Thread</button>
+        </div>
+      </div>
+
+      {/* League category tabs */}
+      <div style={{ borderBottom: `1px solid ${BORDER}`, background: '#08080d', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 40, whiteSpace: 'nowrap' }}>
+          {LEAGUE_CATS.map(({ label, tag, color }) => {
+            const isActive = activeTag === tag
+            return (
+              <button
+                key={label}
+                onClick={() => setActiveTag(tag)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? color : MUTED,
+                  borderBottom: isActive ? `2px solid ${color}` : '2px solid transparent',
+                  padding: '0 14px', height: '100%', transition: 'all 0.15s',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
