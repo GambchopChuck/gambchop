@@ -59,17 +59,21 @@ export function generateMockGames(entityName: string, count = 10): GameEntry[] {
   const opponents = ['@OPP1', 'OPP2', '@OPP3', 'OPP4', '@OPP5', 'OPP6', '@OPP7', 'OPP8', '@OPP9', 'OPP10',
     '@OPP11', 'OPP12', '@OPP13', 'OPP14', '@OPP15', 'OPP16', '@OPP17', 'OPP18', '@OPP19', 'OPP20']
 
+  // Last 2 games are "not yet played" — shows forward-fill streak effect
+  const played = count - 2
+
   return Array.from({ length: count }, (_, i) => {
     const r = (offset: number) => seeded(seed, i * 7 + offset)
+    const hasResult = i < played
     return {
       date: `G${i + 1}`,
       opponent: opponents[i % opponents.length],
       isHome: r(0) > 0.5,
       isFavorite: r(1) > 0.45,
       isSpreadFavorite: r(2) > 0.45,
-      moneylineResult: RESULTS[Math.floor(r(3) * RESULTS.length)],
-      spreadResult: RESULTS[Math.floor(r(4) * RESULTS.length)],
-      ouResult: OU_RESULTS[Math.floor(r(5) * OU_RESULTS.length)],
+      moneylineResult: hasResult ? RESULTS[Math.floor(r(3) * RESULTS.length)] : null,
+      spreadResult:    hasResult ? RESULTS[Math.floor(r(4) * RESULTS.length)] : null,
+      ouResult:        hasResult ? OU_RESULTS[Math.floor(r(5) * OU_RESULTS.length)] : null,
     }
   })
 }
