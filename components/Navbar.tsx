@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 
 const NAV_LINKS = [
-  { label: 'Leagues',    href: '/'           },
-  { label: 'Team Pages', href: '/leagues/mlb' },
+  { label: 'Leagues',    href: '/'            },
+  { label: 'Community',  href: '/community'   },
   { label: 'Merchandise',href: '/merchandise' },
   { label: 'News',       href: '/news'        },
   { label: 'Filters',    href: '/filters'     },

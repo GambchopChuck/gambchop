@@ -7,6 +7,7 @@ const LINKS = [
   { href: '/',                    icon: '◈', label: 'Home'      },
   { href: '/todays-board',        icon: '▦', label: 'Board'     },
   { href: '/streak-leaderboard',  icon: '▲', label: 'Streaks'   },
+  { href: '/community',           icon: '◉', label: 'Community' },
   { href: '/filters',             icon: '◧', label: 'Filters'   },
 ]
 

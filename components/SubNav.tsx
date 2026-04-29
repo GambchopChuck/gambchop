@@ -7,6 +7,7 @@ import { LEAGUES } from '@/lib/leagues-data'
 const FEATURES = [
   { href: '/todays-board',       label: "Today's Board" },
   { href: '/streak-leaderboard', label: 'Streak Leaders' },
+  { href: '/community',          label: 'Community'      },
 ]
 
 export default function SubNav() {
