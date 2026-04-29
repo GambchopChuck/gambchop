@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { TeamChartData, GameEntry, BetResult } from '@/lib/leagues-data'
 import type { MemberTier } from '@/lib/auth-context'
+import { useFilters, gameMatchesFilter, filterChips } from '@/lib/filter-context'
 
 const FREE_COLS = 3
 
@@ -239,7 +240,8 @@ interface Props {
 
 export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green }: Props) {
   const [showBanner, setShowBanner] = useState(false)
-  // Resolve tier: explicit memberTier wins, else map isPro
+  const { filters, isFiltered, activeCount, resetFilters } = useFilters()
+
   const tier: MemberTier = memberTier ?? (isPro ? 'pro' : 'free')
   const dates = data[0]?.games.map(g => g.date) ?? []
   const visibleCols = tier === 'pro' ? dates.length : tier === 'free' ? Math.min(FREE_COLS, dates.length) : 0
@@ -250,6 +252,36 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
   return (
     <div style={{ width: '100%', fontFamily: 'var(--font-geist-mono), monospace' }}>
       <Legend />
+
+      {/* Active filters bar */}
+      {isFiltered && tier !== 'none' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          padding: '8px 20px', background: '#0b0b10',
+          borderBottom: '1px solid #1a1a24',
+        }}>
+          <span style={{ fontSize: 8, color: C.green, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800, flexShrink: 0 }}>
+            ◧ {activeCount} Filter{activeCount !== 1 ? 's' : ''}
+          </span>
+          {filterChips(filters).map(chip => (
+            <div key={chip} style={{
+              background: `${C.green}11`, border: `1px solid ${C.green}33`,
+              borderRadius: 4, padding: '2px 8px',
+              fontSize: 9, color: C.green, letterSpacing: '0.06em', fontWeight: 600,
+            }}>{chip}</div>
+          ))}
+          <button
+            onClick={resetFilters}
+            style={{
+              marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase',
+              fontFamily: 'inherit', textDecoration: 'underline', padding: 0, flexShrink: 0,
+            }}
+          >
+            Clear All
+          </button>
+        </div>
+      )}
 
       {tier !== 'pro' && showBanner && (
         <div style={{ background: '#8b5cf60d', border: '1px solid #8b5cf633', borderRadius: 10, padding: '14px 20px', margin: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
@@ -300,9 +332,20 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
                         {row.record(team.games)}
                       </div>
                       {team.games.map((game, gi) => {
-                        const locked = gi >= visibleCols
+                        const locked    = gi >= visibleCols
+                        const filtered  = isFiltered && !gameMatchesFilter(game, filters)
+                        const blurAmt   = locked ? 'blur(4px)' : filtered ? 'blur(1px)' : 'none'
+                        const opacAmt   = locked ? 0.3 : filtered ? 0.12 : 1
                         return (
-                          <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg, filter: locked ? 'blur(4px)' : 'none', opacity: locked ? 0.3 : 1, pointerEvents: locked ? 'none' : 'auto' }}>
+                          <div
+                            key={game.date}
+                            style={{
+                              width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg,
+                              filter: blurAmt, opacity: opacAmt,
+                              pointerEvents: locked || filtered ? 'none' : 'auto',
+                              transition: 'opacity 0.2s, filter 0.2s',
+                            }}
+                          >
                             <GameCellFilled rowKey={row.key} game={game} gi={gi} filled={filled} />
                           </div>
                         )

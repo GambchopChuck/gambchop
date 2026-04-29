@@ -9,6 +9,8 @@ export interface GameEntry {
   isHome: boolean
   isFavorite: boolean
   isSpreadFavorite: boolean
+  isDivisionGame: boolean
+  restDays: number           // 0 = back-to-back, 1, 2, 3+
   moneylineResult: BetResult
   spreadResult: BetResult
   ouResult: 'over' | 'under' | 'push' | null
@@ -68,9 +70,11 @@ export function generateMockGames(entityName: string, count = 10): GameEntry[] {
     return {
       date: `G${i + 1}`,
       opponent: opponents[i % opponents.length],
-      isHome: r(0) > 0.5,
-      isFavorite: r(1) > 0.45,
+      isHome:          r(0) > 0.5,
+      isFavorite:      r(1) > 0.45,
       isSpreadFavorite: r(2) > 0.45,
+      isDivisionGame:  r(6) > 0.6,
+      restDays:        Math.floor(r(7) * 4),   // 0-3
       moneylineResult: hasResult ? RESULTS[Math.floor(r(3) * RESULTS.length)] : null,
       spreadResult:    hasResult ? RESULTS[Math.floor(r(4) * RESULTS.length)] : null,
       ouResult:        hasResult ? OU_RESULTS[Math.floor(r(5) * OU_RESULTS.length)] : null,
