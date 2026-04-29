@@ -1,8 +1,7 @@
 import GambchopChart from '@/components/GambchopChart'
 import { mockChartData } from '@/lib/mock-data'
 import { supabase } from '@/lib/supabase'
-import type { TeamChartData } from '@/lib/mock-data'
-import Link from 'next/link'
+import type { TeamChartData } from '@/lib/leagues-data'
 
 async function getChartData(): Promise<TeamChartData[]> {
   try {
@@ -33,41 +32,17 @@ export default async function ChartPage() {
   const chartData = await getChartData()
 
   return (
-    <main className="min-h-screen bg-[#0c0c10]">
-      <header className="border-b border-[#1a1a24] px-4 sm:px-8 py-4">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="text-xl font-black tracking-[0.2em] uppercase" style={{
-              background: 'linear-gradient(135deg, #22c55e 0%, #8b5cf6 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>Gambchop</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-[10px] tracking-widest text-zinc-500 uppercase">MLB · 2026</span>
-          </div>
-        </div>
-      </header>
-
-      <div className="border-b border-[#1a1a24] px-4 sm:px-8 py-3">
-        <div className="max-w-[1400px] mx-auto flex items-center gap-4 flex-wrap">
-          <span className="text-[10px] tracking-[0.2em] text-zinc-500 uppercase">2026 Season</span>
-          <span className="text-[#222230] hidden sm:inline">|</span>
-          <span className="text-[10px] tracking-[0.2em] text-green-500 uppercase">First 10 Games</span>
-          <span className="text-[#222230] hidden sm:inline">|</span>
-          <span className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">{chartData.length} Teams</span>
+    <div style={{ background: '#0a0a0f', minHeight: '100vh', fontFamily: 'var(--font-geist-mono), monospace' }}>
+      <div style={{ borderBottom: '1px solid #1a1a24', padding: '12px 24px' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+          <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase' }}>MLB · 2026 Season · {chartData.length} Teams</span>
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-2 sm:px-4 py-6">
-        <GambchopChart data={chartData} />
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 8px' }}>
+        <GambchopChart data={chartData} accent="#22c55e" />
       </div>
-
-      <footer className="border-t border-[#1a1a24] px-4 sm:px-8 py-4 mt-4">
-        <p className="text-[9px] tracking-[0.2em] text-zinc-700 uppercase">
-          Gambchop · For entertainment purposes · Data via Supabase
-        </p>
-      </footer>
-    </main>
+    </div>
   )
 }

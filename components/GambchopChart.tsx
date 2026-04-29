@@ -1,6 +1,9 @@
 'use client'
 
-import type { TeamChartData, GameEntry } from '@/lib/mock-data'
+import { useState } from 'react'
+import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
+
+const FREE_COLS = 3
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -24,25 +27,25 @@ const C = {
 interface WL { w: number; l: number }
 
 const rec = {
-  ml:       (g: GameEntry[]): WL => ({ w: g.filter(x => x.moneylineResult === 'win').length,   l: g.filter(x => x.moneylineResult === 'loss').length }),
-  spread:   (g: GameEntry[]): WL => ({ w: g.filter(x => x.spreadResult === 'win').length,      l: g.filter(x => x.spreadResult === 'loss').length }),
-  mlFav:    (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isFavorite)),
-  mlDog:    (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isFavorite)),
-  spFav:    (g: GameEntry[]): WL => rec.spread(g.filter(x =>  x.isSpreadFavorite)),
-  spDog:    (g: GameEntry[]): WL => rec.spread(g.filter(x => !x.isSpreadFavorite)),
-  home:     (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isHome)),
-  away:     (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isHome)),
-  ou:       (g: GameEntry[])      => ({ o: g.filter(x => x.ouResult === 'over').length,  u: g.filter(x => x.ouResult === 'under').length }),
+  ml:     (g: GameEntry[]): WL => ({ w: g.filter(x => x.moneylineResult === 'win').length,  l: g.filter(x => x.moneylineResult === 'loss').length }),
+  spread: (g: GameEntry[]): WL => ({ w: g.filter(x => x.spreadResult === 'win').length,     l: g.filter(x => x.spreadResult === 'loss').length }),
+  mlFav:  (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isFavorite)),
+  mlDog:  (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isFavorite)),
+  spFav:  (g: GameEntry[]): WL => rec.spread(g.filter(x =>  x.isSpreadFavorite)),
+  spDog:  (g: GameEntry[]): WL => rec.spread(g.filter(x => !x.isSpreadFavorite)),
+  home:   (g: GameEntry[]): WL => rec.ml(g.filter(x =>  x.isHome)),
+  away:   (g: GameEntry[]): WL => rec.ml(g.filter(x => !x.isHome)),
+  ou:     (g: GameEntry[])      => ({ o: g.filter(x => x.ouResult === 'over').length, u: g.filter(x => x.ouResult === 'under').length }),
 }
 
 function wlColor(r: WL) { return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#52525b' }
 
 function RecordBadge({ r }: { r: WL }) {
-  return <span style={{ color: wlColor(r), fontSize: 10, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0 }}>&nbsp;({r.w}-{r.l})</span>
+  return <span style={{ color: wlColor(r), fontSize: 10, fontFamily: 'monospace', fontWeight: 700 }}>&nbsp;({r.w}-{r.l})</span>
 }
 function OUBadge({ o, u }: { o: number; u: number }) {
   const color = o > u ? C.violet : o < u ? C.brown : '#52525b'
-  return <span style={{ color, fontSize: 10, fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0 }}>&nbsp;({o}-{u})</span>
+  return <span style={{ color, fontSize: 10, fontFamily: 'monospace', fontWeight: 700 }}>&nbsp;({o}-{u})</span>
 }
 
 // ─── Cells ────────────────────────────────────────────────────────────────────
@@ -70,24 +73,15 @@ function PillCell({ active, color, glow }: { active: boolean; color: string; glo
 }
 
 function OUCell({ r }: { r: GameEntry['ouResult'] }) {
-  const isO = r === 'over', isU = r === 'under', isP = r === 'push'
+  if (!r) return <Blank />
+  const s = {
+    over:  { bg: C.violet, color: '#fff', label: 'O', glow: `0 0 12px ${C.violet}80` },
+    under: { bg: C.brown,  color: '#fff', label: 'U', glow: `0 0 12px ${C.brown}80`  },
+    push:  { bg: C.white,  color: '#111', label: 'P', glow: 'none'                    },
+  }[r]
   return (
-    <div style={{ display: 'flex', height: 34, margin: '0 3px', borderRadius: 5, overflow: 'hidden', border: '1px solid #1e1e2e' }}>
-      <div style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-        background: isO ? C.violet : isP ? '#2e1a5a' : '#110c1e',
-        color: isO ? '#fff' : '#2e1a5a',
-        boxShadow: isO ? `inset 0 0 10px ${C.violet}60` : 'none',
-      }}>O</div>
-      <div style={{ width: 1, background: '#1e1e2e' }} />
-      <div style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
-        background: isU ? C.brown : isP ? '#2a1500' : '#150a00',
-        color: isU ? '#fff' : '#2a1500',
-        boxShadow: isU ? `inset 0 0 8px ${C.brown}60` : 'none',
-      }}>U</div>
+    <div className="cell" style={{ background: s.bg, color: s.color, boxShadow: s.glow, fontWeight: 800 }}>
+      {s.label}
     </div>
   )
 }
@@ -114,12 +108,12 @@ function GameCell({ rowKey, game }: { rowKey: RowKey; game: GameEntry }) {
   switch (rowKey) {
     case 'moneyline': return <WLCell result={game.moneylineResult} />
     case 'spread':    return <WLCell result={game.spreadResult} winLabel="COV" lossLabel="MIS" />
-    case 'ml-fav':    return <PillCell active={game.isFavorite}         color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
-    case 'ml-dog':    return <PillCell active={!game.isFavorite}        color={C.orange} glow={`0 0 10px ${C.orange}80`} />
-    case 'sp-fav':    return <PillCell active={game.isSpreadFavorite}   color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
-    case 'sp-dog':    return <PillCell active={!game.isSpreadFavorite}  color={C.purple} glow={`0 0 10px ${C.purple}80`} />
-    case 'home':      return <PillCell active={game.isHome}             color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
-    case 'away':      return <PillCell active={!game.isHome}            color={C.silver} glow={`0 0 10px ${C.silver}60`} />
+    case 'ml-fav':    return <PillCell active={game.isFavorite}        color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
+    case 'ml-dog':    return <PillCell active={!game.isFavorite}       color={C.orange} glow={`0 0 10px ${C.orange}80`} />
+    case 'sp-fav':    return <PillCell active={game.isSpreadFavorite}  color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
+    case 'sp-dog':    return <PillCell active={!game.isSpreadFavorite} color={C.purple} glow={`0 0 10px ${C.purple}80`} />
+    case 'home':      return <PillCell active={game.isHome}            color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
+    case 'away':      return <PillCell active={!game.isHome}           color={C.silver} glow={`0 0 10px ${C.silver}60`} />
     case 'ou':        return <OUCell r={game.ouResult} />
   }
 }
@@ -127,17 +121,17 @@ function GameCell({ rowKey, game }: { rowKey: RowKey; game: GameEntry }) {
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 const LEGEND = [
-  { bg: C.green,  label: 'ML Win / Cover'    },
-  { bg: C.red,    label: 'ML Loss / Miss'    },
-  { bg: C.white,  label: 'Push'              },
-  { bg: C.gold,   label: 'ML Favorite'       },
-  { bg: C.orange, label: 'ML Underdog'       },
-  { bg: C.royal,  label: 'Spread Favorite'   },
-  { bg: C.purple, label: 'Spread Dog'        },
-  { bg: C.teal,   label: 'Home'              },
-  { bg: C.silver, label: 'Away'              },
-  { bg: C.violet, label: 'Over'              },
-  { bg: C.brown,  label: 'Under'             },
+  { bg: C.green,  label: 'ML Win / Cover'  },
+  { bg: C.red,    label: 'ML Loss / Miss'  },
+  { bg: C.white,  label: 'Push'            },
+  { bg: C.gold,   label: 'ML Favorite'     },
+  { bg: C.orange, label: 'ML Underdog'     },
+  { bg: C.royal,  label: 'Spread Favorite' },
+  { bg: C.purple, label: 'Spread Dog'      },
+  { bg: C.teal,   label: 'Home'            },
+  { bg: C.silver, label: 'Away'            },
+  { bg: C.violet, label: 'Over'            },
+  { bg: C.brown,  label: 'Under'           },
 ]
 
 function Legend() {
@@ -153,65 +147,129 @@ function Legend() {
   )
 }
 
-// ─── Date Header Row ─────────────────────────────────────────────────────────
+// ─── Date Header ─────────────────────────────────────────────────────────────
 
 const LABEL_W = 220
 const COL_W   = 64
 
 function DateHeader({ dates }: { dates: string[] }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '12px 0 8px', background: '#0c0c10' }}>
-      <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0c0c10', paddingLeft: 20, zIndex: 20 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '12px 0 8px', background: '#0a0a0f' }}>
+      <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0a0a0f', paddingLeft: 20, zIndex: 20 }}>
         <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
       </div>
-      {dates.map(d => (
-        <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center' }}>
-          <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
+      {dates.map((d, i) => (
+        <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center', position: 'relative' }}>
+          <span style={{ fontSize: 10, color: i < FREE_COLS ? '#52525b' : '#3a3a46', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
+          {i === FREE_COLS && (
+            <div style={{ position: 'absolute', top: -2, left: 0, width: 1, height: 28, background: '#8b5cf644' }} />
+          )}
         </div>
       ))}
     </div>
   )
 }
 
+// ─── Pro Blur Overlay ─────────────────────────────────────────────────────────
+
+function ProOverlay({ onUpgrade }: { onUpgrade: () => void }) {
+  return (
+    <div style={{
+      position: 'absolute', top: 0, right: 0, bottom: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(to right, transparent 0%, #0a0a0f88 20%, #0a0a0fcc 60%, #0a0a0f 100%)',
+      zIndex: 5, pointerEvents: 'none',
+    }}>
+      <div style={{ pointerEvents: 'all', textAlign: 'center', padding: '12px 20px', marginRight: 16 }}>
+        <button
+          onClick={onUpgrade}
+          style={{
+            background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+            border: 'none', borderRadius: 8, padding: '10px 20px',
+            color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
+            textTransform: 'uppercase', cursor: 'pointer',
+            boxShadow: '0 0 20px rgba(139,92,246,0.5)',
+            fontFamily: 'inherit',
+          }}
+        >
+          🔒 Go Pro — Unlock All Games
+        </button>
+        <p style={{ fontSize: 9, color: '#52525b', marginTop: 8, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          Free preview: first {FREE_COLS} games only
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Chart ───────────────────────────────────────────────────────────────
 
-export default function GambchopChart({ data }: { data: TeamChartData[] }) {
+interface Props {
+  data: TeamChartData[]
+  isPro?: boolean
+  onUpgrade?: () => void
+  accent?: string
+}
+
+export default function GambchopChart({ data, isPro = false, onUpgrade, accent = C.green }: Props) {
+  const [showProBanner, setShowProBanner] = useState(false)
   const dates = data[0]?.games.map(g => g.date) ?? []
+  const visibleCount = isPro ? dates.length : FREE_COLS
+  const visibleDates = isPro ? dates : dates.slice(0, visibleCount)
+
+  const handleUpgrade = () => {
+    if (onUpgrade) onUpgrade()
+    else setShowProBanner(true)
+  }
 
   return (
     <div style={{ width: '100%', fontFamily: 'var(--font-geist-mono), monospace' }}>
       <Legend />
 
-      <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
-        <div style={{ minWidth: LABEL_W + dates.length * COL_W + 24 }}>
+      {!isPro && showProBanner && (
+        <div style={{ background: '#8b5cf60d', border: '1px solid #8b5cf633', borderRadius: 10, padding: '14px 20px', margin: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#c4b5fd', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Go Pro to unlock all games</div>
+            <div style={{ fontSize: 10, color: '#52525b', marginTop: 4 }}>You&apos;re seeing the first {FREE_COLS} games. Pro unlocks full season data for every team.</div>
+          </div>
+          <button style={{
+            background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', border: 'none', borderRadius: 8,
+            padding: '10px 18px', color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
+            textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+          }}>
+            Go Pro →
+          </button>
+        </div>
+      )}
 
-          {/* Initial date header */}
+      <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
+        <div style={{ minWidth: LABEL_W + (isPro ? dates.length : dates.length) * COL_W + 24, position: 'relative' }}>
+
           <DateHeader dates={dates} />
 
           {data.map((team, ti) => (
             <div key={team.teamName}>
-              {/* Repeat header every 5 teams */}
               {ti > 0 && ti % 5 === 0 && <DateHeader dates={dates} />}
 
               {/* Team header */}
               <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0c0c10', display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 3, alignSelf: 'stretch', background: C.green, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
+                <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0a0a0f', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: 3, alignSelf: 'stretch', background: accent, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>
                       {team.teamName}
                     </div>
                     <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
-                      2026 · {team.games.length} Games
+                      {team.games.length} Games
                     </div>
                   </div>
                 </div>
-                <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${C.green}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
+                <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
               </div>
 
               {/* 9 metric rows */}
               {ROWS.map((row, ri) => {
-                const rowBg = ri % 2 === 0 ? '#0c0c10' : '#0e0e15'
+                const rowBg = ri % 2 === 0 ? '#0a0a0f' : '#0d0d14'
                 return (
                   <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
                     <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
@@ -221,11 +279,14 @@ export default function GambchopChart({ data }: { data: TeamChartData[] }) {
                       </span>
                       {row.record(team.games)}
                     </div>
-                    {team.games.map(game => (
-                      <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg }}>
-                        <GameCell rowKey={row.key} game={game} />
-                      </div>
-                    ))}
+                    {team.games.map((game, gi) => {
+                      const locked = !isPro && gi >= FREE_COLS
+                      return (
+                        <div key={game.date} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg, filter: locked ? 'blur(4px)' : 'none', opacity: locked ? 0.35 : 1, pointerEvents: locked ? 'none' : 'auto' }}>
+                          <GameCell rowKey={row.key} game={game} />
+                        </div>
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -233,6 +294,13 @@ export default function GambchopChart({ data }: { data: TeamChartData[] }) {
               <div style={{ height: 10, borderBottom: ti < data.length - 1 ? '1px solid #16161e' : 'none' }} />
             </div>
           ))}
+
+          {/* Pro blur overlay — covers locked columns */}
+          {!isPro && dates.length > FREE_COLS && (
+            <div style={{ position: 'absolute', top: 0, bottom: 0, left: LABEL_W + FREE_COLS * COL_W, right: 0, pointerEvents: 'none' }}>
+              <ProOverlay onUpgrade={handleUpgrade} />
+            </div>
+          )}
         </div>
       </div>
 

@@ -49,7 +49,7 @@ export default function LeagueCard({ league }: { league: League }) {
               </div>
             </div>
             <div style={{ fontSize: 10, color: league.accent, fontWeight: 700, letterSpacing: '0.1em', background: league.accent + '18', padding: '4px 8px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-              {league.id === 'tennis' ? 'ATP & WTA' : `${league.teams}+ Teams`}
+              {league.id === 'atp' ? 'ATP Tour' : league.id === 'wta' ? 'WTA Tour' : `${league.teams}+ ${league.id === 'wnba' || league.id === 'mlb' || league.id === 'nba' || league.id === 'nhl' || league.id === 'nfl' ? 'Teams' : 'Teams'}`}
             </div>
           </div>
 
@@ -59,7 +59,7 @@ export default function LeagueCard({ league }: { league: League }) {
 
           <div style={{ marginTop: 16 }}>
             <span style={{ fontSize: 11, color: hovered ? league.accent : '#52525b', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'color 0.2s' }}>
-              {league.id === 'mlb' ? 'View Analysis →' : 'Coming Soon'}
+              {league.id === 'mlb' || league.href !== '#' ? 'View Analysis →' : 'Coming Soon'}
             </span>
           </div>
         </div>

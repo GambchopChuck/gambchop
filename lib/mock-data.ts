@@ -1,19 +1,6 @@
-export interface GameEntry {
-  date: string
-  opponent: string
-  isHome: boolean
-  isFavorite: boolean
-  isSpreadFavorite: boolean
-  moneylineResult: 'win' | 'loss' | 'push' | null
-  spreadResult: 'win' | 'loss' | 'push' | null
-  ouResult: 'over' | 'under' | 'push' | null
-}
+export type { GameEntry, TeamChartData } from './leagues-data'
 
-export interface TeamChartData {
-  teamName: string
-  abbreviation: string
-  games: GameEntry[]
-}
+import type { TeamChartData } from './leagues-data'
 
 export const mockChartData: TeamChartData[] = [
   {
