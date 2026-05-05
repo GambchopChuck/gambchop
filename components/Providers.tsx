@@ -2,6 +2,7 @@
 
 import { AuthProvider } from '@/lib/auth-context'
 import { FilterProvider } from '@/lib/filter-context'
+import { UserProvider } from '@/lib/user-context'
 import AuthModals from './AuthModals'
 import Navbar from './Navbar'
 import PersistentVideo from './PersistentVideo'
@@ -12,6 +13,7 @@ import { ReactNode } from 'react'
 export default function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
+      <UserProvider>
       <FilterProvider>
         <Navbar />
         <SubNav />
@@ -24,6 +26,7 @@ export default function Providers({ children }: { children: ReactNode }) {
         </div>
         <AuthModals />
       </FilterProvider>
+      </UserProvider>
     </AuthProvider>
   )
 }

@@ -9,6 +9,8 @@ const LINKS = [
   { href: '/streak-leaderboard',  icon: '▲', label: 'Streaks'   },
   { href: '/teams',               icon: '▤', label: 'Teams'     },
   { href: '/community',           icon: '◉', label: 'Community' },
+  { href: '/favorites',           icon: '⭐', label: 'Favorites' },
+  { href: '/pricing',             icon: '◈', label: 'Pricing'   },
   { href: '/filters',             icon: '◧', label: 'Filters'   },
 ]
 
@@ -36,14 +38,14 @@ export default function Sidebar() {
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               justifyContent: 'center', gap: 4,
               height: 56, width: '100%',
-              color: active ? '#22c55e' : '#3f3f46',
+              color: active ? '#22c55e' : '#71717a',
               background: active ? '#22c55e0d' : 'transparent',
               borderLeft: active ? '2px solid #22c55e' : '2px solid transparent',
               transition: 'all 0.15s',
               cursor: 'pointer',
             }}
-            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#71717a' }}
-            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#3f3f46' }}
+            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#d4d4d8' }}
+            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#71717a' }}
             >
               <span style={{ fontSize: 18 }}>{icon}</span>
               <span style={{ fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'monospace' }}>

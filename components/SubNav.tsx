@@ -35,7 +35,7 @@ export default function SubNav() {
             <Link key={href} href={href} style={{ textDecoration: 'none' }}>
               <span style={{
                 fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: active ? '#22c55e' : '#52525b',
+                color: active ? '#22c55e' : '#a1a1aa',
                 fontWeight: active ? 700 : 500,
                 padding: '0 14px', lineHeight: '36px', display: 'inline-block',
                 borderBottom: active ? '2px solid #22c55e' : '2px solid transparent',
@@ -57,7 +57,7 @@ export default function SubNav() {
             <Link key={l.id} href={l.href} style={{ textDecoration: 'none' }}>
               <span style={{
                 fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: active ? l.accent : '#52525b',
+                color: active ? l.accent : '#a1a1aa',
                 fontWeight: active ? 700 : 500,
                 padding: '0 12px', lineHeight: '36px', display: 'inline-block',
                 borderBottom: active ? `2px solid ${l.accent}` : '2px solid transparent',
