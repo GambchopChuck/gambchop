@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
-import { useUser, FREE_FOLLOWS, FREE_PICKS, BetType } from '@/lib/user-context'
+import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 import { getStoredUser, saveUser, generateUserId, CommunityUser } from '@/lib/community'
 import { generateMockGames, LEAGUE_MAP, slugify } from '@/lib/leagues-data'
 
@@ -115,7 +115,7 @@ function timeAgo(iso: string): string {
 
 export default function ProfilePage() {
   const { memberTier, openModal, setIsMember, setIsPro, isPro, user: authUser } = useAuth()
-  const { follows, picks, notifications, toggleFollow, togglePick, hasPick, markRead, markAllRead, unreadCount } = useUser()
+  const { follows, notifications, toggleFollow, markRead, markAllRead, unreadCount } = useUser()
 
   const [user, setUser] = useState<CommunityUser | null>(null)
   const [memberSince, setMemberSince] = useState<string>('')
@@ -141,7 +141,7 @@ export default function ProfilePage() {
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 10 }}>Profile</div>
           <h1 style={{ fontSize: 22, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 14px' }}>Join to View Your Profile</h1>
           <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.7, margin: '0 0 24px' }}>
-            Follow teams, track picks, and get streak alerts all in one place.
+            Follow teams and get streak alerts all in one place.
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             <button onClick={() => { setIsMember(true); openModal('join') }} style={{ background: 'none', border: `1px solid #2a2a34`, borderRadius: 8, color: SUB, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', padding: '11px 24px', fontFamily: 'inherit' }}>Join Free</button>
@@ -166,7 +166,6 @@ export default function ProfilePage() {
   const initial   = user.username[0].toUpperCase()
   const sinceDate = memberSince ? new Date(memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'recently'
   const followLimit = isPro ? null : FREE_FOLLOWS
-  const pickLimit   = isPro ? null : FREE_PICKS
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace', padding: '0 0 80px' }}>
@@ -202,7 +201,7 @@ export default function ProfilePage() {
               )}
               <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>Member since {sinceDate}</span>
               <span style={{ fontSize: 9, color: MUTED }}>·</span>
-              <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>{follows.length} teams · {picks.length} picks</span>
+              <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>{follows.length} teams followed</span>
             </div>
           </div>
 
@@ -290,62 +289,6 @@ export default function ProfilePage() {
                   <div style={{ fontSize: 9, color: PURPLE, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>Free limit reached</div>
                   <div style={{ fontSize: 10, color: MUTED }}>Follow unlimited teams with Pro</div>
                   <button onClick={() => openModal('pro')} style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`, border: 'none', borderRadius: 8, color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', padding: '8px 16px', fontFamily: 'inherit' }}>
-                    Go Pro →
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* ── My Picks ──────────────────────────────────────────────────── */}
-        <section style={{ marginBottom: 40 }}>
-          <SectionHead
-            label="My Picks"
-            sub={pickLimit !== null ? `${picks.length} / ${pickLimit} active` : `${picks.length} active`}
-            action={
-              <Link href="/" style={{ textDecoration: 'none', fontSize: 10, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 12px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-                Add Picks →
-              </Link>
-            }
-          />
-
-          {picks.length === 0 ? (
-            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '28px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>📋</div>
-              <div style={{ fontSize: 11, color: MUTED }}>No picks added yet. Visit any team&apos;s chart to add picks.</div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {picks.map(p => {
-                const meta = LEAGUE_MAP[p.leagueId]
-                const btColor = { moneyline: GREEN, spread: '#3b82f6', over: PURPLE, under: '#b45309' }[p.betType]
-                const date = new Date(p.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                return (
-                  <div key={p.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 18 }}>{meta?.emoji ?? '🏆'}</span>
-                    <div style={{ flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: TEXT, letterSpacing: '0.04em' }}>{p.teamName}</div>
-                      <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.08em' }}>{meta?.name ?? p.leagueId} · Added {date}</div>
-                    </div>
-                    <div style={{ fontSize: 9, color: btColor, background: `${btColor}18`, border: `1px solid ${btColor}44`, borderRadius: 4, padding: '3px 10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, flexShrink: 0 }}>
-                      {p.betType}
-                    </div>
-                    <Link href={`/leagues/${p.leagueId}/${p.teamSlug}`} style={{ textDecoration: 'none', fontSize: 9, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 5, padding: '4px 10px', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>
-                      Chart →
-                    </Link>
-                    <button onClick={() => togglePick(p.teamSlug, p.leagueId, p.teamName, p.betType)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef444466', fontSize: 14, padding: '0 4px', flexShrink: 0 }}>
-                      ×
-                    </button>
-                  </div>
-                )
-              })}
-
-              {/* Limit warning */}
-              {!isPro && picks.length >= FREE_PICKS && (
-                <div style={{ background: `${PURPLE}08`, border: `1px solid ${PURPLE}33`, borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <span style={{ fontSize: 10, color: MUTED }}>Free pick limit reached. Go Pro for unlimited picks.</span>
-                  <button onClick={() => openModal('pro')} style={{ background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`, border: 'none', borderRadius: 6, color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', padding: '7px 14px', fontFamily: 'inherit', flexShrink: 0 }}>
                     Go Pro →
                   </button>
                 </div>

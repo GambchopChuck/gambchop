@@ -20,17 +20,16 @@ const AMBER  = '#f59e0b'
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const FREE_FEATURES = [
-  { label: 'Last 10 games per team',         included: true  },
+  { label: 'Last 3 games per team',           included: true  },
   { label: 'Moneyline chart view',            included: true  },
   { label: 'Follow up to 3 teams',            included: true  },
-  { label: 'Track up to 3 picks',             included: true  },
   { label: 'Community read access',           included: true  },
   { label: 'Full season history',             included: false },
   { label: 'All 9 betting metrics',           included: false },
   { label: 'Advanced filters & date ranges',  included: false },
   { label: 'Streak alerts & line movement',   included: false },
   { label: 'Community board posting',         included: false },
-  { label: 'Unlimited teams & picks',         included: false },
+  { label: 'Unlimited favorites',             included: false },
   { label: 'CSV export',                      included: false },
 ]
 
@@ -41,7 +40,7 @@ const PRO_FEATURES = [
   { label: 'Advanced filters & date ranges',  highlight: false },
   { label: 'Streak alerts & line movement',   highlight: true  },
   { label: 'Community board access',          highlight: false },
-  { label: 'Unlimited teams & picks',         highlight: true  },
+  { label: 'Unlimited favorites',              highlight: true  },
   { label: 'CSV export',                      highlight: false },
   { label: 'Priority support',                highlight: false },
 ]
@@ -57,7 +56,7 @@ const FAQS = [
   },
   {
     q: 'What\'s the difference between monthly and annual?',
-    a: 'Annual billing locks in $6.58/month (billed as $79/year) and saves you 45% versus paying month-to-month.',
+    a: 'Annual billing locks in $15/month (billed as $180/year) and saves you 25% versus paying month-to-month.',
   },
   {
     q: 'Do you offer refunds?',
@@ -141,7 +140,7 @@ function FreeCard({ onJoin }: { onJoin: () => void }) {
           <span style={{ fontSize: 12, color: MUTED, letterSpacing: '0.06em' }}>/month</span>
         </div>
         <p style={{ fontSize: 11, color: MUTED, margin: 0, lineHeight: 1.6, letterSpacing: '0.02em' }}>
-          Charts, picks, and team tracking — no card needed.
+          Charts and team tracking — no card needed.
         </p>
       </div>
 
@@ -188,9 +187,9 @@ function ProCard({
   const isPro = memberTier === 'pro'
 
   const monthly = billing === 'monthly'
-  const price    = monthly ? '$12'  : '$79'
+  const price    = monthly ? '$20'  : '$180'
   const period   = monthly ? '/month' : '/year'
-  const perMonth = monthly ? null : '$6.58/mo'
+  const perMonth = monthly ? null : '$15/mo'
 
   return (
     <div style={{
@@ -211,7 +210,7 @@ function ProCard({
           letterSpacing: '0.12em', textTransform: 'uppercase',
           padding: '3px 10px', borderRadius: 4,
         }}>
-          Save 45%
+          Save 25%
         </div>
       )}
 
@@ -273,10 +272,9 @@ function ProCard({
 // ─── Comparison Table ─────────────────────────────────────────────────────────
 
 const COMPARE_ROWS: { label: string; free: string; pro: string }[] = [
-  { label: 'Game history',       free: 'Last 10 games',    pro: 'Full season, all years' },
+  { label: 'Game history',       free: 'Last 3 games',     pro: 'Full season, all years' },
   { label: 'Betting metrics',    free: '2 of 9',           pro: 'All 9 unlocked'          },
   { label: 'Teams followed',     free: 'Up to 3',          pro: 'Unlimited'               },
-  { label: 'Active picks',       free: 'Up to 3',          pro: 'Unlimited'               },
   { label: 'Filters & ranges',   free: 'Basic',            pro: 'Advanced + custom dates' },
   { label: 'Streak alerts',      free: '—',                pro: 'Real-time'               },
   { label: 'Line movement',      free: '—',                pro: 'Real-time'               },
@@ -397,7 +395,7 @@ export default function PricingPage() {
                       fontSize: 7, fontWeight: 900, letterSpacing: '0.1em',
                       background: AMBER, color: '#000', borderRadius: 3, padding: '1px 5px',
                     }}>
-                      SAVE 45%
+                      SAVE 25%
                     </span>
                   </span>
                 )}

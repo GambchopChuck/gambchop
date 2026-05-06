@@ -5,22 +5,12 @@ import { generateMockGames } from './leagues-data'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type BetType    = 'moneyline' | 'spread' | 'over' | 'under'
 export type NotifType  = 'streak' | 'line-move' | 'game-day'
 
 export interface Follow {
   teamSlug: string
   leagueId: string
   teamName: string
-  addedAt: string
-}
-
-export interface Pick {
-  id: string
-  teamSlug: string
-  leagueId: string
-  teamName: string
-  betType: BetType
   addedAt: string
 }
 
@@ -36,10 +26,8 @@ export interface AppNotification {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const FREE_FOLLOWS = 3
-export const FREE_PICKS   = 5
 
 const FK = 'gambchop-follows'
-const PK = 'gambchop-picks'
 const NK = 'gambchop-notifications'
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
@@ -115,37 +103,30 @@ export function genNotifs(teamName: string, now = Date.now()): AppNotification[]
 
 interface UCValue {
   follows:      Follow[]
-  picks:        Pick[]
   notifications: AppNotification[]
   unreadCount:  number
   isFollowing:  (slug: string) => boolean
   toggleFollow: (slug: string, leagueId: string, teamName: string) => void
-  hasPick:      (slug: string, betType: BetType) => boolean
-  togglePick:   (slug: string, leagueId: string, teamName: string, betType: BetType) => void
   markRead:     (id: string) => void
   markAllRead:  () => void
 }
 
 const UC = createContext<UCValue>({
-  follows: [], picks: [], notifications: [], unreadCount: 0,
+  follows: [], notifications: [], unreadCount: 0,
   isFollowing: () => false, toggleFollow: () => {},
-  hasPick: () => false, togglePick: () => {},
   markRead: () => {}, markAllRead: () => {},
 })
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [follows, setFollows] = useState<Follow[]>([])
-  const [picks,   setPicks]   = useState<Pick[]>([])
   const [notifs,  setNotifs]  = useState<AppNotification[]>([])
 
   useEffect(() => {
     setFollows(ls<Follow>(FK))
-    setPicks(ls<Pick>(PK))
     setNotifs(ls<AppNotification>(NK))
   }, [])
 
   const isFollowing = (slug: string) => follows.some(f => f.teamSlug === slug)
-  const hasPick     = (slug: string, bt: BetType) => picks.some(p => p.teamSlug === slug && p.betType === bt)
   const unreadCount = notifs.filter(n => !n.read).length
 
   const toggleFollow = (slug: string, leagueId: string, teamName: string) => {
@@ -166,20 +147,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const togglePick = (slug: string, leagueId: string, teamName: string, betType: BetType) => {
-    if (hasPick(slug, betType)) {
-      const np = picks.filter(p => !(p.teamSlug === slug && p.betType === betType))
-      setPicks(np); persist(PK, np)
-    } else {
-      const np = [...picks, {
-        id: `${slug}-${betType}-${Date.now()}`,
-        teamSlug: slug, leagueId, teamName, betType,
-        addedAt: new Date().toISOString(),
-      }]
-      setPicks(np); persist(PK, np)
-    }
-  }
-
   const markRead = (id: string) => {
     const nn = notifs.map(n => n.id === id ? { ...n, read: true } : n)
     setNotifs(nn); persist(NK, nn)
@@ -191,7 +158,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UC.Provider value={{ follows, picks, notifications: notifs, unreadCount, isFollowing, toggleFollow, hasPick, togglePick, markRead, markAllRead }}>
+    <UC.Provider value={{ follows, notifications: notifs, unreadCount, isFollowing, toggleFollow, markRead, markAllRead }}>
       {children}
     </UC.Provider>
   )

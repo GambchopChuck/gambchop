@@ -21,7 +21,7 @@ const PRO_PERKS = [
   'Advanced filters & custom date ranges',
   'Real-time streak alerts & line movement',
   'Community board posting',
-  'Unlimited teams & picks tracked',
+  'Unlimited favorites tracked',
   'CSV export',
 ]
 

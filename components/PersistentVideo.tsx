@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useFilters } from '@/lib/filter-context'
 import FiltersDropdown from './FiltersDropdown'
 
-const VIDEO_ID = 'dQw4w9WgXcQ'
+// TODO: Replace with real video before launch
+const VIDEO_ID = 'PLACEHOLDER_REPLACE_ME'
 
 const CORNER_SIZE = 18
 const CORNER_W    = 2
@@ -43,32 +44,6 @@ export default function PersistentVideo() {
             <span style={{ fontSize: 8, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               Yesterday&apos;s Recap · Today&apos;s Preview
             </span>
-
-            {/* Filters toggle */}
-            <button
-              onClick={() => setFiltersOpen(v => !v)}
-              style={{
-                marginLeft: 'auto', background: filtersOpen ? '#22c55e18' : 'none',
-                border: `1px solid ${filtersOpen ? '#22c55e55' : '#1a1a24'}`,
-                borderRadius: 5, color: filtersOpen ? '#22c55e' : '#52525b',
-                cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
-                padding: '4px 10px', transition: 'all 0.15s',
-                display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-              }}
-            >
-              <span>◧</span>
-              <span>Filters</span>
-              {activeCount > 0 && (
-                <span style={{
-                  background: '#22c55e', borderRadius: '50%',
-                  width: 14, height: 14, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: 8, color: '#000', fontWeight: 900,
-                }}>
-                  {activeCount}
-                </span>
-              )}
-            </button>
 
             {/* Collapse toggle */}
             <button
@@ -118,20 +93,60 @@ export default function PersistentVideo() {
                 '0 0 110px rgba(139,92,246,0.06)',
               ].join(', '),
             }}>
-              <iframe
-                src={`https://www.youtube.com/embed/${VIDEO_ID}?rel=0&modestbranding=1`}
-                title="Gambchop Daily"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0, borderRadius: 8 }}
-              />
+              {VIDEO_ID === 'PLACEHOLDER_REPLACE_ME' ? (
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#0c0c12', borderRadius: 8,
+                }}>
+                  <span style={{ fontSize: 10, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                    Video coming soon
+                  </span>
+                </div>
+              ) : (
+                <iframe
+                  src={`https://www.youtube.com/embed/${VIDEO_ID}?rel=0&modestbranding=1`}
+                  title="Gambchop Daily"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0, borderRadius: 8 }}
+                />
+              )}
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* Filters dropdown — rendered below the video */}
+      {/* Filters toggle — below video, right-aligned */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 24px 0', maxWidth: 800, margin: '0 auto' }}>
+        <button
+          onClick={() => setFiltersOpen(v => !v)}
+          style={{
+            background: filtersOpen ? '#22c55e18' : 'none',
+            border: `1px solid ${filtersOpen ? '#22c55e55' : '#1a1a24'}`,
+            borderRadius: 5, color: filtersOpen ? '#22c55e' : '#52525b',
+            cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
+            padding: '4px 10px', transition: 'all 0.15s',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          <span>◧</span>
+          <span>Filters</span>
+          {activeCount > 0 && (
+            <span style={{
+              background: '#22c55e', borderRadius: '50%',
+              width: 14, height: 14, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: 8, color: '#000', fontWeight: 900,
+            }}>
+              {activeCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filters dropdown */}
       {filtersOpen && <FiltersDropdown onClose={() => setFiltersOpen(false)} />}
 
     </div>

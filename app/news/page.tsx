@@ -33,7 +33,7 @@ export default function NewsPage() {
 
         <div style={{ marginTop: 40, background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 12, padding: '24px', textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: '#52525b', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            Full news feed coming soon — daily articles, trend alerts & value picks
+            Full news feed coming soon — daily articles and trend alerts
           </div>
         </div>
       </div>

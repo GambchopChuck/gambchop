@@ -7,8 +7,7 @@ import { notFound } from 'next/navigation'
 import GambchopChart from '@/components/GambchopChart'
 import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
 import { useAuth } from '@/lib/auth-context'
-import { useUser, FREE_FOLLOWS, FREE_PICKS } from '@/lib/user-context'
-import type { BetType } from '@/lib/user-context'
+import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 
 const BG     = '#0a0a0f'
 const CARD   = '#0f0f14'
@@ -41,7 +40,7 @@ function fakeRecord(seed: number, offset: number): string {
 export default function TeamPage() {
   const params = useParams<{ league: string; team: string }>()
   const { memberTier, openModal, setIsMember } = useAuth()
-  const { isFollowing, toggleFollow, follows, hasPick, togglePick, picks } = useUser()
+  const { isFollowing, toggleFollow, follows } = useUser()
 
   const leagueId  = params?.league ?? ''
   const teamSlug  = params?.team ?? ''
@@ -148,50 +147,6 @@ export default function TeamPage() {
               </div>
             )}
           </div>
-
-          {/* My Picks row — members only */}
-          {ready && memberTier !== 'none' && (() => {
-            const BET_TYPES: { type: BetType; label: string; color: string }[] = [
-              { type: 'moneyline', label: 'Moneyline', color: '#22c55e' },
-              { type: 'spread',    label: 'Spread',    color: '#3b82f6' },
-              { type: 'over',      label: 'Over',      color: '#8b5cf6' },
-              { type: 'under',     label: 'Under',     color: '#f97316' },
-            ]
-            const atPickLimit = memberTier === 'free' && picks.length >= FREE_PICKS
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>My Picks</span>
-                {BET_TYPES.map(({ type, label, color }) => {
-                  const active   = hasPick(teamSlug, type)
-                  const disabled = !active && atPickLimit
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => { if (!disabled) togglePick(teamSlug, leagueId, entity, type) }}
-                      style={{
-                        background: active ? `${color}22` : 'transparent',
-                        border: `1px solid ${active ? color + '66' : disabled ? BORDER : color + '44'}`,
-                        borderRadius: 5, padding: '5px 12px', cursor: disabled ? 'default' : 'pointer',
-                        fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                        color: active ? color : disabled ? MUTED : color,
-                        fontFamily: 'inherit', transition: 'all 0.15s',
-                      }}
-                    >
-                      {active ? `✓ ${label}` : disabled ? `${label} (Pro)` : `+ ${label}`}
-                    </button>
-                  )
-                })}
-                {atPickLimit && (
-                  <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.08em' }}>
-                    {FREE_PICKS}/{FREE_PICKS} picks used —{' '}
-                    <button onClick={() => openModal('pro')} style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: 9, cursor: 'pointer', fontFamily: 'inherit', padding: 0, textDecoration: 'underline', letterSpacing: '0.08em' }}>
-                      Go Pro for unlimited
-                    </button>
-                  </span>
-                )}
-              </div>
-            )
-          })()}
 
           {/* Stats row — hidden until member */}
           {showStats ? (
