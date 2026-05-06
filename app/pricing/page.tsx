@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { supabase } from '@/lib/supabase'
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ const PRO_FEATURES = [
   { label: 'Advanced filters & date ranges',  highlight: false },
   { label: 'Streak alerts & line movement',   highlight: true  },
   { label: 'Community board access',          highlight: false },
-  { label: 'Unlimited favorites',              highlight: true  },
+  { label: 'Unlimited favorites',             highlight: true  },
   { label: 'CSV export',                      highlight: false },
   { label: 'Priority support',                highlight: false },
 ]
@@ -52,7 +53,7 @@ const FAQS = [
   },
   {
     q: 'Is there a free trial?',
-    a: 'Pro comes with a 7-day free trial. No credit card required to start.',
+    a: 'Pro comes with a 3-day free trial. A card is required at checkout — cancel before the trial ends and you won\'t be charged.',
   },
   {
     q: 'What\'s the difference between monthly and annual?',
@@ -128,7 +129,6 @@ function FreeCard({ onJoin }: { onJoin: () => void }) {
       padding: '32px 28px', display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
     }}>
-      {/* Top accent */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${BORDER}, transparent)` }} />
 
       <div style={{ marginBottom: 28 }}>
@@ -200,7 +200,6 @@ function ProCard({
       position: 'relative', overflow: 'hidden',
       boxShadow: `0 0 40px ${PURPLE}18, 0 0 80px ${PURPLE}08`,
     }}>
-      {/* Top accent */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${PURPLE}, transparent)` }} />
 
       {billing === 'annual' && (
@@ -258,12 +257,12 @@ function ProCard({
             boxShadow: `0 0 24px ${PURPLE}55`, opacity: loading ? 0.7 : 1,
           }}
         >
-          {loading ? 'Redirecting…' : billing === 'annual' ? 'Start Annual — 7 Days Free' : 'Start Monthly — 7 Days Free'}
+          {loading ? 'Redirecting…' : billing === 'annual' ? 'Start Annual — 3-Day Trial' : 'Start Monthly — 3-Day Trial'}
         </button>
       )}
 
       <p style={{ fontSize: 9, color: MUTED, textAlign: 'center', marginTop: 12, marginBottom: 0, letterSpacing: '0.08em' }}>
-        Cancel anytime · No card for free trial
+        Cancel anytime · Card required at checkout
       </p>
     </div>
   )
@@ -322,29 +321,59 @@ function ComparisonTable() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function PricingPage() {
-  const { openModal, memberTier, user } = useAuth()
-  const router   = useRouter()
-  const [billing,   setBilling]   = useState<'monthly' | 'annual'>('annual')
-  const [checkingOut, setCheckingOut] = useState(false)
+function PricingContent() {
+  const { openModal, memberTier, user, loading: authLoading } = useAuth()
+  const router        = useRouter()
+  const searchParams  = useSearchParams()
+  const canceled      = searchParams.get('canceled') === 'true'
+  const autoCheckout  = searchParams.get('checkout') as 'monthly' | 'annual' | null
+
+  const [billing,       setBilling]      = useState<'monthly' | 'annual'>('annual')
+  const [checkingOut,   setCheckingOut]  = useState(false)
+  const [checkoutError, setCheckoutError] = useState('')
+  const [autoFired,     setAutoFired]    = useState(false)
 
   const handleUpgrade = async (b: 'monthly' | 'annual') => {
-    if (!user) { openModal('login'); return }
+    setCheckoutError('')
+
+    // Not logged in — send to signup with intent params
+    if (!user) {
+      router.push(`/auth/signup?intent=pro&plan=${b}`)
+      return
+    }
+
     setCheckingOut(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('No active session — please sign in again.')
+
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ billing: b, userId: user.id, email: user.email }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ priceId: b }),
       })
-      const { url, error } = await res.json()
-      if (error || !url) throw new Error(error ?? 'No URL returned')
-      window.location.href = url
+
+      const json = await res.json() as { url?: string; error?: string }
+      if (!res.ok || !json.url) throw new Error(json.error ?? 'No checkout URL returned')
+
+      window.location.href = json.url
     } catch (err) {
-      console.error(err)
+      setCheckoutError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setCheckingOut(false)
     }
   }
+
+  // Auto-trigger checkout after redirecting back from signup with intent=pro
+  useEffect(() => {
+    if (!autoCheckout || authLoading || !user || autoFired) return
+    setAutoFired(true)
+    setBilling(autoCheckout)
+    handleUpgrade(autoCheckout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCheckout, authLoading, user, autoFired])
 
   return (
     <div style={{
@@ -353,6 +382,32 @@ export default function PricingPage() {
       paddingLeft: 80,
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 32px 100px' }}>
+
+        {/* ── Canceled notice ───────────────────────────────────────────── */}
+        {canceled && (
+          <div style={{
+            background: '#f59e0b12', border: '1px solid #f59e0b44', borderRadius: 10,
+            padding: '12px 18px', marginBottom: 28,
+            fontSize: 11, color: AMBER, letterSpacing: '0.03em',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span>◎</span>
+            <span>Checkout canceled — you weren&apos;t charged.</span>
+          </div>
+        )}
+
+        {/* ── Checkout error ────────────────────────────────────────────── */}
+        {checkoutError && (
+          <div style={{
+            background: '#ef444412', border: '1px solid #ef444444', borderRadius: 10,
+            padding: '12px 18px', marginBottom: 28,
+            fontSize: 11, color: '#ef4444', letterSpacing: '0.03em',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span>✕</span>
+            <span>{checkoutError}</span>
+          </div>
+        )}
 
         {/* ── Hero ──────────────────────────────────────────────────────── */}
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
@@ -437,17 +492,17 @@ export default function PricingPage() {
             padding: '40px 40px', textAlign: 'center', marginBottom: 72,
             position: 'relative', overflow: 'hidden',
           }}>
-            {/* Background glow */}
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 300, height: 300, background: PURPLE, borderRadius: '50%', opacity: 0.04, filter: 'blur(60px)', pointerEvents: 'none' }} />
 
             <div style={{ fontSize: 9, color: PURPLE, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12 }}>
               ⚡ Limited-Time Offer
             </div>
             <h2 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '0.04em', textTransform: 'uppercase', margin: '0 0 12px' }}>
-              Start Pro Free for 7 Days
+              Start Pro Free for 3 Days
             </h2>
             <p style={{ fontSize: 11, color: MUTED, maxWidth: 440, margin: '0 auto 28px', lineHeight: 1.7, letterSpacing: '0.02em' }}>
-              No credit card required. Access every metric, every alert, and the full season chart from day one.
+              Card required. Access every metric, every alert, and the full season chart from day one.
+              Cancel before day 3 and you won&apos;t be charged.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
@@ -462,7 +517,7 @@ export default function PricingPage() {
                   boxShadow: `0 0 28px ${PURPLE}55`, opacity: checkingOut ? 0.7 : 1,
                 }}
               >
-                {checkingOut ? 'Redirecting…' : 'Upgrade to Pro →'}
+                {checkingOut ? 'Redirecting…' : 'Start 3-Day Trial →'}
               </button>
               <button
                 onClick={() => openModal('join')}
@@ -509,5 +564,13 @@ export default function PricingPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense>
+      <PricingContent />
+    </Suspense>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
@@ -28,8 +28,12 @@ function friendlyError(msg: string): string {
   return msg
 }
 
-export default function SignUpPage() {
-  const router = useRouter()
+function SignUpForm() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const intent       = searchParams.get('intent')   // 'pro'
+  const plan         = searchParams.get('plan')     // 'monthly' | 'annual'
+
   const [displayName, setDisplayName] = useState('')
   const [email,       setEmail]       = useState('')
   const [password,    setPassword]    = useState('')
@@ -53,7 +57,13 @@ export default function SignUpPage() {
       })
       if (error) { setError(friendlyError(error.message)); return }
       if (!data.session) { setDone(true); return }
-      router.push('/')
+
+      // Session exists — user is immediately logged in
+      if (intent === 'pro' && (plan === 'monthly' || plan === 'annual')) {
+        router.push(`/pricing?checkout=${plan}`)
+      } else {
+        router.push('/')
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setError(friendlyError(msg))
@@ -103,6 +113,16 @@ export default function SignUpPage() {
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>Gambchop</span>
             </div>
+
+            {intent === 'pro' && (
+              <div style={{
+                background: '#8b5cf612', border: '1px solid #8b5cf633', borderRadius: 8,
+                padding: '10px 14px', fontSize: 11, color: '#8b5cf6',
+                letterSpacing: '0.03em', marginBottom: 20, textAlign: 'center',
+              }}>
+                ⚡ Create an account to start your 3-day Pro trial
+              </div>
+            )}
 
             <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
               Free forever
@@ -173,5 +193,13 @@ export default function SignUpPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   )
 }
