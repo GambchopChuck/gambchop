@@ -51,7 +51,7 @@ create policy "profiles: update own"
 
 
 -- ─── 3. favorite_groups RLS ───────────────────────────────────────────────────
--- user_id is stored as text. App writes auth.uid()::text for all new rows.
+-- user_id is uuid. App writes the Supabase auth UUID directly.
 
 alter table favorite_groups enable row level security;
 
@@ -62,16 +62,16 @@ drop policy if exists "fg: update own" on favorite_groups;
 drop policy if exists "fg: delete own" on favorite_groups;
 
 create policy "fg: select own"
-  on favorite_groups for select using (user_id = auth.uid()::text);
+  on favorite_groups for select using (user_id = auth.uid());
 
 create policy "fg: insert own"
-  on favorite_groups for insert with check (user_id = auth.uid()::text);
+  on favorite_groups for insert with check (user_id = auth.uid());
 
 create policy "fg: update own"
-  on favorite_groups for update using (user_id = auth.uid()::text);
+  on favorite_groups for update using (user_id = auth.uid());
 
 create policy "fg: delete own"
-  on favorite_groups for delete using (user_id = auth.uid()::text);
+  on favorite_groups for delete using (user_id = auth.uid());
 
 
 -- ─── 4. favorite_items RLS ────────────────────────────────────────────────────
@@ -88,22 +88,22 @@ drop policy if exists "fi: delete own"  on favorite_items;
 create policy "fi: select own"
   on favorite_items for select using (
     exists (select 1 from favorite_groups
-            where id = favorite_group_id and user_id = auth.uid()::text));
+            where id = favorite_group_id and user_id = auth.uid()));
 
 create policy "fi: insert own"
   on favorite_items for insert with check (
     exists (select 1 from favorite_groups
-            where id = favorite_group_id and user_id = auth.uid()::text));
+            where id = favorite_group_id and user_id = auth.uid()));
 
 create policy "fi: update own"
   on favorite_items for update using (
     exists (select 1 from favorite_groups
-            where id = favorite_group_id and user_id = auth.uid()::text));
+            where id = favorite_group_id and user_id = auth.uid()));
 
 create policy "fi: delete own"
   on favorite_items for delete using (
     exists (select 1 from favorite_groups
-            where id = favorite_group_id and user_id = auth.uid()::text));
+            where id = favorite_group_id and user_id = auth.uid()));
 
 
 -- ─── 5. community_threads RLS ─────────────────────────────────────────────────

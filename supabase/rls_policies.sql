@@ -2,10 +2,10 @@
 -- Run AFTER schema.sql, community.sql, parlays.sql + migrate_to_favorites.sql,
 -- and create_profiles.sql.
 --
--- Note: community_threads, community_comments, favorite_groups, favorite_items
--- all store user_id as TEXT. The app now writes the Supabase auth UUID (a real
--- UUID cast to text) for all new rows. Old rows with custom-generated IDs won't
--- match auth.uid()::text — those are grandfathered read-only until data migrated.
+-- Note: favorite_groups/favorite_items store user_id as UUID (matches auth.uid()).
+-- community_threads, community_comments store user_id as TEXT — those policies
+-- keep the ::text cast. Old community rows with generated IDs won't match
+-- auth.uid()::text and are grandfathered read-only until a community migration.
 
 
 -- ─── profiles ─────────────────────────────────────────────────────────────────
@@ -38,16 +38,16 @@ drop policy if exists "fg: update own"   on favorite_groups;
 drop policy if exists "fg: delete own"   on favorite_groups;
 
 create policy "fg: select own"
-  on favorite_groups for select using (user_id = auth.uid()::text);
+  on favorite_groups for select using (user_id = auth.uid());
 
 create policy "fg: insert own"
-  on favorite_groups for insert with check (user_id = auth.uid()::text);
+  on favorite_groups for insert with check (user_id = auth.uid());
 
 create policy "fg: update own"
-  on favorite_groups for update using (user_id = auth.uid()::text);
+  on favorite_groups for update using (user_id = auth.uid());
 
 create policy "fg: delete own"
-  on favorite_groups for delete using (user_id = auth.uid()::text);
+  on favorite_groups for delete using (user_id = auth.uid());
 
 
 -- ─── favorite_items ───────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ create policy "fi: select own"
     exists (
       select 1 from favorite_groups
       where id = favorite_group_id
-        and user_id = auth.uid()::text
+        and user_id = auth.uid()
     )
   );
 
@@ -74,7 +74,7 @@ create policy "fi: insert own"
     exists (
       select 1 from favorite_groups
       where id = favorite_group_id
-        and user_id = auth.uid()::text
+        and user_id = auth.uid()
     )
   );
 
@@ -83,7 +83,7 @@ create policy "fi: update own"
     exists (
       select 1 from favorite_groups
       where id = favorite_group_id
-        and user_id = auth.uid()::text
+        and user_id = auth.uid()
     )
   );
 
@@ -92,7 +92,7 @@ create policy "fi: delete own"
     exists (
       select 1 from favorite_groups
       where id = favorite_group_id
-        and user_id = auth.uid()::text
+        and user_id = auth.uid()
     )
   );
 

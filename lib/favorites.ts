@@ -48,25 +48,9 @@ export interface FavoriteGroup {
 // ─── User Identity ────────────────────────────────────────────────────────────
 
 export function getUserId(authId?: string | null): string {
-  if (typeof window === 'undefined') return authId ?? ''
-  // Supabase auth UUID takes precedence — write it back so it persists across sessions
-  if (authId) {
-    localStorage.setItem('gambchop-user-id', authId)
-    return authId
-  }
-  // Migrate from old key if present
-  const legacy = localStorage.getItem('gambchop-parlay-uid')
-  if (legacy) {
-    localStorage.setItem('gambchop-user-id', legacy)
-    localStorage.removeItem('gambchop-parlay-uid')
-    return legacy
-  }
-  let uid = localStorage.getItem('gambchop-user-id')
-  if (!uid) {
-    uid = 'usr_' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-    localStorage.setItem('gambchop-user-id', uid)
-  }
-  return uid
+  // favorite_groups.user_id is a uuid column — only auth UUIDs are valid
+  if (authId) return authId
+  return ''
 }
 
 // ─── Mock Upcoming Events ─────────────────────────────────────────────────────
