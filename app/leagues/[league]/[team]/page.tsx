@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -8,6 +8,7 @@ import GambchopChart from '@/components/GambchopChart'
 import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
 import { useAuth } from '@/lib/auth-context'
 import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
+import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 
 const BG     = '#0a0a0f'
 const CARD   = '#0f0f14'
@@ -39,7 +40,7 @@ function fakeRecord(seed: number, offset: number): string {
 
 export default function TeamPage() {
   const params = useParams<{ league: string; team: string }>()
-  const { memberTier, openModal, setIsMember } = useAuth()
+  const { memberTier, openModal, setIsMember, user } = useAuth()
   const { isFollowing, toggleFollow, follows } = useUser()
 
   const leagueId  = params?.league ?? ''
@@ -49,6 +50,42 @@ export default function TeamPage() {
 
   const [ready, setReady] = useState(false)
   useEffect(() => { setReady(true) }, [])
+
+  const [teamFavorites, setTeamFavorites] = useState<Favorite[]>([])
+  const [favError, setFavError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user?.id || !ready) return
+    fetchFavorites(user.id).then(all => setTeamFavorites(all.filter(f => f.team_name === entity)))
+  }, [user?.id, ready, entity])
+
+  const starredBetTypes = useMemo(
+    () => new Set(teamFavorites.map(f => f.bet_type)),
+    [teamFavorites],
+  )
+
+  async function handleStarClick(betType: string) {
+    if (!user?.id || !entity) return
+    const bt = betType as BetType
+    const existing = teamFavorites.find(f => f.bet_type === bt)
+    if (existing) {
+      const ok = await removeFavorite(existing.id)
+      if (ok) setTeamFavorites(prev => prev.filter(f => f.id !== existing.id))
+    } else {
+      const all = await fetchFavorites(user.id)
+      const result = await addFavorite(
+        user.id,
+        { team_name: entity, league_id: leagueId, league_name: meta.name, bet_type: bt },
+        all.length,
+      )
+      if (result.error) {
+        setFavError(result.error)
+        setTimeout(() => setFavError(null), 4000)
+      } else {
+        setTeamFavorites(prev => [...prev, result.data!])
+      }
+    }
+  }
 
   if (!meta || !entity) return notFound()
 
@@ -200,6 +237,13 @@ export default function TeamPage() {
           {memberTier === 'pro' ? 'Last 10 Games — Full Season' : memberTier === 'free' ? 'Last 10 Games — Free Preview (3 shown)' : 'Last 10 Games'}
         </div>
 
+        {favError && (
+          <div style={{ margin: '0 12px 12px', background: '#ef444418', border: '1px solid #ef444444', borderRadius: 8, padding: '10px 14px', fontSize: 11, color: '#ef4444', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{favError}</span>
+            <button onClick={() => setFavError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0, fontFamily: 'inherit' }}>✕</button>
+          </div>
+        )}
+
         {ready && (
           <GambchopChart
             data={chartData}
@@ -207,6 +251,8 @@ export default function TeamPage() {
             accent={meta.accent}
             onJoin={() => { setIsMember(true); openModal('join') }}
             onUpgrade={() => openModal('pro')}
+            starredBetTypes={user ? starredBetTypes : undefined}
+            onStarClick={user ? handleStarClick : undefined}
           />
         )}
       </div>

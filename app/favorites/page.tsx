@@ -1,47 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
-import { LEAGUES } from '@/lib/leagues-data'
+import { generateMockGames } from '@/lib/leagues-data'
+import type { GameEntry } from '@/lib/leagues-data'
 import {
-  FavoriteGroup, FavoriteItem, BetType, UpcomingEvent, HotFavoriteTeam,
-  getUserId, fetchFavoriteGroups, createFavoriteGroup,
-  addItemToGroup, removeItemFromGroup, deleteFavoriteGroup,
-  renameFavoriteGroup, generateUpcomingEvents, getSpreadLabel,
-  getHotFavoriteTeams, checkAndCompleteGroups,
+  Favorite, BetType, BET_TYPE_LABELS, BET_TYPE_ACCENTS,
+  fetchFavorites, addFavorite, removeFavorite, reorderFavorites,
 } from '@/lib/favorites'
-
-// ─── Item Sort ────────────────────────────────────────────────────────────────
-
-type ItemSortMode = 'selected' | 'az' | 'za' | 'wtl' | 'ltw' | 'league'
-
-const SORT_LABELS: Record<ItemSortMode, string> = {
-  selected: 'Selected',
-  az:       'A-Z',
-  za:       'Z-A',
-  wtl:      'W → L',
-  ltw:      'L → W',
-  league:   'League A-Z',
-}
-
-const OUTCOME_RANK: Record<string, number> = {
-  win: 0, over: 1, push: 2, pending: 3, under: 4, loss: 5,
-}
-
-function sortItems(items: FavoriteItem[], mode: ItemSortMode): FavoriteItem[] {
-  if (mode === 'selected') return items
-  const copy = [...items]
-  switch (mode) {
-    case 'az':     return copy.sort((a, b) => a.team_name.localeCompare(b.team_name))
-    case 'za':     return copy.sort((a, b) => b.team_name.localeCompare(a.team_name))
-    case 'wtl':    return copy.sort((a, b) => (OUTCOME_RANK[a.outcome] ?? 3) - (OUTCOME_RANK[b.outcome] ?? 3))
-    case 'ltw':    return copy.sort((a, b) => (OUTCOME_RANK[b.outcome] ?? 3) - (OUTCOME_RANK[a.outcome] ?? 3))
-    case 'league': return copy.sort((a, b) => a.league_id.localeCompare(b.league_id))
-    default:       return copy
-  }
-}
-
-const SORT_LS_KEY = 'gambchop-favorites-sort'
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -52,1101 +19,573 @@ const TEXT   = '#f4f4f5'
 const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 const GREEN  = '#22c55e'
-const RED    = '#ef4444'
-const PURPLE = '#9333ea'
-const BLUE   = '#60a5fa'
-const AMBER  = '#eab308'
+const PURPLE = '#8b5cf6'
+const GOLD   = '#eab308'
 
-function outcomeColor(outcome: ItemOutcome): string {
-  switch (outcome) {
-    case 'win':   return GREEN
-    case 'loss':  return RED
-    case 'over':  return PURPLE
-    case 'under': return BLUE
-    case 'push':  return AMBER
-    default:      return BORDER
+const C = {
+  green: '#22c55e', red: '#ef4444', white: '#f4f4f5',
+  gold: '#eab308', orange: '#f97316', royal: '#2563eb',
+  purple: '#9333ea', teal: '#14b8a6', silver: '#94a3b8',
+  violet: '#8b5cf6', brown: '#b45309', empty: '#131318',
+}
+
+// ─── Sort ─────────────────────────────────────────────────────────────────────
+
+type SortMode = 'selected' | 'az' | 'za' | 'wtl' | 'ltw' | 'league'
+
+const SORT_LABELS: Record<SortMode, string> = {
+  selected: 'Selected',
+  az:       'A-Z',
+  za:       'Z-A',
+  wtl:      'W → L',
+  ltw:      'L → W',
+  league:   'League A-Z',
+}
+const SORT_LS_KEY = 'gambchop-favorites-sort'
+
+// ─── Record helpers ───────────────────────────────────────────────────────────
+
+function getRecord(games: GameEntry[], bt: BetType): { w: number; l: number } {
+  const ml  = (g: GameEntry[]) => ({ w: g.filter(x => x.moneylineResult === 'win').length, l: g.filter(x => x.moneylineResult === 'loss').length })
+  const sp  = (g: GameEntry[]) => ({ w: g.filter(x => x.spreadResult   === 'win').length, l: g.filter(x => x.spreadResult   === 'loss').length })
+  const ou  = (g: GameEntry[], target: 'over' | 'under') => ({
+    w: g.filter(x => x.ouResult === target).length,
+    l: g.filter(x => x.ouResult === (target === 'over' ? 'under' : 'over')).length,
+  })
+  switch (bt) {
+    case 'moneyline':       return ml(games)
+    case 'spread':          return sp(games)
+    case 'ml_favorite':     return ml(games.filter(g => g.isFavorite))
+    case 'ml_underdog':     return ml(games.filter(g => !g.isFavorite))
+    case 'spread_favorite': return sp(games.filter(g => g.isSpreadFavorite))
+    case 'spread_dog':      return sp(games.filter(g => !g.isSpreadFavorite))
+    case 'home':            return ml(games.filter(g => g.isHome))
+    case 'away':            return ml(games.filter(g => !g.isHome))
+    case 'over':            return ou(games, 'over')
+    case 'under':           return ou(games, 'under')
   }
 }
 
-function outcomeIcon(outcome: ItemOutcome): string {
-  switch (outcome) {
-    case 'win':   return '✓'
-    case 'loss':  return '✗'
-    case 'over':  return '▲'
-    case 'under': return '▼'
-    case 'push':  return '~'
-    default:      return '●'
+function winRate(games: GameEntry[], bt: BetType): number {
+  const r = getRecord(games, bt)
+  const t = r.w + r.l
+  return t === 0 ? 0 : r.w / t
+}
+
+// ─── Cell rendering ───────────────────────────────────────────────────────────
+
+type CellInfo = { bg: string; label?: string; textColor?: string; glow?: string; opacity?: number }
+
+function getCellInfo(game: GameEntry, bt: BetType): CellInfo {
+  const empty = { bg: C.empty, opacity: 0.3 }
+  const dim   = { bg: C.empty, opacity: 0.12 }
+
+  const wlp = (result: 'win' | 'loss' | 'push' | null, wL = 'W', lL = 'L'): CellInfo => {
+    if (!result)           return empty
+    if (result === 'win')  return { bg: C.green,  label: wL, textColor: '#000', glow: `0 0 12px ${C.green}80`  }
+    if (result === 'loss') return { bg: C.red,    label: lL, textColor: '#fff', glow: `0 0 12px ${C.red}80`    }
+    return                        { bg: C.white,  label: 'P', textColor: '#111' }
+  }
+
+  const pill = (active: boolean | null, color: string): CellInfo => {
+    if (active === null) return empty
+    return active ? { bg: color, glow: `0 0 10px ${color}80` } : dim
+  }
+
+  const hasML = game.moneylineResult !== null
+  const hasSP = game.spreadResult    !== null
+
+  switch (bt) {
+    case 'moneyline':       return wlp(game.moneylineResult)
+    case 'spread':          return wlp(game.spreadResult, 'COV', 'MIS')
+    case 'ml_favorite':     return pill(hasML ? game.isFavorite       : null, C.gold)
+    case 'ml_underdog':     return pill(hasML ? !game.isFavorite      : null, C.orange)
+    case 'spread_favorite': return pill(hasSP ? game.isSpreadFavorite : null, C.royal)
+    case 'spread_dog':      return pill(hasSP ? !game.isSpreadFavorite : null, C.purple)
+    case 'home':            return pill(hasML ? game.isHome            : null, C.teal)
+    case 'away':            return pill(hasML ? !game.isHome           : null, C.silver)
+    case 'over': {
+      if (!game.ouResult) return empty
+      if (game.ouResult === 'over')  return { bg: C.violet, glow: `0 0 14px ${C.violet}90` }
+      if (game.ouResult === 'under') return dim
+      return { bg: C.white, label: 'P', textColor: '#111' }
+    }
+    case 'under': {
+      if (!game.ouResult) return empty
+      if (game.ouResult === 'under') return { bg: C.brown, glow: `0 0 14px ${C.brown}90` }
+      if (game.ouResult === 'over')  return dim
+      return { bg: C.white, label: 'P', textColor: '#111' }
+    }
   }
 }
 
-type ItemOutcome = FavoriteItem['outcome']
+// ─── Layout constants ─────────────────────────────────────────────────────────
 
-// ─── Pro Gate ─────────────────────────────────────────────────────────────────
+const LABEL_W  = 268
+const COL_W    = 52
+const FREE_COLS = 3
+const DATES    = ['G1','G2','G3','G4','G5','G6','G7','G8','G9','G10']
 
-function ProGate() {
-  const { openModal, setIsPro } = useAuth()
+// ─── Date header ──────────────────────────────────────────────────────────────
 
-  const btnPrimary: React.CSSProperties = {
-    background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`,
-    border: 'none', borderRadius: 8, color: TEXT,
-    fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
-    textTransform: 'uppercase', cursor: 'pointer', padding: '13px 32px',
-    fontFamily: 'var(--font-geist-mono), monospace',
-    boxShadow: `0 0 20px ${PURPLE}55`, width: 300,
-  }
-
-  const btnGhost: React.CSSProperties = {
-    background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8,
-    color: SUB, fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
-    textTransform: 'uppercase', cursor: 'pointer', padding: '10px 18px',
-    fontFamily: 'var(--font-geist-mono), monospace', width: 300,
-  }
-
+function DateHeader({ visibleCols }: { visibleCols: number }) {
   return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-      <div style={{ textAlign: 'center', maxWidth: 520 }}>
-        <div style={{ fontSize: 52, marginBottom: 18 }}>⭐</div>
-        <div style={{ fontSize: 9, color: PURPLE, letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>
-          Pro Feature
-        </div>
-        <h1 style={{
-          fontSize: 28, fontWeight: 900, color: TEXT,
-          letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 14px',
-          background: `linear-gradient(135deg, ${TEXT}, ${PURPLE})`,
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-        }}>
-          Favorites
-        </h1>
-        <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.8, margin: '0 0 28px', fontFamily: 'var(--font-geist-mono), monospace' }}>
-          Track the teams and players you care about across every supported league.
-          Color-coded outcomes, hot favorite alerts, and full history — all in one premium tool.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', marginBottom: 28 }}>
-          <button onClick={() => openModal('pro')} style={btnPrimary}>
-            Go Pro — Unlock Favorites
-          </button>
-          <button onClick={() => openModal('join')} style={btnGhost}>
-            Join Free (Limited Access)
-          </button>
-        </div>
-        <div style={{ padding: '18px 22px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12 }}>
-          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12, fontFamily: 'var(--font-geist-mono), monospace' }}>
-            Favorites Includes
-          </div>
-          {[
-            'Create unlimited favorites groups',
-            'Color-coded win / loss / push / over / under cells',
-            'Auto-saves as you track — no manual save required',
-            '"Hot Favorites" — surface your best-performing teams',
-            'Full tracking history with outcome data',
-            'Multi-league across all Gambchop-supported sports',
-          ].map(f => (
-            <div key={f} style={{ fontSize: 11, color: SUB, display: 'flex', gap: 8, marginBottom: 7, textAlign: 'left', fontFamily: 'var(--font-geist-mono), monospace' }}>
-              <span style={{ color: GREEN, flexShrink: 0 }}>✓</span>{f}
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={() => setIsPro(true)}
-          style={{ marginTop: 22, background: 'none', border: 'none', color: '#1a1a24', fontSize: 9, cursor: 'pointer', fontFamily: 'var(--font-geist-mono), monospace' }}
-        >
-          [Dev: Enable Pro]
-        </button>
+    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: `1px solid ${BORDER}`, padding: '10px 0 6px', background: BG }}>
+      <div style={{ width: 36, minWidth: 36, flexShrink: 0 }} /> {/* arrows gutter */}
+      <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, paddingLeft: 12 }}>
+        <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
       </div>
-    </div>
-  )
-}
-
-// ─── Color Legend ─────────────────────────────────────────────────────────────
-
-function ColorLegend() {
-  const items = [
-    { label: 'Win',     color: GREEN  },
-    { label: 'Loss',    color: RED    },
-    { label: 'Over',    color: PURPLE },
-    { label: 'Under',   color: BLUE   },
-    { label: 'Push',    color: AMBER  },
-    { label: 'Pending', color: BORDER },
-  ]
-  return (
-    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10 }}>
-      {items.map(({ label, color }) => (
-        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div style={{
-            width: 8, height: 8, borderRadius: 2, background: color,
-            boxShadow: color !== BORDER ? `0 0 5px ${color}88` : 'none',
-          }} />
-          <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.08em' }}>{label}</span>
+      {DATES.map((d, i) => (
+        <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center', position: 'relative' }}>
+          <span style={{ fontSize: 10, color: i < visibleCols ? '#52525b' : '#2a2a34', letterSpacing: '0.12em', fontWeight: 600 }}>{d}</span>
+          {i === visibleCols && (
+            <div style={{ position: 'absolute', top: -2, left: 0, width: 1, height: 26, background: `${PURPLE}55` }} />
+          )}
         </div>
       ))}
     </div>
   )
 }
 
-// ─── Item Cell ────────────────────────────────────────────────────────────────
+// ─── Favorite row ─────────────────────────────────────────────────────────────
 
-function ItemCell({
-  item,
-  onRemove,
-  canRemove = false,
+function FavoriteRow({
+  fav, idx, total, visibleCols, onRemove, onMoveUp, onMoveDown,
 }: {
-  item:       FavoriteItem
-  onRemove?:  () => void
-  canRemove?: boolean
+  fav:         Favorite
+  idx:         number
+  total:       number
+  visibleCols: number
+  onRemove:    () => void
+  onMoveUp:    () => void
+  onMoveDown:  () => void
 }) {
-  const isPending = item.outcome === 'pending'
-  const color     = outcomeColor(item.outcome)
-  const icon      = outcomeIcon(item.outcome)
-  const shortTeam = item.team_name.split(' ').pop() ?? item.team_name
-  const shortOpp  = item.opponent ? (item.opponent.split(' ').pop() ?? item.opponent) : '?'
+  const games   = useMemo(() => generateMockGames(fav.team_name, 10), [fav.team_name])
+  const record  = getRecord(games, fav.bet_type)
+  const accent  = BET_TYPE_ACCENTS[fav.bet_type]
+  const rowBg   = idx % 2 === 0 ? BG : '#0d0d14'
+  const wlColor = record.w > record.l ? C.green : record.w < record.l ? C.red : '#52525b'
 
   return (
-    <div style={{
-      position: 'relative',
-      minWidth: 114, maxWidth: 114,
-      background: isPending ? '#0c0c14' : `${color}12`,
-      border: `1px solid ${isPending ? BORDER : `${color}44`}`,
-      borderRadius: 10, padding: '10px 12px',
-      boxShadow: isPending ? 'none' : `0 0 14px ${color}28`,
-      transition: 'all 0.2s',
-      fontFamily: 'var(--font-geist-mono), monospace',
-    }}>
-      {canRemove && (
+    <div style={{ display: 'flex', alignItems: 'stretch', background: rowBg }}>
+
+      {/* ── Reorder arrows (outside scroll) ── */}
+      <div style={{
+        width: 36, minWidth: 36, flexShrink: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 1, background: rowBg,
+      }}>
+        <button
+          onClick={onMoveUp} disabled={idx === 0}
+          title="Move up"
+          style={{
+            background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer',
+            color: idx === 0 ? '#2a2a34' : MUTED, fontSize: 8, padding: '1px 4px', lineHeight: 1,
+            fontFamily: 'var(--font-geist-mono), monospace',
+          }}
+        >▲</button>
+        <button
+          onClick={onMoveDown} disabled={idx === total - 1}
+          title="Move down"
+          style={{
+            background: 'none', border: 'none', cursor: idx === total - 1 ? 'default' : 'pointer',
+            color: idx === total - 1 ? '#2a2a34' : MUTED, fontSize: 8, padding: '1px 4px', lineHeight: 1,
+            fontFamily: 'var(--font-geist-mono), monospace',
+          }}
+        >▼</button>
+      </div>
+
+      {/* ── Sticky label column ── */}
+      <div style={{
+        width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
+        position: 'sticky', left: 36, zIndex: 10, background: rowBg,
+        height: 38, display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 6,
+      }}>
+        {/* Accent bar */}
+        <div style={{ width: 2, height: 14, background: accent, borderRadius: 2, marginRight: 8, flexShrink: 0, opacity: 0.85 }} />
+
+        {/* Team + league + bet type */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, minWidth: 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: TEXT, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 128 }}>
+              {fav.team_name.split(' ').slice(-1)[0]}
+            </span>
+            <span style={{ fontSize: 7, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0 }}>
+              {fav.league_id.toUpperCase()}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 8, color: accent, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              {BET_TYPE_LABELS[fav.bet_type]}
+            </span>
+            <span style={{ fontSize: 9, color: wlColor, fontWeight: 700, fontFamily: 'monospace' }}>
+              {record.w}-{record.l}
+            </span>
+          </div>
+        </div>
+
+        {/* Remove star */}
         <button
           onClick={onRemove}
-          title="Remove"
+          title="Remove from favorites"
           style={{
-            position: 'absolute', top: 5, right: 6,
-            background: 'none', border: 'none', color: MUTED,
-            cursor: 'pointer', fontSize: 9, padding: 2, lineHeight: 1,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 14, color: GOLD, padding: '0 2px', lineHeight: 1, flexShrink: 0,
+            transition: 'opacity 0.15s',
           }}
-        >
-          ✕
-        </button>
-      )}
-      <div style={{ fontSize: 7, letterSpacing: '0.18em', textTransform: 'uppercase', color: isPending ? MUTED : color, marginBottom: 5, fontWeight: 700 }}>
-        {item.bet_type}
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 800, color: isPending ? SUB : TEXT, letterSpacing: '0.02em', lineHeight: 1.2, marginBottom: 2 }}>
-        {shortTeam}
-      </div>
-      <div style={{ fontSize: 9, color: MUTED, marginBottom: 3 }}>
-        vs {shortOpp}
-      </div>
-      <div style={{ fontSize: 8, color: '#2e2e3e', marginBottom: 8 }}>
-        {item.event_date}
-      </div>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 4,
-        padding: '3px 6px', borderRadius: 4,
-        background: isPending ? '#13131d' : `${color}1a`,
-        border: `1px solid ${isPending ? '#1a1a2e' : `${color}30`}`,
-      }}>
-        <span style={{ fontSize: 9, color: isPending ? MUTED : color }}>{icon}</span>
-        <span style={{ fontSize: 7, letterSpacing: '0.15em', textTransform: 'uppercase', color: isPending ? MUTED : color }}>
-          {item.outcome}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// ─── Favorites Group Card ─────────────────────────────────────────────────────
-
-function FavoritesGroupCard({
-  group,
-  onAddItem,
-  onRemoveItem,
-  onDelete,
-  onRename,
-  sortMode,
-}: {
-  group:        FavoriteGroup
-  onAddItem:    () => void
-  onRemoveItem: (itemId: string) => void
-  onDelete:     () => void
-  onRename:     (name: string) => void
-  sortMode:     ItemSortMode
-}) {
-  const displayItems = sortItems(group.items, sortMode)
-  const [renaming,       setRenaming]       = useState(false)
-  const [draft,          setDraft]          = useState(group.name)
-  const [hoverDelete,    setHoverDelete]    = useState(false)
-  const [confirmDelete,  setConfirmDelete]  = useState(false)
-
-  const settled    = group.items.filter(i => i.outcome !== 'pending').length
-  const wins       = group.items.filter(i => i.outcome === 'win').length
-  const losses     = group.items.filter(i => i.outcome === 'loss').length
-  const pushes     = group.items.filter(i => i.outcome === 'push').length
-  const overs      = group.items.filter(i => i.outcome === 'over').length
-  const unders     = group.items.filter(i => i.outcome === 'under').length
-  const isComplete = group.status === 'complete'
-  const allWin     = settled === group.items.length && wins === group.items.length && group.items.length > 0
-  const anyLoss    = losses > 0
-
-  const cardGlow = allWin ? `0 0 28px ${GREEN}1a` : anyLoss ? `0 0 28px ${RED}14` : 'none'
-  const created  = new Date(group.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
-  const commitRename = () => {
-    onRename(draft.trim() || group.name)
-    setRenaming(false)
-  }
-
-  return (
-    <div style={{
-      background: CARD,
-      border: `1px solid ${allWin ? `${GREEN}44` : anyLoss ? `${RED}28` : BORDER}`,
-      borderRadius: 14, boxShadow: cardGlow, marginBottom: 18, overflow: 'hidden',
-      fontFamily: 'var(--font-geist-mono), monospace',
-    }}>
-      {/* Card header */}
-      <div style={{
-        padding: '13px 18px', borderBottom: `1px solid ${BORDER}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-          {renaming ? (
-            <input
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={e => {
-                if (e.key === 'Enter')  commitRename()
-                if (e.key === 'Escape') { setDraft(group.name); setRenaming(false) }
-              }}
-              autoFocus
-              style={{
-                background: '#0a0a0f', border: `1px solid ${PURPLE}88`, borderRadius: 6,
-                color: TEXT, fontSize: 13, fontWeight: 800, letterSpacing: '0.04em',
-                padding: '4px 8px', fontFamily: 'var(--font-geist-mono), monospace',
-                outline: 'none', maxWidth: 220,
-              }}
-            />
-          ) : (
-            <button
-              onClick={() => { setDraft(group.name); setRenaming(true) }}
-              title="Click to rename"
-              style={{
-                background: 'none', border: 'none', color: TEXT, cursor: 'text',
-                fontSize: 13, fontWeight: 800, letterSpacing: '0.04em',
-                fontFamily: 'var(--font-geist-mono), monospace', padding: 0, textAlign: 'left',
-              }}
-            >
-              {group.name}
-            </button>
-          )}
-          <span style={{
-            fontSize: 7, letterSpacing: '0.2em', textTransform: 'uppercase',
-            color: isComplete ? GREEN : PURPLE,
-            background: isComplete ? `${GREEN}18` : `${PURPLE}18`,
-            border: `1px solid ${isComplete ? `${GREEN}44` : `${PURPLE}44`}`,
-            padding: '2px 8px', borderRadius: 4, flexShrink: 0,
-          }}>
-            {isComplete ? 'complete' : 'active'}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <span style={{ fontSize: 9, color: MUTED }}>
-            {created} · {group.items.length} item{group.items.length !== 1 ? 's' : ''}
-          </span>
-          {settled > 0 && (
-            <span style={{ fontSize: 10 }}>
-              {wins   > 0 && <span style={{ color: GREEN  }}>{wins}W </span>}
-              {losses > 0 && <span style={{ color: RED    }}>{losses}L </span>}
-              {pushes > 0 && <span style={{ color: AMBER  }}>{pushes}P </span>}
-              {overs  > 0 && <span style={{ color: PURPLE }}>{overs}O </span>}
-              {unders > 0 && <span style={{ color: BLUE   }}>{unders}U </span>}
-            </span>
-          )}
-          {confirmDelete ? (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                onClick={onDelete}
-                style={{
-                  background: `${RED}22`, border: `1px solid ${RED}66`, borderRadius: 6,
-                  color: RED, cursor: 'pointer', fontSize: 9, padding: '4px 10px',
-                  fontFamily: 'var(--font-geist-mono), monospace', letterSpacing: '0.1em', textTransform: 'uppercase',
-                }}
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                style={{
-                  background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6,
-                  color: MUTED, cursor: 'pointer', fontSize: 9, padding: '4px 10px',
-                  fontFamily: 'var(--font-geist-mono), monospace',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              onMouseEnter={() => setHoverDelete(true)}
-              onMouseLeave={() => setHoverDelete(false)}
-              style={{
-                background: hoverDelete ? `${RED}18` : 'none',
-                border: `1px solid ${hoverDelete ? `${RED}55` : BORDER}`,
-                borderRadius: 6, color: hoverDelete ? RED : MUTED,
-                cursor: 'pointer', fontSize: 9, letterSpacing: '0.1em',
-                textTransform: 'uppercase', padding: '4px 10px',
-                fontFamily: 'var(--font-geist-mono), monospace', transition: 'all 0.15s',
-              }}
-            >
-              Delete
-            </button>
-          )}
-        </div>
+        >★</button>
       </div>
 
-      {/* Items */}
-      <div style={{ padding: '14px 18px' }}>
-        {group.items.length === 0 ? (
-          <div style={{
-            padding: '22px', textAlign: 'center',
-            border: `1px dashed ${BORDER}`, borderRadius: 10,
-            color: MUTED, fontSize: 11, letterSpacing: '0.06em',
-          }}>
-            No items selected yet — tap "Add Item" to start tracking
-          </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
-            {displayItems.map(item => (
-              <ItemCell
-                key={item.id}
-                item={item}
-                canRemove={!isComplete}
-                onRemove={() => onRemoveItem(item.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      {!isComplete && (
-        <div style={{
-          padding: '10px 18px', borderTop: `1px solid ${BORDER}`,
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          <button
-            onClick={onAddItem}
+      {/* ── Game cells ── */}
+      {games.map((game, gi) => {
+        const locked = gi >= visibleCols
+        const cell   = getCellInfo(game, fav.bet_type)
+        return (
+          <div
+            key={gi}
             style={{
-              background: `linear-gradient(135deg, ${GREEN}cc, #16a34a)`,
-              border: 'none', borderRadius: 7, color: '#000',
-              fontSize: 9, fontWeight: 900, letterSpacing: '0.15em',
-              textTransform: 'uppercase', cursor: 'pointer', padding: '8px 16px',
-              fontFamily: 'var(--font-geist-mono), monospace',
-              boxShadow: `0 0 12px ${GREEN}44`,
+              width: COL_W, minWidth: COL_W, flexShrink: 0, height: 38,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: rowBg,
+              filter:  locked ? 'blur(4px)' : 'none',
+              opacity: locked ? 0.3 : (cell.opacity ?? 1),
+              pointerEvents: locked ? 'none' : 'auto',
+              transition: 'opacity 0.2s, filter 0.2s',
             }}
           >
-            + Add Item
-          </button>
-          {group.items.length > 0 && settled < group.items.length && (
-            <span style={{ fontSize: 9, color: MUTED }}>
-              {group.items.length - settled} item{group.items.length - settled !== 1 ? 's' : ''} pending
-            </span>
-          )}
-        </div>
-      )}
+            <div style={{
+              width: COL_W - 8, height: 28, borderRadius: 5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: cell.bg,
+              boxShadow: cell.glow,
+              fontSize: 10, fontWeight: 800, letterSpacing: '0.08em',
+              color: cell.textColor,
+            }}>
+              {cell.label}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-// ─── Item Picker Modal ────────────────────────────────────────────────────────
+// ─── Login gate ───────────────────────────────────────────────────────────────
 
-const PICKER_LEAGUE_IDS = ['mlb', 'nfl', 'nba', 'nhl', 'ncaaf', 'ncaab', 'wnba', 'atp', 'wta']
-
-function ItemPickerModal({
-  onAdd,
-  onClose,
-}: {
-  onAdd:   (event: UpcomingEvent, teamName: string, betType: BetType) => void
-  onClose: () => void
-}) {
-  const [selectedLeague,  setSelectedLeague]  = useState('mlb')
-  const [events,          setEvents]          = useState<UpcomingEvent[]>([])
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
-  const [selectedTeam,    setSelectedTeam]    = useState<string | null>(null)
-  const [selectedBet,     setSelectedBet]     = useState<BetType>('moneyline')
-
-  useEffect(() => {
-    setEvents(generateUpcomingEvents(selectedLeague))
-    setExpandedEventId(null)
-    setSelectedTeam(null)
-    setSelectedBet('moneyline')
-  }, [selectedLeague])
-
-  const handleExpand = (eventId: string) => {
-    if (expandedEventId === eventId) { setExpandedEventId(null); return }
-    setExpandedEventId(eventId)
-    setSelectedTeam(null)
-    setSelectedBet('moneyline')
-  }
-
-  const spreadLabel = getSpreadLabel(selectedLeague)
-
+function LoginGate() {
+  const { openModal } = useAuth()
   return (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        padding: '72px 20px 20px', overflowY: 'auto',
-      }}
-    >
-      <div style={{
-        width: '100%', maxWidth: 780,
-        background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
-        boxShadow: `0 0 60px ${PURPLE}20`,
-        fontFamily: 'var(--font-geist-mono), monospace', marginBottom: 40,
-      }}>
-        {/* Modal header */}
-        <div style={{
-          padding: '16px 22px', borderBottom: `1px solid ${BORDER}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <div style={{ fontSize: 8, color: PURPLE, letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: 4 }}>
-              Add to Favorites
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Select Team or Player
-            </div>
-          </div>
+    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+      <div style={{ textAlign: 'center', maxWidth: 420 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⭐</div>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>
+          Favorites
+        </h1>
+        <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.8, margin: '0 0 28px', fontFamily: 'var(--font-geist-mono), monospace' }}>
+          Track any team × bet type combination across all supported leagues.
+          Sign in to get started.
+        </p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button
-            onClick={onClose}
+            onClick={() => openModal('join')}
+            style={{
+              background: `linear-gradient(135deg, ${GREEN}, #16a34a)`, border: 'none', borderRadius: 8,
+              color: '#000', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
+              cursor: 'pointer', padding: '12px 24px', fontFamily: 'var(--font-geist-mono), monospace',
+              boxShadow: `0 0 20px ${GREEN}35`,
+            }}
+          >
+            Join Free
+          </button>
+          <button
+            onClick={() => openModal('login')}
             style={{
               background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8,
-              color: MUTED, cursor: 'pointer', fontSize: 10, letterSpacing: '0.1em',
-              padding: '7px 14px', fontFamily: 'var(--font-geist-mono), monospace',
+              color: SUB, fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
+              cursor: 'pointer', padding: '12px 24px', fontFamily: 'var(--font-geist-mono), monospace',
             }}
           >
-            ✕ Close
+            Sign In
           </button>
         </div>
-
-        {/* League tabs */}
-        <div style={{
-          padding: '10px 22px', borderBottom: `1px solid ${BORDER}`,
-          display: 'flex', gap: 6, overflowX: 'auto',
-        }}>
-          {PICKER_LEAGUE_IDS.map(lid => {
-            const meta   = LEAGUES.find(l => l.id === lid)
-            if (!meta) return null
-            const active = selectedLeague === lid
-            return (
-              <button
-                key={lid}
-                onClick={() => setSelectedLeague(lid)}
-                style={{
-                  background: active ? `${meta.accent}20` : 'none',
-                  border: `1px solid ${active ? `${meta.accent}60` : BORDER}`,
-                  borderRadius: 7, color: active ? meta.accent : MUTED,
-                  cursor: 'pointer', fontSize: 8, fontWeight: active ? 900 : 500,
-                  letterSpacing: '0.15em', textTransform: 'uppercase',
-                  padding: '6px 12px', whiteSpace: 'nowrap',
-                  fontFamily: 'var(--font-geist-mono), monospace', transition: 'all 0.15s',
-                }}
-              >
-                {meta.emoji} {meta.name}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Events list */}
-        <div style={{ padding: 14, maxHeight: '58vh', overflowY: 'auto' }}>
-          {events.length === 0 && (
-            <div style={{ padding: 40, textAlign: 'center', color: MUTED, fontSize: 11 }}>
-              No upcoming events
-            </div>
-          )}
-          {events.map(event => {
-            const expanded = expandedEventId === event.id
-            const meta     = LEAGUES.find(l => l.id === event.leagueId)
-            const accent   = meta?.accent ?? GREEN
-
-            const teamSpread = selectedTeam
-              ? (selectedTeam === event.homeTeam ? event.spread : -event.spread)
-              : 0
-            const spreadStr = teamSpread >= 0 ? `+${teamSpread}` : `${teamSpread}`
-            const mlOdds    = selectedTeam
-              ? (selectedTeam === event.homeTeam ? event.homeOdds : event.awayOdds)
-              : 0
-            const mlStr = mlOdds >= 0 ? `+${mlOdds}` : `${mlOdds}`
-
-            return (
-              <div key={event.id} style={{ marginBottom: 6 }}>
-                <button
-                  onClick={() => handleExpand(event.id)}
-                  style={{
-                    width: '100%', textAlign: 'left',
-                    background: expanded ? `${accent}0a` : '#0b0b12',
-                    border: `1px solid ${expanded ? `${accent}44` : BORDER}`,
-                    borderRadius: expanded ? '10px 10px 0 0' : 10,
-                    padding: '11px 14px', cursor: 'pointer',
-                    fontFamily: 'var(--font-geist-mono), monospace',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 9, color: accent, letterSpacing: '0.08em' }}>
-                      {event.displayDate}
-                    </span>
-                    <span style={{ fontSize: 12, color: TEXT, fontWeight: 700 }}>
-                      <span style={{ color: SUB, fontWeight: 400 }}>{event.awayTeam.split(' ').pop()}</span>
-                      <span style={{ color: MUTED, margin: '0 5px' }}>@</span>
-                      <span>{event.homeTeam.split(' ').pop()}</span>
-                    </span>
-                    <span style={{ fontSize: 9, color: MUTED }}>
-                      {event.awayOdds > 0 ? `+${event.awayOdds}` : event.awayOdds}
-                      {' / '}
-                      {event.homeOdds > 0 ? `+${event.homeOdds}` : event.homeOdds}
-                    </span>
-                    <span style={{ fontSize: 9, color: '#2e2e40' }}>O/U {event.total}</span>
-                  </div>
-                  <span style={{ fontSize: 9, color: expanded ? accent : MUTED, marginLeft: 10 }}>
-                    {expanded ? '▲' : '▼'}
-                  </span>
-                </button>
-
-                {expanded && (
-                  <div style={{
-                    background: '#08080e', border: `1px solid ${accent}33`,
-                    borderTop: 'none', borderRadius: '0 0 10px 10px', padding: 16,
-                  }}>
-                    {/* Team selector */}
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 7, color: MUTED, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8 }}>
-                        Select Team / Side
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {[event.awayTeam, event.homeTeam].map(team => {
-                          const isHome = team === event.homeTeam
-                          const active = selectedTeam === team
-                          return (
-                            <button
-                              key={team}
-                              onClick={() => setSelectedTeam(team)}
-                              style={{
-                                background: active ? `${accent}20` : '#0e0e18',
-                                border: `1px solid ${active ? `${accent}60` : BORDER}`,
-                                borderRadius: 8, color: active ? TEXT : SUB,
-                                cursor: 'pointer', fontSize: 11, fontWeight: active ? 800 : 400,
-                                padding: '8px 14px',
-                                fontFamily: 'var(--font-geist-mono), monospace', transition: 'all 0.15s',
-                              }}
-                            >
-                              {team}
-                              <span style={{ fontSize: 8, color: MUTED, marginLeft: 5 }}>{isHome ? '(H)' : '(A)'}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Stat type selector */}
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 7, color: MUTED, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8 }}>
-                        Track By
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {([
-                          { type: 'moneyline' as BetType, label: 'Moneyline',  detail: selectedTeam ? mlStr     : '—' },
-                          { type: 'spread'    as BetType, label: spreadLabel,  detail: selectedTeam ? spreadStr : '—' },
-                          { type: 'over'      as BetType, label: 'Over',        detail: `${event.total}` },
-                          { type: 'under'     as BetType, label: 'Under',       detail: `${event.total}` },
-                        ] as const).map(({ type, label, detail }) => {
-                          const active = selectedBet === type
-                          return (
-                            <button
-                              key={type}
-                              onClick={() => setSelectedBet(type)}
-                              style={{
-                                background: active ? `${accent}18` : '#0e0e18',
-                                border: `1px solid ${active ? `${accent}55` : BORDER}`,
-                                borderRadius: 8, cursor: 'pointer',
-                                padding: '8px 14px', textAlign: 'left',
-                                fontFamily: 'var(--font-geist-mono), monospace', transition: 'all 0.15s',
-                              }}
-                            >
-                              <div style={{ fontSize: 10, color: active ? TEXT : SUB, fontWeight: 700, letterSpacing: '0.06em' }}>
-                                {label}
-                              </div>
-                              <div style={{ fontSize: 9, color: active ? accent : MUTED, marginTop: 2 }}>
-                                {detail}
-                              </div>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        if (!selectedTeam) return
-                        onAdd(event, selectedTeam, selectedBet)
-                        setExpandedEventId(null)
-                        setSelectedTeam(null)
-                      }}
-                      disabled={!selectedTeam}
-                      style={{
-                        background: selectedTeam ? `linear-gradient(135deg, ${GREEN}cc, #16a34a)` : '#1a1a24',
-                        border: 'none', borderRadius: 8,
-                        color: selectedTeam ? '#000' : MUTED,
-                        cursor: selectedTeam ? 'pointer' : 'not-allowed',
-                        fontSize: 10, fontWeight: 900, letterSpacing: '0.15em',
-                        textTransform: 'uppercase', padding: '10px 22px',
-                        fontFamily: 'var(--font-geist-mono), monospace',
-                        boxShadow: selectedTeam ? `0 0 14px ${GREEN}44` : 'none',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      + Add to Favorites
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
       </div>
     </div>
   )
 }
 
-// ─── Hot Favorites Section ────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
 
-function HotFavoritesSection({
-  hotFavorites,
-  activeGroupId,
-  onAdd,
-}: {
-  hotFavorites:  HotFavoriteTeam[]
-  activeGroupId: string | null
-  onAdd:         (team: HotFavoriteTeam, groupId: string) => void
-}) {
-  if (hotFavorites.length === 0 || !activeGroupId) return null
+export default function FavoritesPage() {
+  const { user, isMember, isPro, memberTier, loading: authLoading, openModal } = useAuth()
 
-  return (
-    <div style={{ marginBottom: 36, fontFamily: 'var(--font-geist-mono), monospace' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 18 }}>🔥</span>
-        <div>
-          <div style={{ fontSize: 9, color: AMBER, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 3 }}>
-            Hot Favorites
-          </div>
-          <div style={{ fontSize: 10, color: MUTED }}>
-            Teams and players that have been performing well in your tracked groups
-          </div>
-        </div>
-      </div>
+  const [mounted,    setMounted]    = useState(false)
+  const [favorites,  setFavorites]  = useState<Favorite[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [sortMode,   setSortMode]   = useState<SortMode>('selected')
+  const [toast,      setToast]      = useState<string | null>(null)
 
-      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
-        {hotFavorites.map(team => (
-          <div
-            key={team.teamName}
-            style={{
-              minWidth: 192, flexShrink: 0,
-              background: `${AMBER}08`,
-              border: `1px solid ${AMBER}28`,
-              borderRadius: 12, padding: '14px 16px',
-              boxShadow: `0 0 20px ${AMBER}0e`,
-            }}
-          >
-            <div style={{ fontSize: 7, color: AMBER, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 5, fontWeight: 700 }}>
-              {team.leagueName}
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: TEXT, letterSpacing: '0.02em', marginBottom: 3 }}>
-              {team.teamName.split(' ').pop()}
-            </div>
-            <div style={{ fontSize: 10, color: TEXT, marginBottom: 2, opacity: 0.5 }}>
-              {team.teamName}
-            </div>
-            <div style={{ fontSize: 9, color: GREEN, marginBottom: team.event ? 8 : 12 }}>
-              ✓ {team.wins} win{team.wins !== 1 ? 's' : ''} tracked
-            </div>
-            {team.event && (
-              <div style={{ fontSize: 8, color: MUTED, marginBottom: 12 }}>
-                Next: {team.event.displayDate}
-                <span style={{ color: '#2e2e3e', marginLeft: 5 }}>
-                  vs {team.event.homeTeam === team.teamName ? team.event.awayTeam.split(' ').pop() : team.event.homeTeam.split(' ').pop()}
-                </span>
-              </div>
-            )}
-            <button
-              onClick={() => onAdd(team, activeGroupId)}
-              style={{
-                background: `linear-gradient(135deg, ${AMBER}cc, #ca8a04)`,
-                border: 'none', borderRadius: 7, color: '#000',
-                fontSize: 9, fontWeight: 900, letterSpacing: '0.15em',
-                textTransform: 'uppercase', cursor: 'pointer', padding: '8px 14px',
-                fontFamily: 'var(--font-geist-mono), monospace',
-                boxShadow: `0 0 10px ${AMBER}44`, width: '100%',
-              }}
-            >
-              🔥 Track Again
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Completed Group Card ─────────────────────────────────────────────────────
-
-function CompletedGroupCard({ group }: { group: FavoriteGroup }) {
-  const [expanded, setExpanded] = useState(false)
-
-  const wins   = group.items.filter(i => i.outcome === 'win').length
-  const losses = group.items.filter(i => i.outcome === 'loss').length
-  const pushes = group.items.filter(i => i.outcome === 'push').length
-  const overs  = group.items.filter(i => i.outcome === 'over').length
-  const unders = group.items.filter(i => i.outcome === 'under').length
-  const allWin  = wins === group.items.length && group.items.length > 0
-  const anyLoss = losses > 0
-  const created = new Date(group.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })
-
-  return (
-    <div style={{
-      background: '#0b0b11',
-      border: `1px solid ${allWin ? `${GREEN}30` : anyLoss ? `${RED}1e` : BORDER}`,
-      borderRadius: 12, marginBottom: 8, overflow: 'hidden',
-      fontFamily: 'var(--font-geist-mono), monospace',
-    }}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-          padding: '12px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontFamily: 'var(--font-geist-mono), monospace',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: TEXT, letterSpacing: '0.03em' }}>
-            {group.name}
-          </span>
-          <span style={{ fontSize: 8, color: MUTED }}>{created}</span>
-          <span style={{ fontSize: 9 }}>
-            {wins   > 0 && <span style={{ color: GREEN  }}>{wins}W{' '}</span>}
-            {losses > 0 && <span style={{ color: RED    }}>{losses}L{' '}</span>}
-            {pushes > 0 && <span style={{ color: AMBER  }}>{pushes}P{' '}</span>}
-            {overs  > 0 && <span style={{ color: PURPLE }}>{overs}O{' '}</span>}
-            {unders > 0 && <span style={{ color: BLUE   }}>{unders}U{' '}</span>}
-          </span>
-        </div>
-        <span style={{ fontSize: 9, color: MUTED }}>{expanded ? '▲' : '▼'}</span>
-      </button>
-
-      {expanded && group.items.length > 0 && (
-        <div style={{ padding: '0 16px 14px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-          {group.items.map(item => (
-            <ItemCell key={item.id} item={item} canRemove={false} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function FavoritesBoardPage() {
-  const { isPro, user } = useAuth()
-  const [mounted,        setMounted]        = useState(false)
-  const [userId,         setUserId]         = useState('')
-  const [groups,         setGroups]         = useState<FavoriteGroup[]>([])
-  const [loading,        setLoading]        = useState(true)
-  const [pickerGroupId,  setPickerGroupId]  = useState<string | null>(null)
-  const [creating,       setCreating]       = useState(false)
-  const [itemSort,       setItemSort]       = useState<ItemSortMode>('selected')
+  const visibleCols = isPro ? 10 : FREE_COLS
 
   useEffect(() => {
     setMounted(true)
-    setUserId(getUserId(user?.id))
-    const saved = localStorage.getItem(SORT_LS_KEY) as ItemSortMode | null
-    if (saved && saved in SORT_LABELS) setItemSort(saved)
+    const saved = localStorage.getItem(SORT_LS_KEY) as SortMode | null
+    if (saved && saved in SORT_LABELS) setSortMode(saved)
+  }, [])
+
+  const loadFavorites = useCallback(async () => {
+    if (!user?.id) { setLoading(false); return }
+    setLoading(true)
+    const data = await fetchFavorites(user.id)
+    setFavorites(data)
+    setLoading(false)
   }, [user?.id])
 
-  const handleSortChange = (mode: ItemSortMode) => {
-    setItemSort(mode)
+  useEffect(() => {
+    if (mounted && !authLoading) loadFavorites()
+  }, [mounted, authLoading, loadFavorites])
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleSortChange = (mode: SortMode) => {
+    setSortMode(mode)
     localStorage.setItem(SORT_LS_KEY, mode)
   }
 
-  const loadGroups = useCallback(async (uid: string) => {
-    if (!uid) return
-    setLoading(true)
-    const data = await fetchFavoriteGroups(uid)
-    await checkAndCompleteGroups(data)
-    const updated = await fetchFavoriteGroups(uid)
-    setGroups(updated)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    if (mounted && userId) loadGroups(userId)
-  }, [mounted, userId, loadGroups])
-
-  if (!mounted) return null
-
-  if (!isPro) {
-    return (
-      <div style={{ paddingLeft: 80, paddingTop: 80, minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace' }}>
-        <ProGate />
-      </div>
-    )
+  const handleRemove = async (fav: Favorite) => {
+    const ok = await removeFavorite(fav.id)
+    if (ok) setFavorites(prev => prev.filter(f => f.id !== fav.id))
   }
 
-  const activeGroups     = groups.filter(g => g.status === 'active')
-  const completedGroups  = groups.filter(g => g.status === 'complete')
-  const hotFavorites     = getHotFavoriteTeams(groups)
-  const firstActiveGroupId = activeGroups[0]?.id ?? null
-
-  const handleNewGroup = async () => {
-    if (!userId || creating) return
-    setCreating(true)
-    const name = `Group #${groups.length + 1}`
-    const g = await createFavoriteGroup(userId, name)
-    if (g) setGroups(prev => [g, ...prev])
-    setCreating(false)
+  const handleMoveUp = async (idx: number) => {
+    if (idx === 0) return
+    const next = [...favorites]
+    ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+    setFavorites(next)
+    await reorderFavorites(next.map(f => f.id))
   }
 
-  const handleAddItem = async (
-    groupId:  string,
-    event:    UpcomingEvent,
-    teamName: string,
-    betType:  BetType,
-  ) => {
-    const opponent = teamName === event.homeTeam ? event.awayTeam : event.homeTeam
-    const itemData: Omit<FavoriteItem, 'id' | 'favorite_group_id' | 'created_at'> = {
-      team_name:   teamName,
-      league_id:   event.leagueId,
-      league_name: event.leagueName,
-      event_id:    event.id,
-      event_date:  event.displayDate,
-      opponent,
-      bet_type:    betType,
-      outcome:     'pending',
+  const handleMoveDown = async (idx: number) => {
+    if (idx === favorites.length - 1) return
+    const next = [...favorites]
+    ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
+    setFavorites(next)
+    await reorderFavorites(next.map(f => f.id))
+  }
+
+  // Sort favorites for display (only affects render order, not DB order for "selected")
+  const displayFavorites = useMemo(() => {
+    if (sortMode === 'selected') return favorites
+    const withGames = favorites.map(f => ({
+      fav: f,
+      games: generateMockGames(f.team_name, 10),
+    }))
+    switch (sortMode) {
+      case 'az':     return withGames.sort((a, b) => a.fav.team_name.localeCompare(b.fav.team_name)).map(x => x.fav)
+      case 'za':     return withGames.sort((a, b) => b.fav.team_name.localeCompare(a.fav.team_name)).map(x => x.fav)
+      case 'wtl':    return withGames.sort((a, b) => winRate(b.games, b.fav.bet_type) - winRate(a.games, a.fav.bet_type)).map(x => x.fav)
+      case 'ltw':    return withGames.sort((a, b) => winRate(a.games, a.fav.bet_type) - winRate(b.games, b.fav.bet_type)).map(x => x.fav)
+      case 'league': return withGames.sort((a, b) => a.fav.league_name.localeCompare(b.fav.league_name)).map(x => x.fav)
+      default:       return favorites
     }
-    const newItem = await addItemToGroup(groupId, itemData)
-    if (newItem) {
-      setGroups(prev => prev.map(g =>
-        g.id === groupId ? { ...g, items: [...g.items, newItem] } : g,
-      ))
-    }
-    setPickerGroupId(null)
-  }
+  }, [favorites, sortMode])
 
-  const handleRemoveItem = async (groupId: string, itemId: string) => {
-    await removeItemFromGroup(itemId)
-    setGroups(prev => prev.map(g =>
-      g.id === groupId ? { ...g, items: g.items.filter(i => i.id !== itemId) } : g,
-    ))
-  }
+  if (!mounted || authLoading) return null
 
-  const handleDeleteGroup = async (groupId: string) => {
-    await deleteFavoriteGroup(groupId)
-    setGroups(prev => prev.filter(g => g.id !== groupId))
-  }
-
-  const handleRenameGroup = async (groupId: string, name: string) => {
-    await renameFavoriteGroup(groupId, name)
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, name } : g))
-  }
-
-  const handleAddHotFavorite = async (team: HotFavoriteTeam, groupId: string) => {
-    if (!team.event) return
-    await handleAddItem(groupId, team.event, team.teamName, 'moneyline')
-  }
+  if (!isMember) return (
+    <div style={{ paddingLeft: 80, paddingTop: 80, minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace' }}>
+      <LoginGate />
+    </div>
+  )
 
   return (
     <div style={{
-      paddingLeft: 80, paddingTop: 80, paddingRight: 24, paddingBottom: 56,
+      paddingLeft: 80, paddingTop: 80, paddingRight: 0, paddingBottom: 56,
       minHeight: '100vh', background: BG,
       fontFamily: 'var(--font-geist-mono), monospace',
     }}>
-      {/* ─── Page Header ─────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 36 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <div style={{
-              fontSize: 8, letterSpacing: '0.35em', textTransform: 'uppercase',
-              fontWeight: 700, marginBottom: 8,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{ color: PURPLE }}>Gambchop Pro</span>
-              <span style={{
-                background: `${PURPLE}22`, border: `1px solid ${PURPLE}55`,
-                borderRadius: 4, padding: '1px 6px', fontSize: 7, color: PURPLE,
-              }}>
-                PRO
-              </span>
-            </div>
-            <h1 style={{
-              fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-              background: `linear-gradient(135deg, ${TEXT} 40%, ${PURPLE})`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>
-              Favorites
-            </h1>
-            <p style={{ fontSize: 10, color: MUTED, marginTop: 8, marginBottom: 0 }}>
-              Track the teams and players you care about across every league. Auto-saves as you go.
-            </p>
-            <ColorLegend />
+
+      {/* ─── Header ─────────────────────────────────────────────────────── */}
+      <div style={{ padding: '0 24px 28px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 8, color: PURPLE, letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            {isPro ? '⚡ Pro Feature' : 'Member Feature'}
+          </div>
+          <h1 style={{
+            fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            background: `linear-gradient(135deg, ${TEXT} 40%, ${PURPLE})`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            Favorites
+          </h1>
+          <p style={{ fontSize: 10, color: MUTED, marginTop: 8, marginBottom: 0 }}>
+            Track any team × bet type across all leagues.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Cap indicator */}
+          <div style={{
+            background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8,
+            padding: '8px 14px', fontSize: 10, color: favorites.length >= 16 ? '#ef4444' : SUB,
+            fontFamily: 'var(--font-geist-mono), monospace',
+          }}>
+            {favorites.length} <span style={{ color: MUTED }}>/</span> 16
           </div>
 
-          <button
-            onClick={handleNewGroup}
-            disabled={creating}
-            style={{
-              background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`,
-              border: 'none', borderRadius: 10, color: TEXT,
-              fontSize: 10, fontWeight: 900, letterSpacing: '0.15em',
-              textTransform: 'uppercase', cursor: creating ? 'not-allowed' : 'pointer',
-              padding: '12px 22px', fontFamily: 'var(--font-geist-mono), monospace',
-              boxShadow: `0 0 18px ${PURPLE}44`, opacity: creating ? 0.6 : 1,
-              transition: 'all 0.2s', flexShrink: 0,
-            }}
-          >
-            {creating ? '…' : '+ New Group'}
-          </button>
+          {/* Sort dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>Sort:</span>
+            <select
+              value={sortMode}
+              onChange={e => handleSortChange(e.target.value as SortMode)}
+              style={{
+                background: CARD, border: `1px solid ${BORDER}`, borderRadius: 6,
+                color: SUB, fontSize: 10, padding: '7px 10px',
+                fontFamily: 'var(--font-geist-mono), monospace',
+                cursor: 'pointer', outline: 'none',
+              }}
+            >
+              {(Object.keys(SORT_LABELS) as SortMode[]).map(k => (
+                <option key={k} value={k}>{SORT_LABELS[k]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Browse Teams link */}
+          <Link href="/teams" style={{
+            textDecoration: 'none', fontSize: 10, fontWeight: 700,
+            color: GREEN, border: `1px solid ${GREEN}44`, borderRadius: 8,
+            padding: '8px 16px', letterSpacing: '0.1em', textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}>
+            + Browse Teams
+          </Link>
         </div>
       </div>
 
+      {/* ─── Toast ──────────────────────────────────────────────────────── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1a24', border: `1px solid ${BORDER}`, borderRadius: 10,
+          padding: '12px 24px', fontSize: 11, color: SUB,
+          zIndex: 500, boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+          fontFamily: 'var(--font-geist-mono), monospace', whiteSpace: 'nowrap',
+        }}>
+          {toast}
+        </div>
+      )}
+
+      {/* ─── Free-tier upgrade banner ────────────────────────────────────── */}
+      {!isPro && (
+        <div style={{
+          margin: '0 24px 20px',
+          background: `${PURPLE}0a`, border: `1px solid ${PURPLE}33`, borderRadius: 10,
+          padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 11, color: '#c4b5fd', letterSpacing: '0.06em' }}>
+            Free plan shows G1-G3 only. Go Pro to unlock the full 10-game history.
+          </span>
+          <button
+            onClick={() => openModal('pro')}
+            style={{
+              background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`, border: 'none', borderRadius: 7,
+              color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
+              cursor: 'pointer', padding: '9px 18px', fontFamily: 'var(--font-geist-mono), monospace',
+              boxShadow: `0 0 16px ${PURPLE}44`, whiteSpace: 'nowrap',
+            }}
+          >
+            🔒 Go Pro
+          </button>
+        </div>
+      )}
+
+      {/* ─── Chart area ─────────────────────────────────────────────────── */}
       {loading ? (
         <div style={{ padding: 60, textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.1em' }}>
           Loading favorites…
         </div>
+      ) : favorites.length === 0 ? (
+        // Empty state
+        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⭐</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>
+            No favorites yet
+          </div>
+          <div style={{ fontSize: 11, color: MUTED, marginBottom: 28 }}>
+            Add any team × bet type combination from any team page
+          </div>
+          <Link href="/teams" style={{
+            textDecoration: 'none',
+            background: `linear-gradient(135deg, ${GREEN}, #16a34a)`, borderRadius: 8,
+            color: '#000', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
+            padding: '13px 28px', display: 'inline-block',
+          }}>
+            Browse Teams →
+          </Link>
+        </div>
       ) : (
-        <>
-          {/* ─── Hot Favorites ────────────────────────────────────────── */}
-          <HotFavoritesSection
-            hotFavorites={hotFavorites}
-            activeGroupId={firstActiveGroupId}
-            onAdd={handleAddHotFavorite}
-          />
+        // Chart grid
+        <div style={{ overflowX: 'auto', paddingBottom: 24, paddingLeft: 0, paddingRight: 0 }}>
+          <div style={{ minWidth: 36 + LABEL_W + DATES.length * COL_W + 8, position: 'relative' }}>
 
-          {/* ─── Active Groups ────────────────────────────────────────── */}
-          <div style={{ marginBottom: 44 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%', background: GREEN,
-                  display: 'inline-block', boxShadow: `0 0 8px ${GREEN}`,
-                }} />
-                <span style={{ fontSize: 9, color: GREEN, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Active Groups
-                </span>
-                {activeGroups.length > 0 && (
-                  <span style={{
-                    background: `${GREEN}1a`, border: `1px solid ${GREEN}44`,
-                    borderRadius: 10, padding: '1px 8px', fontSize: 8, color: GREEN,
-                  }}>
-                    {activeGroups.length}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>Sort items:</span>
-                <select
-                  value={itemSort}
-                  onChange={e => handleSortChange(e.target.value as ItemSortMode)}
-                  style={{
-                    background: CARD, border: `1px solid ${BORDER}`,
-                    borderRadius: 6, color: SUB,
-                    fontSize: 10, padding: '5px 10px',
-                    fontFamily: 'var(--font-geist-mono), monospace',
-                    cursor: 'pointer', outline: 'none',
-                  }}
-                >
-                  {(Object.keys(SORT_LABELS) as ItemSortMode[]).map(k => (
-                    <option key={k} value={k}>{SORT_LABELS[k]}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            {/* Date header */}
+            <DateHeader visibleCols={visibleCols} />
 
-            {activeGroups.length === 0 ? (
+            {/* Rows */}
+            {displayFavorites.map((fav, idx) => (
+              <FavoriteRow
+                key={fav.id}
+                fav={fav}
+                idx={idx}
+                total={displayFavorites.length}
+                visibleCols={visibleCols}
+                onRemove={() => handleRemove(fav)}
+                onMoveUp={() => {
+                  const realIdx = favorites.findIndex(f => f.id === fav.id)
+                  handleMoveUp(realIdx)
+                }}
+                onMoveDown={() => {
+                  const realIdx = favorites.findIndex(f => f.id === fav.id)
+                  handleMoveDown(realIdx)
+                }}
+              />
+            ))}
+
+            {/* Pro upgrade overlay over locked columns */}
+            {!isPro && DATES.length > FREE_COLS && (
               <div style={{
-                padding: '44px 24px', textAlign: 'center',
-                border: `1px dashed ${BORDER}`, borderRadius: 14, color: MUTED,
+                position: 'absolute', top: 0, bottom: 0,
+                left: 36 + LABEL_W + FREE_COLS * COL_W, right: 0,
+                pointerEvents: 'none',
+                background: `linear-gradient(to right, transparent 0%, ${BG}88 20%, ${BG}cc 60%, ${BG} 100%)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                zIndex: 5,
               }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>⭐</div>
-                <div style={{ fontSize: 12, letterSpacing: '0.05em', marginBottom: 6 }}>
-                  No active groups
+                <div style={{ pointerEvents: 'all', textAlign: 'center', padding: '12px 20px', marginRight: 8 }}>
+                  <button
+                    onClick={() => openModal('pro')}
+                    style={{
+                      background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`, border: 'none', borderRadius: 8,
+                      padding: '10px 18px', color: '#fff', fontSize: 10, fontWeight: 900,
+                      letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
+                      boxShadow: `0 0 20px ${PURPLE}50`, fontFamily: 'var(--font-geist-mono), monospace',
+                    }}
+                  >
+                    🔒 Go Pro — Full Season
+                  </button>
+                  <p style={{ fontSize: 9, color: MUTED, marginTop: 8, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Free: G1-G{FREE_COLS} only
+                  </p>
                 </div>
-                <div style={{ fontSize: 10, color: '#2e2e3e', marginBottom: 22 }}>
-                  Tap "New Group" to start tracking your favorites
-                </div>
-                <button
-                  onClick={handleNewGroup}
-                  style={{
-                    background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`,
-                    border: 'none', borderRadius: 8, color: TEXT,
-                    fontSize: 10, fontWeight: 900, letterSpacing: '0.15em',
-                    textTransform: 'uppercase', cursor: 'pointer', padding: '10px 24px',
-                    fontFamily: 'var(--font-geist-mono), monospace',
-                    boxShadow: `0 0 14px ${PURPLE}44`,
-                  }}
-                >
-                  + New Group
-                </button>
               </div>
-            ) : (
-              activeGroups.map(group => (
-                <FavoritesGroupCard
-                  key={group.id}
-                  group={group}
-                  onAddItem={() => setPickerGroupId(group.id)}
-                  onRemoveItem={itemId => handleRemoveItem(group.id, itemId)}
-                  onDelete={() => handleDeleteGroup(group.id)}
-                  onRename={name => handleRenameGroup(group.id, name)}
-                  sortMode={itemSort}
-                />
-              ))
             )}
           </div>
-
-          {/* ─── History ──────────────────────────────────────────────── */}
-          {completedGroups.length > 0 && (
-            <div>
-              <div style={{
-                fontSize: 9, color: MUTED, letterSpacing: '0.3em', textTransform: 'uppercase',
-                fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                History
-                <span style={{
-                  background: '#1a1a24', border: `1px solid ${BORDER}`,
-                  borderRadius: 10, padding: '1px 8px', fontSize: 8, color: MUTED,
-                }}>
-                  {completedGroups.length} completed
-                </span>
-              </div>
-              {completedGroups.map(group => (
-                <CompletedGroupCard key={group.id} group={group} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ─── Item Picker Modal ────────────────────────────────────────── */}
-      {pickerGroupId && (
-        <ItemPickerModal
-          onAdd={(event, teamName, betType) =>
-            handleAddItem(pickerGroupId, event, teamName, betType)
-          }
-          onClose={() => setPickerGroupId(null)}
-        />
+        </div>
       )}
     </div>
   )

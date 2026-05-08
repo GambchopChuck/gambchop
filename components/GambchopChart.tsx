@@ -229,6 +229,19 @@ function ProUpgradeOverlay({ onUpgrade }: { onUpgrade: () => void }) {
 
 // ─── Main Chart ───────────────────────────────────────────────────────────────
 
+// Maps each chart RowKey to its favorites bet_type string(s)
+const ROW_STAR: Partial<Record<RowKey, string | [string, string]>> = {
+  moneyline: 'moneyline',
+  spread:    'spread',
+  'ml-fav':  'ml_favorite',
+  'ml-dog':  'ml_underdog',
+  'sp-fav':  'spread_favorite',
+  'sp-dog':  'spread_dog',
+  home:      'home',
+  away:      'away',
+  ou:        ['over', 'under'],  // two separate star buttons
+}
+
 interface Props {
   data: TeamChartData[]
   memberTier?: MemberTier
@@ -236,9 +249,12 @@ interface Props {
   onJoin?: () => void
   onUpgrade?: () => void
   accent?: string
+  // Optional star-toggle support (used on team pages)
+  starredBetTypes?: Set<string>
+  onStarClick?: (betType: string) => void
 }
 
-export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green }: Props) {
+export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green, starredBetTypes, onStarClick }: Props) {
   const [showBanner, setShowBanner] = useState(false)
   const { filters, isFiltered, activeCount, resetFilters } = useFilters()
 
@@ -330,6 +346,30 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
                         <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
                         <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
                         {row.record(team.games)}
+                        {onStarClick && (() => {
+                          const mapping = ROW_STAR[row.key]
+                          if (!mapping) return null
+                          const bts = Array.isArray(mapping) ? mapping : [mapping]
+                          return (
+                            <span style={{ marginLeft: 'auto', paddingRight: 6, display: 'flex', gap: 1, flexShrink: 0 }}>
+                              {bts.map(bt => (
+                                <button
+                                  key={bt}
+                                  onClick={e => { e.stopPropagation(); onStarClick(bt) }}
+                                  title={starredBetTypes?.has(bt) ? 'Remove from favorites' : 'Add to favorites'}
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    padding: '0 3px', lineHeight: 1, transition: 'color 0.15s',
+                                    fontSize: Array.isArray(mapping) ? 11 : 14,
+                                    color: starredBetTypes?.has(bt) ? '#eab308' : '#3f3f46',
+                                  }}
+                                >
+                                  {starredBetTypes?.has(bt) ? '★' : '☆'}
+                                </button>
+                              ))}
+                            </span>
+                          )
+                        })()}
                       </div>
                       {team.games.map((game, gi) => {
                         const locked    = gi >= visibleCols
