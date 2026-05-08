@@ -11,6 +11,38 @@ import {
   getHotFavoriteTeams, checkAndCompleteGroups,
 } from '@/lib/favorites'
 
+// ─── Item Sort ────────────────────────────────────────────────────────────────
+
+type ItemSortMode = 'selected' | 'az' | 'za' | 'wtl' | 'ltw' | 'league'
+
+const SORT_LABELS: Record<ItemSortMode, string> = {
+  selected: 'Selected',
+  az:       'A-Z',
+  za:       'Z-A',
+  wtl:      'W → L',
+  ltw:      'L → W',
+  league:   'League A-Z',
+}
+
+const OUTCOME_RANK: Record<string, number> = {
+  win: 0, over: 1, push: 2, pending: 3, under: 4, loss: 5,
+}
+
+function sortItems(items: FavoriteItem[], mode: ItemSortMode): FavoriteItem[] {
+  if (mode === 'selected') return items
+  const copy = [...items]
+  switch (mode) {
+    case 'az':     return copy.sort((a, b) => a.team_name.localeCompare(b.team_name))
+    case 'za':     return copy.sort((a, b) => b.team_name.localeCompare(a.team_name))
+    case 'wtl':    return copy.sort((a, b) => (OUTCOME_RANK[a.outcome] ?? 3) - (OUTCOME_RANK[b.outcome] ?? 3))
+    case 'ltw':    return copy.sort((a, b) => (OUTCOME_RANK[b.outcome] ?? 3) - (OUTCOME_RANK[a.outcome] ?? 3))
+    case 'league': return copy.sort((a, b) => a.league_id.localeCompare(b.league_id))
+    default:       return copy
+  }
+}
+
+const SORT_LS_KEY = 'gambchop-favorites-sort'
+
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
 const BG     = '#0a0a0f'
@@ -227,13 +259,16 @@ function FavoritesGroupCard({
   onRemoveItem,
   onDelete,
   onRename,
+  sortMode,
 }: {
   group:        FavoriteGroup
   onAddItem:    () => void
   onRemoveItem: (itemId: string) => void
   onDelete:     () => void
   onRename:     (name: string) => void
+  sortMode:     ItemSortMode
 }) {
+  const displayItems = sortItems(group.items, sortMode)
   const [renaming,       setRenaming]       = useState(false)
   const [draft,          setDraft]          = useState(group.name)
   const [hoverDelete,    setHoverDelete]    = useState(false)
@@ -379,7 +414,7 @@ function FavoritesGroupCard({
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
-            {group.items.map(item => (
+            {displayItems.map(item => (
               <ItemCell
                 key={item.id}
                 item={item}
@@ -832,11 +867,19 @@ export default function FavoritesBoardPage() {
   const [loading,        setLoading]        = useState(true)
   const [pickerGroupId,  setPickerGroupId]  = useState<string | null>(null)
   const [creating,       setCreating]       = useState(false)
+  const [itemSort,       setItemSort]       = useState<ItemSortMode>('selected')
 
   useEffect(() => {
     setMounted(true)
     setUserId(getUserId(user?.id))
+    const saved = localStorage.getItem(SORT_LS_KEY) as ItemSortMode | null
+    if (saved && saved in SORT_LABELS) setItemSort(saved)
   }, [user?.id])
+
+  const handleSortChange = (mode: ItemSortMode) => {
+    setItemSort(mode)
+    localStorage.setItem(SORT_LS_KEY, mode)
+  }
 
   const loadGroups = useCallback(async (uid: string) => {
     if (!uid) return
@@ -994,22 +1037,42 @@ export default function FavoritesBoardPage() {
 
           {/* ─── Active Groups ────────────────────────────────────────── */}
           <div style={{ marginBottom: 44 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%', background: GREEN,
-                display: 'inline-block', boxShadow: `0 0 8px ${GREEN}`,
-              }} />
-              <span style={{ fontSize: 9, color: GREEN, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700 }}>
-                Active Groups
-              </span>
-              {activeGroups.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{
-                  background: `${GREEN}1a`, border: `1px solid ${GREEN}44`,
-                  borderRadius: 10, padding: '1px 8px', fontSize: 8, color: GREEN,
-                }}>
-                  {activeGroups.length}
+                  width: 6, height: 6, borderRadius: '50%', background: GREEN,
+                  display: 'inline-block', boxShadow: `0 0 8px ${GREEN}`,
+                }} />
+                <span style={{ fontSize: 9, color: GREEN, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Active Groups
                 </span>
-              )}
+                {activeGroups.length > 0 && (
+                  <span style={{
+                    background: `${GREEN}1a`, border: `1px solid ${GREEN}44`,
+                    borderRadius: 10, padding: '1px 8px', fontSize: 8, color: GREEN,
+                  }}>
+                    {activeGroups.length}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>Sort items:</span>
+                <select
+                  value={itemSort}
+                  onChange={e => handleSortChange(e.target.value as ItemSortMode)}
+                  style={{
+                    background: CARD, border: `1px solid ${BORDER}`,
+                    borderRadius: 6, color: SUB,
+                    fontSize: 10, padding: '5px 10px',
+                    fontFamily: 'var(--font-geist-mono), monospace',
+                    cursor: 'pointer', outline: 'none',
+                  }}
+                >
+                  {(Object.keys(SORT_LABELS) as ItemSortMode[]).map(k => (
+                    <option key={k} value={k}>{SORT_LABELS[k]}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {activeGroups.length === 0 ? (
@@ -1047,6 +1110,7 @@ export default function FavoritesBoardPage() {
                   onRemoveItem={itemId => handleRemoveItem(group.id, itemId)}
                   onDelete={() => handleDeleteGroup(group.id)}
                   onRename={name => handleRenameGroup(group.id, name)}
+                  sortMode={itemSort}
                 />
               ))
             )}

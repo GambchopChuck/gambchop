@@ -437,7 +437,7 @@ function ProModal() {
           onClick={handleStart}
           style={BTN_GREEN}
         >
-          Start Pro — 7 Days Free
+          Start Pro — 3 Days Free
         </button>
 
         <div style={{ display: 'flex', gap: 16, marginTop: 20, justifyContent: 'center' }}>
@@ -445,7 +445,7 @@ function ProModal() {
         </div>
 
         <p style={{ fontSize: 9, color: '#3f3f46', textAlign: 'center', marginTop: 16, letterSpacing: '0.1em' }}>
-          Cancel anytime · No credit card for free trial
+          Card required · Cancel before day 3 and you won&apos;t be charged
         </p>
       </div>
     </div>

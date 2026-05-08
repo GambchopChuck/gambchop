@@ -179,7 +179,7 @@ function SignUpForm() {
                   boxShadow: `0 0 20px ${GREEN}35`,
                 }}
               >
-                {loading ? 'Creating Account…' : 'Create Free Account'}
+                {loading ? 'Creating Account…' : intent === 'pro' ? 'Create Account' : 'Create Free Account'}
               </button>
             </form>
 
