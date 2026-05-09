@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import GambchopChart from '@/components/GambchopChart'
@@ -40,6 +40,7 @@ function fakeRecord(seed: number, offset: number): string {
 
 export default function TeamPage() {
   const params = useParams<{ league: string; team: string }>()
+  const router = useRouter()
   const { memberTier, openModal, setIsMember, user } = useAuth()
   const { isFollowing, toggleFollow, follows } = useUser()
 
@@ -60,11 +61,11 @@ export default function TeamPage() {
   }, [user?.id, ready, entity])
 
   const starredBetTypes = useMemo(
-    () => new Set(teamFavorites.map(f => f.bet_type)),
-    [teamFavorites],
+    () => new Set(teamFavorites.map(f => `${entity}|${f.bet_type}`)),
+    [teamFavorites, entity],
   )
 
-  async function handleStarClick(betType: string) {
+  async function handleStarClick(betType: string, _teamName: string) {
     if (!user?.id || !entity) return
     const bt = betType as BetType
     const existing = teamFavorites.find(f => f.bet_type === bt)
@@ -72,6 +73,7 @@ export default function TeamPage() {
       const ok = await removeFavorite(existing.id)
       if (ok) setTeamFavorites(prev => prev.filter(f => f.id !== existing.id))
     } else {
+      if (memberTier !== 'pro') { router.push('/pricing'); return }
       const all = await fetchFavorites(user.id)
       const result = await addFavorite(
         user.id,

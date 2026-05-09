@@ -249,9 +249,9 @@ interface Props {
   onJoin?: () => void
   onUpgrade?: () => void
   accent?: string
-  // Optional star-toggle support (used on team pages)
-  starredBetTypes?: Set<string>
-  onStarClick?: (betType: string) => void
+  // Optional star-toggle support (used on team/league pages)
+  starredBetTypes?: Set<string>   // keyed as `${teamName}|${betType}`
+  onStarClick?: (betType: string, teamName: string) => void
 }
 
 export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green, starredBetTypes, onStarClick }: Props) {
@@ -351,22 +351,26 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
                           if (!mapping) return null
                           const bts = Array.isArray(mapping) ? mapping : [mapping]
                           return (
-                            <span style={{ marginLeft: 'auto', paddingRight: 6, display: 'flex', gap: 1, flexShrink: 0 }}>
-                              {bts.map(bt => (
-                                <button
-                                  key={bt}
-                                  onClick={e => { e.stopPropagation(); onStarClick(bt) }}
-                                  title={starredBetTypes?.has(bt) ? 'Remove from favorites' : 'Add to favorites'}
-                                  style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    padding: '0 3px', lineHeight: 1, transition: 'color 0.15s',
-                                    fontSize: Array.isArray(mapping) ? 11 : 14,
-                                    color: starredBetTypes?.has(bt) ? '#eab308' : '#3f3f46',
-                                  }}
-                                >
-                                  {starredBetTypes?.has(bt) ? '★' : '☆'}
-                                </button>
-                              ))}
+                            <span style={{ marginLeft: 'auto', display: 'flex', gap: 0, flexShrink: 0 }}>
+                              {bts.map(bt => {
+                                const key = `${team.teamName}|${bt}`
+                                const starred = starredBetTypes?.has(key)
+                                return (
+                                  <button
+                                    key={bt}
+                                    onClick={e => { e.stopPropagation(); onStarClick(bt, team.teamName) }}
+                                    title={starred ? 'Remove from favorites' : 'Add to favorites'}
+                                    style={{
+                                      background: 'none', border: 'none', cursor: 'pointer',
+                                      padding: '4px 6px', lineHeight: 1, transition: 'color 0.15s',
+                                      fontSize: 15,
+                                      color: starred ? '#eab308' : '#71717a',
+                                    }}
+                                  >
+                                    {starred ? '★' : '☆'}
+                                  </button>
+                                )
+                              })}
                             </span>
                           )
                         })()}

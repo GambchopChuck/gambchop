@@ -1,23 +1,60 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import GambchopChart from '@/components/GambchopChart'
 import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
+import { useAuth } from '@/lib/auth-context'
+import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 
-interface Props {
-  params: Promise<{ league: string }>
-}
+export default function LeaguePage() {
+  const params = useParams<{ league: string }>()
+  const router = useRouter()
+  const { user, memberTier } = useAuth()
 
-export async function generateStaticParams() {
-  const { LEAGUES } = await import('@/lib/leagues-data')
-  return LEAGUES.map(l => ({ league: l.id }))
-}
-
-export default async function LeaguePage({ params }: Props) {
-  const { league: leagueId } = await params
+  const leagueId = params?.league ?? ''
   const meta = LEAGUE_MAP[leagueId]
-  if (!meta) notFound()
+  if (!meta) return notFound()
 
   const chartData = generateChartData(meta.entities, 10)
+
+  const [allFavorites, setAllFavorites] = useState<Favorite[]>([])
+  const [favError, setFavError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user?.id) return
+    fetchFavorites(user.id).then(setAllFavorites)
+  }, [user?.id])
+
+  const starredBetTypes = useMemo(
+    () => new Set(allFavorites.map(f => `${f.team_name}|${f.bet_type}`)),
+    [allFavorites],
+  )
+
+  async function handleStarClick(betType: string, teamName: string) {
+    if (!user?.id) return
+    const bt = betType as BetType
+    const existing = allFavorites.find(f => f.team_name === teamName && f.bet_type === bt)
+    if (existing) {
+      const ok = await removeFavorite(existing.id)
+      if (ok) setAllFavorites(prev => prev.filter(f => f.id !== existing.id))
+    } else {
+      if (memberTier !== 'pro') { router.push('/pricing'); return }
+      const result = await addFavorite(
+        user.id,
+        { team_name: teamName, league_id: leagueId, league_name: meta.name, bet_type: bt },
+        allFavorites.length,
+      )
+      if (result.error) {
+        setFavError(result.error)
+        setTimeout(() => setFavError(null), 4000)
+      } else {
+        setAllFavorites(prev => [...prev, result.data!])
+      }
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace' }}>
@@ -61,8 +98,22 @@ export default async function LeaguePage({ params }: Props) {
         </div>
       </div>
 
+      {favError && (
+        <div style={{ maxWidth: 1400, margin: '12px auto 0', padding: '0 8px' }}>
+          <div style={{ background: '#ef444418', border: '1px solid #ef444444', borderRadius: 8, padding: '10px 14px', fontSize: 11, color: '#ef4444', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{favError}</span>
+            <button onClick={() => setFavError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0, fontFamily: 'inherit' }}>✕</button>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 8px' }}>
-        <GambchopChart data={chartData} accent={meta.accent} />
+        <GambchopChart
+          data={chartData}
+          accent={meta.accent}
+          starredBetTypes={user ? starredBetTypes : undefined}
+          onStarClick={user ? handleStarClick : undefined}
+        />
       </div>
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '16px 24px', textAlign: 'center' }}>
