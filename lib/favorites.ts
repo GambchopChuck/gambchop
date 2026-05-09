@@ -7,7 +7,7 @@ export type BetType =
   | 'ml_favorite' | 'ml_underdog'
   | 'spread_favorite' | 'spread_dog'
   | 'home' | 'away'
-  | 'over' | 'under'
+  | 'over_under'
 
 export const BET_TYPE_LABELS: Record<BetType, string> = {
   moneyline:       'Moneyline',
@@ -18,8 +18,7 @@ export const BET_TYPE_LABELS: Record<BetType, string> = {
   spread_dog:      'Spread Dog',
   home:            'Home',
   away:            'Away',
-  over:            'Over',
-  under:           'Under',
+  over_under:      'Over/Under',
 }
 
 export const BET_TYPE_ACCENTS: Record<BetType, string> = {
@@ -31,8 +30,7 @@ export const BET_TYPE_ACCENTS: Record<BetType, string> = {
   spread_dog:      '#9333ea',
   home:            '#14b8a6',
   away:            '#94a3b8',
-  over:            '#8b5cf6',
-  under:           '#b45309',
+  over_under:      '#8b5cf6',
 }
 
 export interface Favorite {

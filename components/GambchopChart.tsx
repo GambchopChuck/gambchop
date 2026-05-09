@@ -239,7 +239,7 @@ const ROW_STAR: Partial<Record<RowKey, string | [string, string]>> = {
   'sp-dog':  'spread_dog',
   home:      'home',
   away:      'away',
-  ou:        ['over', 'under'],  // two separate star buttons
+  ou:        'over_under',
 }
 
 interface Props {

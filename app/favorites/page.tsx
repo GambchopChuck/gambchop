@@ -48,10 +48,6 @@ const SORT_LS_KEY = 'gambchop-favorites-sort'
 function getRecord(games: GameEntry[], bt: BetType): { w: number; l: number } {
   const ml  = (g: GameEntry[]) => ({ w: g.filter(x => x.moneylineResult === 'win').length, l: g.filter(x => x.moneylineResult === 'loss').length })
   const sp  = (g: GameEntry[]) => ({ w: g.filter(x => x.spreadResult   === 'win').length, l: g.filter(x => x.spreadResult   === 'loss').length })
-  const ou  = (g: GameEntry[], target: 'over' | 'under') => ({
-    w: g.filter(x => x.ouResult === target).length,
-    l: g.filter(x => x.ouResult === (target === 'over' ? 'under' : 'over')).length,
-  })
   switch (bt) {
     case 'moneyline':       return ml(games)
     case 'spread':          return sp(games)
@@ -61,8 +57,10 @@ function getRecord(games: GameEntry[], bt: BetType): { w: number; l: number } {
     case 'spread_dog':      return sp(games.filter(g => !g.isSpreadFavorite))
     case 'home':            return ml(games.filter(g => g.isHome))
     case 'away':            return ml(games.filter(g => !g.isHome))
-    case 'over':            return ou(games, 'over')
-    case 'under':           return ou(games, 'under')
+    case 'over_under':      return {
+      w: games.filter(g => g.ouResult === 'over').length,
+      l: games.filter(g => g.ouResult === 'under').length,
+    }
   }
 }
 
@@ -104,16 +102,10 @@ function getCellInfo(game: GameEntry, bt: BetType): CellInfo {
     case 'spread_dog':      return pill(hasSP ? !game.isSpreadFavorite : null, C.purple)
     case 'home':            return pill(hasML ? game.isHome            : null, C.teal)
     case 'away':            return pill(hasML ? !game.isHome           : null, C.silver)
-    case 'over': {
+    case 'over_under': {
       if (!game.ouResult) return empty
       if (game.ouResult === 'over')  return { bg: C.violet, glow: `0 0 14px ${C.violet}90` }
-      if (game.ouResult === 'under') return dim
-      return { bg: C.white, label: 'P', textColor: '#111' }
-    }
-    case 'under': {
-      if (!game.ouResult) return empty
-      if (game.ouResult === 'under') return { bg: C.brown, glow: `0 0 14px ${C.brown}90` }
-      if (game.ouResult === 'over')  return dim
+      if (game.ouResult === 'under') return { bg: C.brown,  glow: `0 0 14px ${C.brown}90`  }
       return { bg: C.white, label: 'P', textColor: '#111' }
     }
   }
