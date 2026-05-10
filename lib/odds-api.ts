@@ -118,3 +118,77 @@ export function fetchOdds(
     `/v4/sports/${sport}/odds?regions=${regions}&markets=${markets}&apiKey=${apiKey()}`,
   )
 }
+
+// ─── MLB Stats API (free, no key, full history) ────────────────────────────────
+// Used for historical scores beyond the 3-day Odds API window.
+// Endpoint: https://statsapi.mlb.com/api/v1/schedule
+// Returns GameScore[] normalized to the same shape as fetchScores() so the
+// caller (backfill route) can treat both sources identically.
+// external_id = gamePk.toString() — a different namespace from Odds API UUIDs,
+// but the two windows (days 1–3 via Odds API, days 4–14 via MLB Stats) don't
+// overlap so there are no duplicate game rows.
+
+const MLB_STATS_BASE = 'https://statsapi.mlb.com'
+
+interface MLBStatsResponse {
+  dates: Array<{
+    date: string
+    games: Array<{
+      gamePk:       number
+      gameDate:     string   // ISO 8601 timestamp, e.g. "2026-05-01T20:10:00Z"
+      officialDate: string   // YYYY-MM-DD
+      status:       { detailedState: string }
+      teams: {
+        home: { score: number; team: { name: string } }
+        away: { score: number; team: { name: string } }
+      }
+    }>
+  }>
+}
+
+export async function fetchMLBStatsScores(
+  startDate: string,   // YYYY-MM-DD
+  endDate:   string,   // YYYY-MM-DD
+): Promise<GameScore[]> {
+  const url =
+    `${MLB_STATS_BASE}/api/v1/schedule` +
+    `?sportId=1&startDate=${startDate}&endDate=${endDate}&gameType=R&hydrate=linescore`
+  console.log('[mlb-stats] GET', url)
+
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`MLB Stats API: HTTP ${res.status}`)
+
+  const body = await res.json() as MLBStatsResponse
+  const games: GameScore[] = []
+
+  for (const dateGroup of body.dates ?? []) {
+    const dayGames: GameScore[] = []
+    for (const g of dateGroup.games ?? []) {
+      if (g.status.detailedState !== 'Final') continue
+      const homeScore = g.teams.home.score
+      const awayScore = g.teams.away.score
+      if (homeScore == null || awayScore == null) continue
+      const homeTeam = g.teams.home.team.name
+      const awayTeam = g.teams.away.team.name
+      dayGames.push({
+        id:            g.gamePk.toString(),
+        sport_key:     'baseball_mlb',
+        sport_title:   'MLB',
+        commence_time: g.gameDate,
+        completed:     true,
+        home_team:     homeTeam,
+        away_team:     awayTeam,
+        scores: [
+          { name: homeTeam, score: homeScore.toString() },
+          { name: awayTeam, score: awayScore.toString() },
+        ],
+        last_update: null,
+      })
+    }
+    console.log(`[mlb-stats] ${dateGroup.date}: ${dayGames.length} final games`)
+    games.push(...dayGames)
+  }
+
+  console.log(`[mlb-stats] total: ${games.length} final games for ${startDate} → ${endDate}`)
+  return games
+}

@@ -2,24 +2,28 @@ export const runtime    = 'nodejs'
 export const dynamic    = 'force-dynamic'
 export const maxDuration = 60   // Vercel Hobby max; upgrade plan for longer
 
-// ─── Stage 3: MLB score backfill ──────────────────────────────────────────────
+// ─── Stage 3: MLB score backfill — 14 days ────────────────────────────────────
 //
-// API CONSTRAINT (verified from docs):
-//   The Odds API /scores endpoint accepts daysFrom = 1 | 2 | 3 ONLY.
-//   There is no date-offset or dateFrom/dateTo parameter.
-//   The window is always "last N days from now," so daysFrom=3 is a strict
-//   superset of daysFrom=1 and daysFrom=2 — multiple calls add no new data.
-//   Each call with daysFrom specified costs 2 quota units (vs 1 for live games).
-//   Historical data beyond 3 days requires a separate historical API product.
+// Two-source strategy (verified against live docs):
 //
-//   TOTAL API COST OF THIS ENDPOINT: 2 quota units (one call, daysFrom=3).
+//   Source A — Odds API /scores (days 1–3):
+//     daysFrom accepts 1 | 2 | 3 ONLY. No date-offset exists. One call with
+//     daysFrom=3 covers the last 3 days and costs 2 quota units.
 //
-//   To accumulate beyond 3 days, run this endpoint once per day.
-//   Stage 4's daily cron handles forward accumulation automatically.
+//   Source B — MLB Stats API /schedule (days 4–14):
+//     statsapi.mlb.com accepts any date range, returns final scores, free,
+//     no API key required. /v4/historical/sports/{sport}/scores does NOT exist
+//     on The Odds API — MLB Stats API is the correct solution for history.
+//
+//   The two windows do not overlap (Odds API: days 1–3, MLB Stats: days 4–14),
+//   so external_ids are always unique per row. external_id for Odds API games
+//   is the Odds API UUID; for MLB Stats games it is gamePk.toString().
+//
+//   TOTAL COST: 2 Odds API quota units + 1 free MLB Stats API call.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { fetchScores, type GameScore } from '@/lib/odds-api'
+import { fetchScores, fetchMLBStatsScores, type GameScore } from '@/lib/odds-api'
 import { slugify, computeOutcomes } from '@/lib/ingestion'
 
 export async function GET(req: NextRequest) {
@@ -59,14 +63,38 @@ export async function GET(req: NextRequest) {
     const leagueId: string = league.id
     console.log('[backfill-mlb] league_id:', leagueId)
 
-    // ── 4. Fetch completed scores (one call, daysFrom=3 = API maximum) ────────
-    console.log('[backfill-mlb] fetching scores with daysFrom=3...')
+    // ── 4. Fetch scores from two sources and combine ──────────────────────────
+
+    // Source A: Odds API /scores (days 1–3, 2 quota units)
+    console.log('[backfill-mlb] [A] Odds API: fetching daysFrom=3...')
     const scoresResp = await fetchScores('baseball_mlb', 3)
-    const apiRemaining = scoresResp.remainingRequests
-    console.log(`[backfill-mlb] raw games in response: ${scoresResp.data.length} | quota remaining: ${apiRemaining}`)
+    const oddsApiRemaining = scoresResp.remainingRequests
+    console.log(`[backfill-mlb] [A] Odds API: ${scoresResp.data.length} games | quota remaining: ${oddsApiRemaining}`)
+
+    // Source B: MLB Stats API (days 4–14, free)
+    // Window: today-14 → today-4  (does not overlap with Odds API's days 1–3)
+    const toDateStr = (d: Date): string =>
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+    const now       = new Date()
+    const histStart = new Date(now); histStart.setUTCDate(histStart.getUTCDate() - 14)
+    const histEnd   = new Date(now); histEnd.setUTCDate(histEnd.getUTCDate() - 4)
+    const histStartStr = toDateStr(histStart)
+    const histEndStr   = toDateStr(histEnd)
+
+    console.log(`[backfill-mlb] [B] MLB Stats API: fetching ${histStartStr} → ${histEndStr}...`)
+    const mlbStatsGames = await fetchMLBStatsScores(histStartStr, histEndStr)
+    console.log(`[backfill-mlb] [B] MLB Stats API: ${mlbStatsGames.length} final games`)
+
+    // Combine and dedupe by external_id
+    const seenIds = new Set<string>()
+    const allGames: GameScore[] = []
+    for (const g of [...scoresResp.data, ...mlbStatsGames]) {
+      if (!seenIds.has(g.id)) { seenIds.add(g.id); allGames.push(g) }
+    }
+    console.log(`[backfill-mlb] combined: ${allGames.length} unique games across both sources`)
 
     type CompletedGame = GameScore & { scores: NonNullable<GameScore['scores']> }
-    const completedGames = scoresResp.data.filter(
+    const completedGames = allGames.filter(
       (g): g is CompletedGame =>
         g.completed === true &&
         Array.isArray(g.scores) &&
@@ -75,7 +103,7 @@ export async function GET(req: NextRequest) {
     console.log(`[backfill-mlb] completed games with scores: ${completedGames.length}`)
 
     if (!completedGames.length) {
-      const msg = 'No completed MLB games found in the last 3 days (API maximum window)'
+      const msg = 'No completed MLB games found in the last 14 days'
       if (runId) {
         await supabaseAdmin
           .from('ingestion_runs')
@@ -236,7 +264,7 @@ export async function GET(req: NextRequest) {
           status:         'success',
           completed_at:   new Date().toISOString(),
           games_inserted: gamesInserted,
-          api_calls_used: 1,
+          api_calls_used: 2,   // 1 Odds API + 1 MLB Stats
         })
         .eq('id', runId)
     }
@@ -245,13 +273,16 @@ export async function GET(req: NextRequest) {
       success: true,
       run_id:  runId,
       summary: {
-        api_calls_used:   1,
-        api_remaining:    apiRemaining,
-        games_inserted:   gamesInserted,
-        games_updated:    gamesUpdated,
-        games_failed:     gamesFailed,
-        teams_total:      teamIdBySlug.size,
-        duration_seconds: parseFloat(((Date.now() - startedAt) / 1000).toFixed(1)),
+        odds_api_calls:       1,
+        odds_api_quota_used:  2,
+        odds_api_remaining:   oddsApiRemaining,
+        mlb_stats_api_calls:  1,
+        mlb_stats_cost:       'free',
+        games_inserted:       gamesInserted,
+        games_updated:        gamesUpdated,
+        games_failed:         gamesFailed,
+        teams_total:          teamIdBySlug.size,
+        duration_seconds:     parseFloat(((Date.now() - startedAt) / 1000).toFixed(1)),
       },
     })
 
