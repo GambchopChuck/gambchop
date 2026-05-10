@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import GambchopChart from '@/components/GambchopChart'
 import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
+import type { TeamChartData } from '@/lib/leagues-data'
+import { fetchTeamOutcomes } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
@@ -52,8 +54,34 @@ export default function TeamPage() {
   const [ready, setReady] = useState(false)
   useEffect(() => { setReady(true) }, [])
 
+  // MLB → real Supabase data; all other leagues → mock fallback
+  const [chartData, setChartData]     = useState<TeamChartData[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
+
+  useEffect(() => {
+    if (!meta || !entity) return
+    if (leagueId !== 'mlb') {
+      setChartData(generateChartData([entity], 10))
+      setDataLoading(false)
+      return
+    }
+    fetchTeamOutcomes('mlb', teamSlug, 10).then(games => {
+      if (games.length > 0) {
+        setChartData([{
+          teamName:     entity,
+          abbreviation: entity.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
+          games,
+        }])
+      } else {
+        console.warn('[gambchop] fetchTeamOutcomes returned empty — using mock fallback')
+        setChartData(generateChartData([entity], 10))
+      }
+      setDataLoading(false)
+    })
+  }, [leagueId, teamSlug, entity])   // eslint-disable-line react-hooks/exhaustive-deps
+
   const [teamFavorites, setTeamFavorites] = useState<Favorite[]>([])
-  const [favError, setFavError] = useState<string | null>(null)
+  const [favError, setFavError]           = useState<string | null>(null)
 
   useEffect(() => {
     if (!user?.id || !ready) return
@@ -91,8 +119,7 @@ export default function TeamPage() {
 
   if (!meta || !entity) return notFound()
 
-  const chartData = generateChartData([entity], 10)
-  const seed = hash(entity)
+  const seed     = hash(entity)
   const isPlayer = meta.entityType === 'player'
 
   const stats = isPlayer
@@ -113,7 +140,6 @@ export default function TeamPage() {
         { label: 'Under',       value: `${3 + seed % 4}-${4 + (seed + 1) % 5}`, color: '#b45309' },
       ]
 
-  // Show stats only to members
   const showStats = ready && memberTier !== 'none'
 
   return (
@@ -132,7 +158,7 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* Entity header — always visible */}
+      {/* Entity header */}
       <div style={{ padding: '28px 24px 20px', borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
@@ -145,7 +171,6 @@ export default function TeamPage() {
                 {entity}
               </h1>
             </div>
-            {/* Membership badge + Follow */}
             {ready && (
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {memberTier === 'none' && (
@@ -163,7 +188,6 @@ export default function TeamPage() {
                     ⚡ Pro · Full Season
                   </div>
                 )}
-                {/* Follow button */}
                 {memberTier !== 'none' && (() => {
                   const following = isFollowing(teamSlug)
                   const atLimit   = !following && memberTier === 'free' && follows.length >= FREE_FOLLOWS
@@ -187,7 +211,7 @@ export default function TeamPage() {
             )}
           </div>
 
-          {/* Stats row — hidden until member */}
+          {/* Stats row */}
           {showStats ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {stats.map(s => <StatBlock key={s.label} {...s} />)}
@@ -207,7 +231,6 @@ export default function TeamPage() {
 
       {/* Chart section */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 8px' }}>
-        {/* Non-member CTA banner above chart */}
         {ready && memberTier === 'none' && (
           <div style={{ margin: '0 16px 16px', background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 12, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
@@ -247,15 +270,21 @@ export default function TeamPage() {
         )}
 
         {ready && (
-          <GambchopChart
-            data={chartData}
-            memberTier={memberTier}
-            accent={meta.accent}
-            onJoin={() => { setIsMember(true); openModal('join') }}
-            onUpgrade={() => openModal('pro')}
-            starredBetTypes={user ? starredBetTypes : undefined}
-            onStarClick={user ? handleStarClick : undefined}
-          />
+          dataLoading ? (
+            <div style={{ padding: 60, textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+              Loading game data…
+            </div>
+          ) : (
+            <GambchopChart
+              data={chartData}
+              memberTier={memberTier}
+              accent={meta.accent}
+              onJoin={() => { setIsMember(true); openModal('join') }}
+              onUpgrade={() => openModal('pro')}
+              starredBetTypes={user ? starredBetTypes : undefined}
+              onStarClick={user ? handleStarClick : undefined}
+            />
+          )
         )}
       </div>
 

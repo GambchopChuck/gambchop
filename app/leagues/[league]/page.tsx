@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import GambchopChart from '@/components/GambchopChart'
 import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
+import type { TeamChartData } from '@/lib/leagues-data'
+import { fetchLeagueOutcomes } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 
@@ -18,10 +20,24 @@ export default function LeaguePage() {
   const meta = LEAGUE_MAP[leagueId]
   if (!meta) return notFound()
 
-  const chartData = generateChartData(meta.entities, 10)
+  // MLB → real Supabase data; all other leagues → mock fallback
+  const [chartData, setChartData]     = useState<TeamChartData[]>(() => generateChartData(meta.entities, 10))
+  const [dataLoading, setDataLoading] = useState(leagueId === 'mlb')
+
+  useEffect(() => {
+    if (leagueId !== 'mlb') return
+    fetchLeagueOutcomes('mlb').then(data => {
+      if (data.length > 0) {
+        setChartData(data)
+      } else {
+        console.warn('[gambchop] fetchLeagueOutcomes returned empty — using mock fallback')
+      }
+      setDataLoading(false)
+    })
+  }, [leagueId])
 
   const [allFavorites, setAllFavorites] = useState<Favorite[]>([])
-  const [favError, setFavError] = useState<string | null>(null)
+  const [favError, setFavError]         = useState<string | null>(null)
 
   useEffect(() => {
     if (!user?.id) return
@@ -108,12 +124,18 @@ export default function LeaguePage() {
       )}
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 8px' }}>
-        <GambchopChart
-          data={chartData}
-          accent={meta.accent}
-          starredBetTypes={user ? starredBetTypes : undefined}
-          onStarClick={user ? handleStarClick : undefined}
-        />
+        {dataLoading ? (
+          <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            Loading game data…
+          </div>
+        ) : (
+          <GambchopChart
+            data={chartData}
+            accent={meta.accent}
+            starredBetTypes={user ? starredBetTypes : undefined}
+            onStarClick={user ? handleStarClick : undefined}
+          />
+        )}
       </div>
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '16px 24px', textAlign: 'center' }}>

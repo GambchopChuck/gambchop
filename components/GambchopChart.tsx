@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { TeamChartData, GameEntry, BetResult } from '@/lib/leagues-data'
 import type { MemberTier } from '@/lib/auth-context'
 import { useFilters, gameMatchesFilter, filterChips } from '@/lib/filter-context'
+import { computeStreak } from '@/lib/chart-data'
 
 const FREE_COLS = 3
 
@@ -113,7 +114,7 @@ const ROWS: RowMeta[] = [
   { key: 'ou',       label: 'Over / Under',    accent: C.violet, record: g => { const {o,u} = rec.ou(g); return <OUBadge o={o} u={u} /> } },
 ]
 
-function GameCellFilled({ rowKey, game, gi, filled }: { rowKey: RowKey; game: GameEntry; gi: number; filled: FilledRow }) {
+function GameCellFilled({ rowKey, game: _game, gi, filled }: { rowKey: RowKey; game: GameEntry; gi: number; filled: FilledRow }) {
   switch (rowKey) {
     case 'moneyline': return <WLCell result={filled.ml[gi]} />
     case 'spread':    return <WLCell result={filled.sp[gi]} winLabel="COV" lossLabel="MIS" />
@@ -322,7 +323,15 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
           <DateHeader dates={dates} visibleCols={visibleCols} />
 
           {data.map((team, ti) => {
-            const filled = buildFilledRows(team.games)
+            const filled    = buildFilledRows(team.games)
+            const mlStreak  = computeStreak(team.games, 'moneyline')
+            const spStreak  = computeStreak(team.games, 'spread')
+            const ouStreak  = computeStreak(team.games, 'over_under')
+            const streakFor: Partial<Record<RowKey, typeof mlStreak>> = {
+              moneyline: mlStreak,
+              spread:    spStreak,
+              ou:        ouStreak,
+            }
             return (
               <div key={team.teamName}>
                 {ti > 0 && ti % 5 === 0 && <DateHeader dates={dates} visibleCols={visibleCols} />}
@@ -346,6 +355,18 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
                         <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
                         <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
                         {row.record(team.games)}
+                        {(() => {
+                          const s = streakFor[row.key]
+                          if (!s) return null
+                          const color = (s.type === 'W' || s.type === 'O') ? '#22c55e'
+                            : (s.type === 'L' || s.type === 'U') ? '#ef4444'
+                            : '#52525b'
+                          return (
+                            <span style={{ fontSize: 9, color, fontWeight: 800, letterSpacing: '0.05em', marginLeft: 5, flexShrink: 0 }}>
+                              · {s.type}{s.count}
+                            </span>
+                          )
+                        })()}
                         {onStarClick && (() => {
                           const mapping = ROW_STAR[row.key]
                           if (!mapping) return null

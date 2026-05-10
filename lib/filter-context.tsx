@@ -56,7 +56,6 @@ export function countActiveFilters(f: Filters): number {
   let n = 0
   if (!f.showHome || !f.showAway)         n++
   if (!f.showFavorite || !f.showUnderdog) n++
-  if (f.divisionOnly)                     n++
   if (f.restDays !== 'all')               n++
   if (!f.showOver || !f.showUnder)        n++
   return n
@@ -70,7 +69,6 @@ export function filterChips(f: Filters): string[] {
   if (f.showFavorite && !f.showUnderdog)  chips.push('Favorites Only')
   if (!f.showFavorite && f.showUnderdog)  chips.push('Underdogs Only')
   if (!f.showFavorite && !f.showUnderdog) chips.push('No Fav/Dog')
-  if (f.divisionOnly)                chips.push('Division Only')
   if (f.restDays === 'b2b')          chips.push('Back-to-Back')
   if (f.restDays === '1+')           chips.push('1+ Day Rest')
   if (f.restDays === '2+')           chips.push('2+ Days Rest')

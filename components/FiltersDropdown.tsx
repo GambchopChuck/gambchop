@@ -1,12 +1,11 @@
 'use client'
 
-import { useFilters, DEFAULT_FILTERS, Filters } from '@/lib/filter-context'
+import { useFilters, Filters } from '@/lib/filter-context'
 
 const BG     = '#0a0a0f'
 const CARD   = '#0f0f14'
 const BORDER = '#1a1a24'
 const MUTED  = '#52525b'
-const SUB    = '#a1a1aa'
 const TEXT   = '#f4f4f5'
 const GREEN  = '#22c55e'
 
@@ -175,19 +174,6 @@ export default function FiltersDropdown({ onClose }: { onClose: () => void }) {
             />
           </FilterSection>
 
-          {/* Division */}
-          <FilterSection title="Opponent">
-            <Checkbox
-              checked={filters.divisionOnly}
-              onChange={v => set('divisionOnly', v)}
-              label="Division Games Only"
-              color='#8b5cf6'
-            />
-            <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.06em', lineHeight: 1.5, marginTop: 2 }}>
-              Filter to rivalry &amp; divisional matchups
-            </div>
-          </FilterSection>
-
           {/* Over / Under */}
           <FilterSection title="Over / Under">
             <Checkbox
@@ -256,7 +242,6 @@ function buildChips(f: Filters): string[] {
   if (f.showFavorite && !f.showUnderdog)  chips.push('Favorites Only')
   if (!f.showFavorite && f.showUnderdog)  chips.push('Underdogs Only')
   if (!f.showFavorite && !f.showUnderdog) chips.push('No Role Filter')
-  if (f.divisionOnly)                 chips.push('Division Only')
   if (f.restDays === 'b2b')           chips.push('Back-to-Back')
   if (f.restDays === '1+')            chips.push('1+ Day Rest')
   if (f.restDays === '2+')            chips.push('2+ Days Rest')
