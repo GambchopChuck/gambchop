@@ -144,7 +144,7 @@ export async function GET(req: NextRequest) {
     // ── 7. Parse game date / time / season ────────────────────────────────────
     const commence  = new Date(game.commence_time)
     const gameDate  = commence.toISOString().slice(0, 10)           // YYYY-MM-DD
-    const gameTime  = commence.toISOString().slice(11, 19)          // HH:MM:SS
+    const gameTime  = game.commence_time                            // full ISO 8601 timestamptz
     const season    = commence.getUTCFullYear()
 
     // ── 8. Upsert game ────────────────────────────────────────────────────────
