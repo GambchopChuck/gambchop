@@ -95,7 +95,7 @@ async function fetchLeagueGameRows(leagueId: string): Promise<RawGameRow[]> {
         was_home, was_ml_favorite, was_spread_favorite,
         own_score, opponent_score,
         moneyline_result, spread_result, over_under_result,
-        team:team_id(id, name, slug)
+        team:teams!team_id(id, name, slug)
       )
     `)
     .eq('league_id', leagueId)
@@ -220,23 +220,31 @@ export function computeStreak(
     return g.ouResult
   }
 
+  // Pushes are transparent — treated as if the game didn't happen for streak purposes.
+  const isPush = (r: string) =>
+    metric === 'over_under' ? (r !== 'over' && r !== 'under') : (r !== 'win' && r !== 'loss')
+
+  // Find most recent non-null, non-push result
   let ref: string | null = null
   let i = games.length - 1
   for (; i >= 0; i--) {
     const r = get(games[i])
-    if (r !== null) { ref = r; break }
+    if (r !== null && !isPush(r)) { ref = r; break }
   }
   if (!ref || i < 0) return null
 
   const type: StreakType =
     metric === 'over_under'
-      ? (ref === 'over'  ? 'O' : ref === 'under' ? 'U' : 'P')
-      : (ref === 'win'   ? 'W' : ref === 'loss'  ? 'L' : 'P')
+      ? (ref === 'over' ? 'O' : 'U')
+      : (ref === 'win'  ? 'W' : 'L')
 
   let count = 0
   for (let j = i; j >= 0; j--) {
-    if (get(games[j]) === ref) count++
-    else break
+    const r = get(games[j])
+    if (r === null) break       // unknown result — stop counting
+    if (isPush(r))  continue    // push — skip transparently
+    if (r === ref)  count++
+    else            break
   }
 
   return { count, type }
