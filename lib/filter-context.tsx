@@ -1,104 +1,96 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
-import type { GameEntry } from './leagues-data'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface Filters {
-  showHome:      boolean
-  showAway:      boolean
-  showFavorite:  boolean
-  showUnderdog:  boolean
-  divisionOnly:  boolean
-  restDays:      'all' | 'b2b' | '1+' | '2+' | '3+'
-  showOver:      boolean
-  showUnder:     boolean
+export interface VisibleRows {
+  moneyline:       boolean
+  spread:          boolean
+  ml_favorite:     boolean
+  ml_underdog:     boolean
+  spread_favorite: boolean
+  spread_dog:      boolean
+  home:            boolean
+  away:            boolean
+  over_under:      boolean
 }
 
-export const DEFAULT_FILTERS: Filters = {
-  showHome:     true,
-  showAway:     true,
-  showFavorite: true,
-  showUnderdog: true,
-  divisionOnly: false,
-  restDays:     'all',
-  showOver:     true,
-  showUnder:    true,
+export const ROW_LABELS: Record<keyof VisibleRows, string> = {
+  moneyline:       'Moneyline',
+  spread:          'Spread',
+  ml_favorite:     'ML Favorite',
+  ml_underdog:     'ML Underdog',
+  spread_favorite: 'Spread Favorite',
+  spread_dog:      'Spread Dog',
+  home:            'Home',
+  away:            'Away',
+  over_under:      'Over / Under',
 }
+
+export const DEFAULT_VISIBLE_ROWS: VisibleRows = {
+  moneyline:       true,
+  spread:          true,
+  ml_favorite:     true,
+  ml_underdog:     true,
+  spread_favorite: true,
+  spread_dog:      true,
+  home:            true,
+  away:            true,
+  over_under:      true,
+}
+
+const LS_KEY = 'gambchop-row-visibility'
+
+// ─── Context value ────────────────────────────────────────────────────────────
 
 export interface FilterContextValue {
-  filters: Filters
-  setFilters: (f: Filters) => void
-  resetFilters: () => void
-  isFiltered: boolean
-  activeCount: number
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-export function gameMatchesFilter(game: GameEntry, f: Filters): boolean {
-  if (game.isHome  && !f.showHome)     return false
-  if (!game.isHome && !f.showAway)     return false
-  if (game.isFavorite  && !f.showFavorite)  return false
-  if (!game.isFavorite && !f.showUnderdog)  return false
-  if (f.divisionOnly && !game.isDivisionGame) return false
-  if (f.restDays === 'b2b' && game.restDays !== 0)  return false
-  if (f.restDays === '1+'  && game.restDays < 1)     return false
-  if (f.restDays === '2+'  && game.restDays < 2)     return false
-  if (f.restDays === '3+'  && game.restDays < 3)     return false
-  if (game.ouResult === 'over'  && !f.showOver)  return false
-  if (game.ouResult === 'under' && !f.showUnder) return false
-  return true
-}
-
-export function countActiveFilters(f: Filters): number {
-  let n = 0
-  if (!f.showHome || !f.showAway)         n++
-  if (!f.showFavorite || !f.showUnderdog) n++
-  if (f.restDays !== 'all')               n++
-  if (!f.showOver || !f.showUnder)        n++
-  return n
-}
-
-export function filterChips(f: Filters): string[] {
-  const chips: string[] = []
-  if (f.showHome && !f.showAway)     chips.push('Home Only')
-  if (!f.showHome && f.showAway)     chips.push('Away Only')
-  if (!f.showHome && !f.showAway)    chips.push('No Home/Away')
-  if (f.showFavorite && !f.showUnderdog)  chips.push('Favorites Only')
-  if (!f.showFavorite && f.showUnderdog)  chips.push('Underdogs Only')
-  if (!f.showFavorite && !f.showUnderdog) chips.push('No Fav/Dog')
-  if (f.restDays === 'b2b')          chips.push('Back-to-Back')
-  if (f.restDays === '1+')           chips.push('1+ Day Rest')
-  if (f.restDays === '2+')           chips.push('2+ Days Rest')
-  if (f.restDays === '3+')           chips.push('3+ Days Rest')
-  if (f.showOver && !f.showUnder)    chips.push('Over Only')
-  if (!f.showOver && f.showUnder)    chips.push('Under Only')
-  if (!f.showOver && !f.showUnder)   chips.push('No O/U')
-  return chips
+  visibleRows:    VisibleRows
+  setVisibleRows: (v: VisibleRows) => void
+  resetFilters:   () => void
+  isFiltered:     boolean
+  activeCount:    number                                // rows currently hidden
+  filterChips:    Array<{ key: keyof VisibleRows; label: string }>
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const FilterContext = createContext<FilterContextValue>({
-  filters:     DEFAULT_FILTERS,
-  setFilters:  () => {},
-  resetFilters: () => {},
-  isFiltered:  false,
-  activeCount: 0,
+  visibleRows:    DEFAULT_VISIBLE_ROWS,
+  setVisibleRows: () => {},
+  resetFilters:   () => {},
+  isFiltered:     false,
+  activeCount:    0,
+  filterChips:    [],
 })
 
 export function FilterProvider({ children }: { children: ReactNode }) {
-  const [filters, setFiltersState] = useState<Filters>(DEFAULT_FILTERS)
+  const [visibleRows, setVisibleRowsState] = useState<VisibleRows>(DEFAULT_VISIBLE_ROWS)
 
-  const setFilters = (f: Filters) => setFiltersState(f)
-  const resetFilters = () => setFiltersState(DEFAULT_FILTERS)
-  const activeCount = countActiveFilters(filters)
-  const isFiltered = activeCount > 0
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<VisibleRows>
+        setVisibleRowsState({ ...DEFAULT_VISIBLE_ROWS, ...parsed })
+      }
+    } catch {}
+  }, [])
+
+  const setVisibleRows = (v: VisibleRows) => {
+    setVisibleRowsState(v)
+    try { localStorage.setItem(LS_KEY, JSON.stringify(v)) } catch {}
+  }
+
+  const resetFilters = () => setVisibleRows(DEFAULT_VISIBLE_ROWS)
+
+  const hiddenKeys = (Object.keys(visibleRows) as Array<keyof VisibleRows>).filter(k => !visibleRows[k])
+  const activeCount = hiddenKeys.length
+  const isFiltered  = activeCount > 0
+  const filterChips = hiddenKeys.map(k => ({ key: k, label: ROW_LABELS[k] }))
 
   return (
-    <FilterContext.Provider value={{ filters, setFilters, resetFilters, isFiltered, activeCount }}>
+    <FilterContext.Provider value={{ visibleRows, setVisibleRows, resetFilters, isFiltered, activeCount, filterChips }}>
       {children}
     </FilterContext.Provider>
   )

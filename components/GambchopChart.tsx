@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import type { TeamChartData, GameEntry, BetResult } from '@/lib/leagues-data'
 import type { MemberTier } from '@/lib/auth-context'
-import { useFilters, gameMatchesFilter, filterChips } from '@/lib/filter-context'
+import { useFilters } from '@/lib/filter-context'
+import type { VisibleRows } from '@/lib/filter-context'
 import { computeStreak } from '@/lib/chart-data'
 
 const FREE_COLS = 3
@@ -249,6 +250,19 @@ function ProUpgradeOverlay({ onUpgrade }: { onUpgrade: () => void }) {
 
 // ─── Main Chart ───────────────────────────────────────────────────────────────
 
+// Maps each chart RowKey → filter-context VisibleRows key
+const ROW_VISIBLE_KEY: Record<RowKey, keyof VisibleRows> = {
+  moneyline: 'moneyline',
+  spread:    'spread',
+  'ml-fav':  'ml_favorite',
+  'ml-dog':  'ml_underdog',
+  'sp-fav':  'spread_favorite',
+  'sp-dog':  'spread_dog',
+  home:      'home',
+  away:      'away',
+  ou:        'over_under',
+}
+
 // Maps each chart RowKey to its favorites bet_type string(s)
 const ROW_STAR: Partial<Record<RowKey, string | [string, string]>> = {
   moneyline: 'moneyline',
@@ -276,7 +290,8 @@ interface Props {
 
 export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green, starredBetTypes, onStarClick }: Props) {
   const [showBanner, setShowBanner] = useState(false)
-  const { filters, isFiltered, activeCount, resetFilters } = useFilters()
+  const { visibleRows, setVisibleRows, filterChips, isFiltered, activeCount, resetFilters } = useFilters()
+  const allRowsHidden = Object.values(visibleRows).every(v => !v)
 
   const tier: MemberTier = memberTier ?? (isPro ? 'pro' : 'free')
   const dates = data[0]?.games.map(g => g.date) ?? []
@@ -299,12 +314,22 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
           <span style={{ fontSize: 8, color: C.green, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800, flexShrink: 0 }}>
             ◧ {activeCount} Filter{activeCount !== 1 ? 's' : ''}
           </span>
-          {filterChips(filters).map(chip => (
-            <div key={chip} style={{
-              background: `${C.green}11`, border: `1px solid ${C.green}33`,
-              borderRadius: 4, padding: '2px 8px',
-              fontSize: 9, color: C.green, letterSpacing: '0.06em', fontWeight: 600,
-            }}>{chip}</div>
+          {filterChips.map(({ key, label }) => (
+            <div
+              key={key as string}
+              style={{
+                background: `${C.green}11`, border: `1px solid ${C.green}33`,
+                borderRadius: 4, padding: '2px 6px',
+                fontSize: 9, color: C.green, letterSpacing: '0.06em', fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              {label}
+              <button
+                onClick={() => setVisibleRows({ ...visibleRows, [key]: true })}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: C.green, fontSize: 10, lineHeight: 1, fontFamily: 'inherit' }}
+              >×</button>
+            </div>
           ))}
           <button
             onClick={resetFilters}
@@ -366,7 +391,12 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
                   <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
                 </div>
 
-                {ROWS.map((row, ri) => {
+                {allRowsHidden && (
+                  <div style={{ padding: '14px 20px', fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    No rows selected — open filters to enable rows
+                  </div>
+                )}
+                {ROWS.filter(row => visibleRows[ROW_VISIBLE_KEY[row.key]]).map((row, ri) => {
                   const rowBg = ri % 2 === 0 ? '#0a0a0f' : '#0d0d14'
                   return (
                     <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
@@ -416,18 +446,15 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
                         })()}
                       </div>
                       {team.games.map((game, gi) => {
-                        const locked    = gi >= visibleCols
-                        const filtered  = isFiltered && !gameMatchesFilter(game, filters)
-                        const blurAmt   = locked ? 'blur(4px)' : filtered ? 'blur(1px)' : 'none'
-                        const opacAmt   = locked ? 0.3 : filtered ? 0.12 : 1
+                        const locked = gi >= visibleCols
                         return (
                           <div
                             key={game.date}
                             style={{
                               width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg,
-                              filter: blurAmt, opacity: opacAmt,
-                              pointerEvents: locked || filtered ? 'none' : 'auto',
-                              transition: 'opacity 0.2s, filter 0.2s',
+                              filter: locked ? 'blur(4px)' : 'none',
+                              opacity: locked ? 0.3 : 1,
+                              pointerEvents: locked ? 'none' : 'auto',
                             }}
                           >
                             <GameCellFilled rowKey={row.key} game={game} gi={gi} filled={filled} />
