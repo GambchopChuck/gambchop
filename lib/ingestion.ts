@@ -1,3 +1,4 @@
+import type { GameOdds } from './odds-api'
 // ─── Pure ingestion helpers — no Supabase imports, fully unit-testable ────────
 
 // ─── slugify ──────────────────────────────────────────────────────────────────
@@ -120,4 +121,70 @@ export function computeOutcomes(
       over_under_result:   ouResult,
     },
   ]
+}
+
+// ─── extractLine ─────────────────────────────────────────────────────────────
+// Flattens one bookmaker's h2h/spreads/totals markets from a fetchOdds() game
+// into the flat shape the lines table + computeOutcomes expect.
+// Bookmaker preference: draftkings → fanduel → betmgm → first available.
+
+
+
+export interface ExtractedLine {
+  ml_home:      number | null
+  ml_away:      number | null
+  spread_home:  number | null
+  spread_away:  number | null
+  spread_juice: number | null
+  total:        number | null
+  over_juice:   number | null
+  under_juice:  number | null
+  bookmaker:    string | null
+}
+
+const BOOKMAKER_PREFERENCE = ['draftkings', 'fanduel', 'betmgm']
+
+export function extractLine(game: GameOdds): ExtractedLine {
+  const empty: ExtractedLine = {
+    ml_home: null, ml_away: null,
+    spread_home: null, spread_away: null, spread_juice: null,
+    total: null, over_juice: null, under_juice: null,
+    bookmaker: null,
+  }
+
+  if (!game.bookmakers?.length) return empty
+
+  // Pick bookmaker by preference, else first available
+  let book = game.bookmakers[0]
+  for (const pref of BOOKMAKER_PREFERENCE) {
+    const found = game.bookmakers.find(b => b.key === pref)
+    if (found) { book = found; break }
+  }
+
+  const result: ExtractedLine = { ...empty, bookmaker: book.key }
+
+  for (const market of book.markets ?? []) {
+    if (market.key === 'h2h') {
+      const home = market.outcomes.find(o => o.name === game.home_team)
+      const away = market.outcomes.find(o => o.name === game.away_team)
+      result.ml_home = home?.price ?? null
+      result.ml_away = away?.price ?? null
+    }
+    else if (market.key === 'spreads') {
+      const home = market.outcomes.find(o => o.name === game.home_team)
+      const away = market.outcomes.find(o => o.name === game.away_team)
+      result.spread_home  = home?.point ?? null
+      result.spread_away  = away?.point ?? null
+      result.spread_juice = home?.price ?? null
+    }
+    else if (market.key === 'totals') {
+      const over  = market.outcomes.find(o => o.name === 'Over')
+      const under = market.outcomes.find(o => o.name === 'Under')
+      result.total      = over?.point ?? null
+      result.over_juice  = over?.price ?? null
+      result.under_juice = under?.price ?? null
+    }
+  }
+
+  return result
 }
