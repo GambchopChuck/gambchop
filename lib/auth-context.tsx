@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
@@ -8,19 +8,22 @@ type Modal = 'login' | 'join' | 'pro' | null
 export type MemberTier = 'none' | 'free' | 'pro'
 
 interface AuthContextValue {
-  modal:        Modal
-  openModal:    (m: Modal) => void
-  closeModal:   () => void
+  modal:                Modal
+  openModal:            (m: Modal) => void
+  closeModal:           () => void
   // Session-derived state
-  user:         User | null
-  displayName:  string | null     // from profiles.display_name
-  isMember:     boolean           // true when a real Supabase session exists
-  isPro:        boolean           // profiles.is_pro, localStorage as fallback
-  memberTier:   MemberTier
-  loading:      boolean           // true until initial getSession() resolves
+  user:                 User | null
+  displayName:          string | null     // from profiles.display_name
+  isMember:             boolean           // true when a real Supabase session exists
+  isPro:                boolean           // profiles.is_pro, localStorage as fallback
+  memberTier:           MemberTier
+  loading:              boolean           // true until initial getSession() resolves
   // Setters
-  setIsPro:     (v: boolean) => void
-  setIsMember:  (v: boolean) => void  // no-op kept for backward compat
+  setIsPro:             (v: boolean) => void
+  setIsMember:          (v: boolean) => void  // no-op kept for backward compat
+  // Pro activation helpers (used by /checkout/success polling)
+  beginProActivation:   () => void   // hold is_pro=true against stale DB reads
+  endProActivation:     () => void   // release the hold (called on poll timeout)
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -28,6 +31,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null, displayName: null,
   isMember: false, isPro: false, memberTier: 'none', loading: true,
   setIsPro: () => {}, setIsMember: () => {},
+  beginProActivation: () => {}, endProActivation: () => {},
 })
 
 function readLocalPro(): boolean {
@@ -42,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [loading,     setLoading]     = useState(true)
 
+  // Guards syncProfileFromSupabase from stomping is_pro=true while the Stripe
+  // webhook is still in-flight. Cleared when poll confirms, or on poll timeout.
+  const proActivationPending = useRef(false)
+
   async function syncProfileFromSupabase(userId: string) {
     const { data } = await supabase
       .from('profiles')
@@ -50,9 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single()
 
     if (data) {
-      setProState(data.is_pro)
+      if (data.is_pro) {
+        // Webhook confirmed — release guard and clear banner flag
+        proActivationPending.current = false
+        localStorage.removeItem('gambchop-pro-activating')
+      }
+      // If activation is pending, hold is_pro=true regardless of what DB says
+      const effectiveIsPro = proActivationPending.current ? true : data.is_pro
+      setProState(effectiveIsPro)
       setDisplayName(data.display_name ?? null)
-      localStorage.setItem('gambchop-is-pro', String(data.is_pro))
+      localStorage.setItem('gambchop-is-pro', String(effectiveIsPro))
     } else {
       // Profile row missing — backfill from localStorage
       const localPro = readLocalPro()
@@ -88,13 +103,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isMember = !!session
   const user     = session?.user ?? null
 
-  const setIsPro = (v: boolean) => {
+  const setIsPro = useCallback((v: boolean) => {
     setProState(v)
     localStorage.setItem('gambchop-is-pro', String(v))
     if (user) {
       supabase.from('profiles').upsert({ id: user.id, is_pro: v }, { onConflict: 'id' })
     }
-  }
+  }, [user])
+
+  const beginProActivation = useCallback(() => {
+    proActivationPending.current = true
+  }, [])
+
+  const endProActivation = useCallback(() => {
+    proActivationPending.current = false
+  }, [])
 
   const memberTier: MemberTier = isPro && isMember ? 'pro' : isMember ? 'free' : 'none'
 
@@ -104,6 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, displayName, isMember, isPro, memberTier, loading,
       setIsPro,
       setIsMember: () => {},
+      beginProActivation,
+      endProActivation,
     }}>
       {children}
     </AuthContext.Provider>

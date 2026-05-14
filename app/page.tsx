@@ -1,9 +1,11 @@
 import LeagueGrid from '@/components/LeagueGrid'
 import CommunityPreview from '@/components/CommunityPreview'
+import ActivationBanner from '@/components/ActivationBanner'
 
 export default function HomePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace' }}>
+      <ActivationBanner />
 
       {/* Hero tagline */}
       <div style={{ textAlign: 'center', paddingTop: 28 }}>
