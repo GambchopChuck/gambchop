@@ -30,7 +30,7 @@ const LEAGUE_SORT_LS_KEY = 'gambchop-league-sort'
 export default function LeaguePage() {
   const params = useParams<{ league: string }>()
   const router = useRouter()
-  const { user, memberTier } = useAuth()
+  const { user, memberTier, loading: authLoading } = useAuth()
 
   const leagueId = params?.league ?? ''
   const meta = LEAGUE_MAP[leagueId]
@@ -209,13 +209,14 @@ export default function LeaguePage() {
           </select>
         </div>
 
-        {dataLoading ? (
+        {dataLoading || authLoading ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             Loading game data…
           </div>
         ) : (
           <GambchopChart
             data={sortedChartData}
+            memberTier={memberTier}
             accent={meta.accent}
             starredBetTypes={user ? starredBetTypes : undefined}
             onStarClick={user ? handleStarClick : undefined}
