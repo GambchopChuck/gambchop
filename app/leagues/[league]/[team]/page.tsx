@@ -57,6 +57,7 @@ export default function TeamPage() {
   // MLB → real Supabase data; all other leagues → mock fallback
   const [chartData, setChartData]     = useState<TeamChartData[]>([])
   const [dataLoading, setDataLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
     if (!meta || !entity) return
@@ -79,6 +80,23 @@ export default function TeamPage() {
       setDataLoading(false)
     })
   }, [leagueId, teamSlug, entity])   // eslint-disable-line react-hooks/exhaustive-deps
+    
+  useEffect(() => {
+    if (leagueId !== 'mlb') return
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase
+        .from('ingestion_runs')
+        .select('completed_at')
+        .eq('status', 'success')
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .single()
+        .then(({ data }) => {
+          if (data?.completed_at) setLastUpdated(data.completed_at as string)
+        })
+    })
+  }, [leagueId])
 
   const [teamFavorites, setTeamFavorites] = useState<Favorite[]>([])
   const [favError, setFavError]           = useState<string | null>(null)
@@ -283,6 +301,7 @@ export default function TeamPage() {
               onUpgrade={() => openModal('pro')}
               starredBetTypes={user ? starredBetTypes : undefined}
               onStarClick={user ? handleStarClick : undefined}
+              lastUpdated={lastUpdated}
             />
           )
         )}

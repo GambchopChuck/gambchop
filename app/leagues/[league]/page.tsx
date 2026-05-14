@@ -39,6 +39,7 @@ export default function LeaguePage() {
   // MLB → real Supabase data; all other leagues → mock fallback
   const [chartData, setChartData]     = useState<TeamChartData[]>(() => generateChartData(meta.entities, 10))
   const [dataLoading, setDataLoading] = useState(leagueId === 'mlb')
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
     if (leagueId !== 'mlb') return
@@ -49,6 +50,23 @@ export default function LeaguePage() {
         console.warn('[gambchop] fetchLeagueOutcomes returned empty — using mock fallback')
       }
       setDataLoading(false)
+    })
+  }, [leagueId])
+
+  useEffect(() => {
+    if (leagueId !== 'mlb') return
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase
+        .from('ingestion_runs')
+        .select('completed_at')
+        .eq('status', 'success')
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .single()
+        .then(({ data }) => {
+          if (data?.completed_at) setLastUpdated(data.completed_at as string)
+        })
     })
   }, [leagueId])
 
@@ -220,6 +238,7 @@ export default function LeaguePage() {
             accent={meta.accent}
             starredBetTypes={user ? starredBetTypes : undefined}
             onStarClick={user ? handleStarClick : undefined}
+            lastUpdated={lastUpdated}
           />
         )}
       </div>

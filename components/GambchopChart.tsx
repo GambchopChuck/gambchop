@@ -155,15 +155,34 @@ const LEGEND = [
   { bg: C.violet, label: 'Over' }, { bg: C.brown, label: 'Under' },
 ]
 
-function Legend() {
+function formatUpdatedAgo(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const then = new Date(iso).getTime()
+  if (isNaN(then)) return null
+  const mins = Math.floor((Date.now() - then) / 60000)
+  if (mins < 1)  return 'Updated just now'
+  if (mins < 60) return `Updated ${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `Updated ${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `Updated ${days}d ago`
+}
+
+function Legend({ lastUpdated }: { lastUpdated?: string | null }) {
+  const updatedLabel = formatUpdatedAgo(lastUpdated)
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', padding: '12px 20px 14px', borderBottom: '1px solid #1a1a24' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 18px', padding: '12px 20px 14px', borderBottom: '1px solid #1a1a24' }}>
       {LEGEND.map(({ bg, label }) => (
         <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 10, height: 10, background: bg, borderRadius: 2, flexShrink: 0 }} />
           <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
         </div>
       ))}
+      {updatedLabel && (
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: '#3f3f46', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          ◷ {updatedLabel}
+        </span>
+      )}
     </div>
   )
 }
@@ -286,9 +305,11 @@ interface Props {
   // Optional star-toggle support (used on team/league pages)
   starredBetTypes?: Set<string>   // keyed as `${teamName}|${betType}`
   onStarClick?: (betType: string, teamName: string) => void
+  lastUpdated?: string | null     // ISO timestamp of latest successful ingestion run
 }
 
-export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green, starredBetTypes, onStarClick }: Props) {
+
+export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgrade, accent = C.green, starredBetTypes, onStarClick, lastUpdated }: Props) {
   const [showBanner, setShowBanner] = useState(false)
   const { visibleRows, setVisibleRows, filterChips, isFiltered, activeCount, resetFilters } = useFilters()
   const allRowsHidden = Object.values(visibleRows).every(v => !v)
@@ -302,7 +323,7 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
 
   return (
     <div style={{ width: '100%', fontFamily: 'var(--font-geist-mono), monospace' }}>
-      <Legend />
+      <Legend lastUpdated={lastUpdated} />
 
       {/* Active filters bar */}
       {isFiltered && tier !== 'none' && (
