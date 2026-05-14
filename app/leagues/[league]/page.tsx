@@ -7,9 +7,25 @@ import Link from 'next/link'
 import GambchopChart from '@/components/GambchopChart'
 import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
 import type { TeamChartData } from '@/lib/leagues-data'
-import { fetchLeagueOutcomes } from '@/lib/chart-data'
+import { fetchLeagueOutcomes, computeStreak } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
+
+// ─── Sort ─────────────────────────────────────────────────────────────────────
+
+type SortMode = 'az' | 'za' | 'best-record' | 'hot' | 'cold'
+
+const SORT_LABELS: Record<SortMode, string> = {
+  'az':          'A–Z',
+  'za':          'Z–A',
+  'best-record': 'Best Record',
+  'hot':         'Hottest Streak',
+  'cold':        'Coldest Streak',
+}
+
+const LEAGUE_SORT_LS_KEY = 'gambchop-league-sort'
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LeaguePage() {
   const params = useParams<{ league: string }>()
@@ -36,6 +52,55 @@ export default function LeaguePage() {
     })
   }, [leagueId])
 
+  // ── Sort ────────────────────────────────────────────────────────────────────
+  const [sortMode, setSortMode] = useState<SortMode>('az')
+
+  useEffect(() => {
+    const saved = localStorage.getItem(LEAGUE_SORT_LS_KEY) as SortMode | null
+    if (saved && saved in SORT_LABELS) setSortMode(saved)
+  }, [])
+
+  const handleSortChange = (mode: SortMode) => {
+    setSortMode(mode)
+    localStorage.setItem(LEAGUE_SORT_LS_KEY, mode)
+  }
+
+  const sortedChartData = useMemo((): TeamChartData[] => {
+    const sorted = [...chartData]
+    switch (sortMode) {
+      case 'az':
+        return sorted.sort((a, b) => a.teamName.localeCompare(b.teamName))
+      case 'za':
+        return sorted.sort((a, b) => b.teamName.localeCompare(a.teamName))
+      case 'best-record': {
+        const rate = (d: TeamChartData) => {
+          const w = d.games.filter(g => g.moneylineResult === 'win').length
+          const l = d.games.filter(g => g.moneylineResult === 'loss').length
+          return (w + l) === 0 ? -1 : w / (w + l)
+        }
+        return sorted.sort((a, b) => {
+          const diff = rate(b) - rate(a)
+          return diff !== 0 ? diff : a.teamName.localeCompare(b.teamName)
+        })
+      }
+      case 'hot':
+        return sorted.sort((a, b) => {
+          const aW = computeStreak(a.games, 'moneyline')?.type === 'W' ? (computeStreak(a.games, 'moneyline')?.count ?? 0) : 0
+          const bW = computeStreak(b.games, 'moneyline')?.type === 'W' ? (computeStreak(b.games, 'moneyline')?.count ?? 0) : 0
+          return aW !== bW ? bW - aW : a.teamName.localeCompare(b.teamName)
+        })
+      case 'cold':
+        return sorted.sort((a, b) => {
+          const aL = computeStreak(a.games, 'moneyline')?.type === 'L' ? (computeStreak(a.games, 'moneyline')?.count ?? 0) : 0
+          const bL = computeStreak(b.games, 'moneyline')?.type === 'L' ? (computeStreak(b.games, 'moneyline')?.count ?? 0) : 0
+          return aL !== bL ? bL - aL : a.teamName.localeCompare(b.teamName)
+        })
+      default:
+        return sorted
+    }
+  }, [chartData, sortMode])
+
+  // ── Favorites ────────────────────────────────────────────────────────────────
   const [allFavorites, setAllFavorites] = useState<Favorite[]>([])
   const [favError, setFavError]         = useState<string | null>(null)
 
@@ -124,13 +189,33 @@ export default function LeaguePage() {
       )}
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 8px' }}>
+
+        {/* Sort controls */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sort:</span>
+          <select
+            value={sortMode}
+            onChange={e => handleSortChange(e.target.value as SortMode)}
+            style={{
+              background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 6,
+              color: '#a1a1aa', fontSize: 10, padding: '7px 10px',
+              fontFamily: 'var(--font-geist-mono), monospace',
+              cursor: 'pointer', outline: 'none',
+            }}
+          >
+            {(Object.keys(SORT_LABELS) as SortMode[]).map(k => (
+              <option key={k} value={k}>{SORT_LABELS[k]}</option>
+            ))}
+          </select>
+        </div>
+
         {dataLoading ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             Loading game data…
           </div>
         ) : (
           <GambchopChart
-            data={chartData}
+            data={sortedChartData}
             accent={meta.accent}
             starredBetTypes={user ? starredBetTypes : undefined}
             onStarClick={user ? handleStarClick : undefined}
