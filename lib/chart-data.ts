@@ -135,14 +135,14 @@ export async function fetchLeagueOutcomes(
         if (!teamMap.has(t.slug)) {
           teamMap.set(t.slug, { name: t.name, slug: t.slug, pairs: [] })
         }
-        const accum = teamMap.get(t.slug)!
-        if (accum.pairs.length >= limit) continue
 
-        // Opponent = the other team in this game's outcomes
+        // Collect ALL outcomes — no early limit cutoff.
+        // Doubleheaders produce two rows with the same game_date; cutting mid-group
+        // is non-deterministic because row.outcomes order isn't guaranteed.
         const other = row.outcomes.find(o => o.team_id !== outcome.team_id)
         const opponentName = other?.team?.name ?? 'OPP'
 
-        accum.pairs.push({
+        teamMap.get(t.slug)!.pairs.push({
           entry: outcomeToEntry(outcome, opponentName, row.game_date),
           date:  row.game_date,
         })
@@ -150,8 +150,12 @@ export async function fetchLeagueOutcomes(
     }
 
     return Array.from(teamMap.values()).map(({ name, pairs }) => {
-      const rev     = [...pairs].reverse()                  // oldest-first
-      const entries = withRestDays(rev.map(p => p.entry), rev.map(p => p.date))
+      // Sort DESC (most recent first), take the N most recent, then reverse to oldest-first.
+      const recent = pairs
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+        .slice(0, limit)
+        .reverse()
+      const entries = withRestDays(recent.map(p => p.entry), recent.map(p => p.date))
       return { teamName: name, abbreviation: makeAbbr(name), games: entries }
     })
 
@@ -181,21 +185,25 @@ export async function fetchTeamOutcomes(
     const pairs: Array<{ entry: GameEntry; date: string }> = []
 
     for (const row of rows) {
-      if (pairs.length >= limit) break
       const mine = row.outcomes.find(o => o.team?.slug === teamSlug)
       if (!mine) continue
 
       const other = row.outcomes.find(o => o.team_id !== mine.team_id)
       const opponentName = other?.team?.name ?? 'OPP'
 
+      // Collect ALL — sort + slice after, same as fetchLeagueOutcomes.
       pairs.push({
         entry: outcomeToEntry(mine, opponentName, row.game_date),
         date:  row.game_date,
       })
     }
 
-    const rev = [...pairs].reverse()                        // oldest-first
-    return withRestDays(rev.map(p => p.entry), rev.map(p => p.date))
+    // Sort DESC, take N most recent, reverse to oldest-first.
+    const recent = pairs
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+      .slice(0, limit)
+      .reverse()
+    return withRestDays(recent.map(p => p.entry), recent.map(p => p.date))
 
   } catch (err) {
     console.error('[chart-data] fetchTeamOutcomes:', err)
