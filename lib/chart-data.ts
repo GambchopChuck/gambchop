@@ -204,8 +204,8 @@ export async function fetchTeamOutcomes(
 }
 
 // ─── computeStreak ────────────────────────────────────────────────────────────
-// Pure helper — walks backwards through oldest-first games, finds the most
-// recent non-null result, counts how many consecutive preceding games share it.
+// games is oldest-first: games[0] = oldest, games[games.length-1] = most recent.
+// Both passes walk newest → oldest so we always read the present first.
 
 export type StreakType   = 'W' | 'L' | 'P' | 'O' | 'U'
 export type StreakResult = { count: number; type: StreakType }
@@ -220,31 +220,36 @@ export function computeStreak(
     return g.ouResult
   }
 
-  // Pushes are transparent — treated as if the game didn't happen for streak purposes.
-  const isPush = (r: string) =>
-    metric === 'over_under' ? (r !== 'over' && r !== 'under') : (r !== 'win' && r !== 'loss')
-
-  // Find most recent non-null, non-push result
-  let ref: string | null = null
-  let i = games.length - 1
-  for (; i >= 0; i--) {
-    const r = get(games[i])
-    if (r !== null && !isPush(r)) { ref = r; break }
+  // Null (unplayed/missing) and pushes are both transparent — skipped, not streak-terminating.
+  const isSkip = (r: string | null): boolean => {
+    if (r === null) return true
+    return metric === 'over_under'
+      ? r !== 'over' && r !== 'under'
+      : r !== 'win'  && r !== 'loss'
   }
-  if (!ref || i < 0) return null
+
+  // Pass 1 — newest → oldest: find the most-recent decisive result.
+  // This defines the streak type (W / L / O / U).
+  let ref: string | null = null
+  for (let i = games.length - 1; i >= 0; i--) {
+    const r = get(games[i])
+    if (!isSkip(r)) { ref = r; break }
+  }
+  if (ref === null) return null
 
   const type: StreakType =
     metric === 'over_under'
       ? (ref === 'over' ? 'O' : 'U')
       : (ref === 'win'  ? 'W' : 'L')
 
+  // Pass 2 — newest → oldest: count consecutive games that match ref.
+  // Example: [W,W,L,W,W,W,L,W,L,L] → ref='loss', i=9→L(1), i=8→L(2), i=7→W(break) → L2
   let count = 0
-  for (let j = i; j >= 0; j--) {
-    const r = get(games[j])
-    if (r === null) break       // unknown result — stop counting
-    if (isPush(r))  continue    // push — skip transparently
-    if (r === ref)  count++
-    else            break
+  for (let i = games.length - 1; i >= 0; i--) {
+    const r = get(games[i])
+    if (isSkip(r)) continue    // push or missing — transparent
+    if (r === ref) count++
+    else           break       // different result — streak over
   }
 
   return { count, type }

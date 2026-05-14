@@ -86,8 +86,24 @@ function WLCell({ result, winLabel = 'W', lossLabel = 'L' }: { result: BetResult
   return <div className="cell" style={{ background: s.bg, color: s.color, boxShadow: s.glow, fontWeight: 800, fontSize: result === 'push' ? 10 : 11 }}>{s.label}</div>
 }
 
-function PillCell({ active, color, glow }: { active: boolean | null; color: string; glow: string }) {
-  return <div className="cell" style={{ background: active === true ? color : C.empty, boxShadow: active === true ? glow : 'none', opacity: active === null ? 0.3 : 1 }} />
+// ConditionCell: colored=won, red=lost, black=didn't apply, dim=no data
+function ConditionCell({ active, result, color, glow }: { active: boolean | null; result: BetResult; color: string; glow: string }) {
+  if (active === null) return <div className="cell" style={{ background: C.empty, opacity: 0.3 }} />
+  if (!active)         return <div className="cell" style={{ background: C.empty }} />
+  if (!result)         return <div className="cell" style={{ background: C.empty }} />
+  if (result === 'push') return <div className="cell" style={{ background: C.white, color: '#111', fontWeight: 800, fontSize: 10 }}>P</div>
+  const won = result === 'win'
+  return (
+    <div className="cell" style={{
+      background: won ? color : C.red,
+      color:      won ? '#000' : '#fff',
+      boxShadow:  won ? glow   : `0 0 12px ${C.red}80`,
+      fontWeight: 800,
+      fontSize:   11,
+    }}>
+      {won ? 'W' : 'L'}
+    </div>
+  )
 }
 
 function OUCell({ r }: { r: 'over' | 'under' | 'push' | null }) {
@@ -118,12 +134,12 @@ function GameCellFilled({ rowKey, game: _game, gi, filled }: { rowKey: RowKey; g
   switch (rowKey) {
     case 'moneyline': return <WLCell result={filled.ml[gi]} />
     case 'spread':    return <WLCell result={filled.sp[gi]} winLabel="COV" lossLabel="MIS" />
-    case 'ml-fav':    return <PillCell active={filled.fav[gi]}  color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
-    case 'ml-dog':    return <PillCell active={filled.fav[gi] === null ? null : !filled.fav[gi]}   color={C.orange} glow={`0 0 10px ${C.orange}80`} />
-    case 'sp-fav':    return <PillCell active={filled.spFav[gi]} color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
-    case 'sp-dog':    return <PillCell active={filled.spFav[gi] === null ? null : !filled.spFav[gi]} color={C.purple} glow={`0 0 10px ${C.purple}80`} />
-    case 'home':      return <PillCell active={filled.home[gi]}  color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
-    case 'away':      return <PillCell active={filled.home[gi] === null ? null : !filled.home[gi]}  color={C.silver} glow={`0 0 10px ${C.silver}60`} />
+    case 'ml-fav':    return <ConditionCell active={filled.fav[gi]}                                         result={filled.ml[gi]} color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
+    case 'ml-dog':    return <ConditionCell active={filled.fav[gi]   === null ? null : !filled.fav[gi]}   result={filled.ml[gi]} color={C.orange} glow={`0 0 10px ${C.orange}80`} />
+    case 'sp-fav':    return <ConditionCell active={filled.spFav[gi]}                                     result={filled.sp[gi]} color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
+    case 'sp-dog':    return <ConditionCell active={filled.spFav[gi] === null ? null : !filled.spFav[gi]} result={filled.sp[gi]} color={C.purple} glow={`0 0 10px ${C.purple}80`} />
+    case 'home':      return <ConditionCell active={filled.home[gi]}                                      result={filled.ml[gi]} color={C.teal}   glow={`0 0 10px ${C.teal}80`}   />
+    case 'away':      return <ConditionCell active={filled.home[gi]  === null ? null : !filled.home[gi]}  result={filled.ml[gi]} color={C.silver} glow={`0 0 10px ${C.silver}60`}  />
     case 'ou':        return <OUCell r={filled.ou[gi]} />
     default: return null
   }
@@ -158,14 +174,17 @@ const COL_W   = 64
 
 function DateHeader({ dates, visibleCols }: { dates: string[]; visibleCols: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '12px 0 8px', background: '#0a0a0f' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '10px 0 8px', background: '#0a0a0f' }}>
       <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0a0a0f', paddingLeft: 20, zIndex: 20 }}>
         <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
       </div>
       {dates.map((d, i) => (
-        <div key={d} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center', position: 'relative' }}>
-          <span style={{ fontSize: 10, color: i < visibleCols ? '#52525b' : '#2a2a34', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>{d}</span>
-          {i === visibleCols && <div style={{ position: 'absolute', top: -2, left: 0, width: 1, height: 28, background: '#8b5cf644' }} />}
+        <div key={i} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          {/* actual game date — "M/D" from real data, "G1" etc. from mock */}
+          <span style={{ fontSize: 9,  color: i < visibleCols ? '#d4d4d8' : '#3f3f46', letterSpacing: '0.04em', fontWeight: 600 }}>{d}</span>
+          {/* column sequence label */}
+          <span style={{ fontSize: 9,  color: i < visibleCols ? '#d4d4d8' : '#2a2a34', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>G{i + 1}</span>
+          {i === visibleCols && <div style={{ position: 'absolute', top: -2, left: 0, width: 1, height: 44, background: '#8b5cf644' }} />}
         </div>
       ))}
     </div>
