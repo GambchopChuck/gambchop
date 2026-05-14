@@ -175,7 +175,7 @@ async function ingestLeague(
       .in('external_id', externalIds)
       .eq('league_id', leagueId)
     const existingExternalIds = new Set((existingGames ?? []).map(g => g.external_id as string))
-
+    
     // Process each game
     let gamesInserted = 0
     let gamesUpdated  = 0
@@ -229,6 +229,13 @@ async function ingestLeague(
         if (existingExternalIds.has(game.id)) gamesUpdated++
         else gamesInserted++
 
+        // Look up the line captured pre-game by the odds cron (if any)
+        const { data: lineRow } = await supabaseAdmin
+          .from('lines')
+          .select('ml_home, ml_away, spread_home, total')
+          .eq('game_id', gameId)
+          .maybeSingle()
+
         const outcomes = computeOutcomes(
           {
             home_team:  game.home_team,
@@ -236,7 +243,7 @@ async function ingestLeague(
             home_score: homeScore,
             away_score: awayScore,
           },
-          null,
+          lineRow ?? null,
         )
 
         const outcomeRows = outcomes.map(o => ({
