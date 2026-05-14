@@ -106,7 +106,9 @@ async function fetchLeagueGameRows(leagueId: string): Promise<RawGameRow[]> {
     console.error('[chart-data] fetchLeagueGameRows:', error.message)
     return []
   }
-  return (data as unknown as RawGameRow[]) ?? []
+  const rows = (data as unknown as RawGameRow[]) ?? []
+  console.log(`[chart-data] fetchLeagueGameRows: ${rows.length} game rows, most recent date: ${rows[0]?.game_date ?? 'none'}`)
+  return rows
 }
 
 // ─── fetchLeagueOutcomes ──────────────────────────────────────────────────────
@@ -155,6 +157,7 @@ export async function fetchLeagueOutcomes(
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
         .slice(0, limit)
         .reverse()
+      console.log(`[chart-data] ${name}: ${recent.length} games, oldest=${recent[0]?.date ?? '-'} newest=${recent[recent.length - 1]?.date ?? '-'}`)
       const entries = withRestDays(recent.map(p => p.entry), recent.map(p => p.date))
       return { teamName: name, abbreviation: makeAbbr(name), games: entries }
     })
@@ -203,6 +206,7 @@ export async function fetchTeamOutcomes(
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
       .slice(0, limit)
       .reverse()
+    console.log(`[chart-data] fetchTeamOutcomes(${teamSlug}): ${recent.length} games, oldest=${recent[0]?.date ?? '-'} newest=${recent[recent.length - 1]?.date ?? '-'}`)
     return withRestDays(recent.map(p => p.entry), recent.map(p => p.date))
 
   } catch (err) {
