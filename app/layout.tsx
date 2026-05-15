@@ -52,6 +52,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <div><Link href="/dmca" style={footLink}>DMCA / Copyright</Link></div>
                 </div>
               </div>
+              <div style={{ display: 'flex', gap: 16, marginTop: 28 }}>
+                <a href="https://x.com/" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#52525b', textDecoration: 'none' }}>X</a>
+                <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#52525b', textDecoration: 'none' }}>Instagram</a>
+                <a href="https://tiktok.com/" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#52525b', textDecoration: 'none' }}>TikTok</a>
+                <a href="https://youtube.com/" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#52525b', textDecoration: 'none' }}>YouTube</a>
+              </div>
               <div style={{ borderTop: '1px solid #14141c', marginTop: 24, paddingTop: 20 }}>
                 <p style={{ fontSize: 10, color: '#3f3f46', lineHeight: 1.8, margin: 0, maxWidth: 900 }}>
                   Gambchop is a data visualization tool that displays historical sports betting outcomes for informational and entertainment purposes only. Gambchop does not accept wagers, does not provide betting advice, picks, or predictions, and does not guarantee any outcome. Past results do not indicate future performance. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Must be of legal age to gamble in your jurisdiction.
