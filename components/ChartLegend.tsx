@@ -31,16 +31,18 @@ const ITEMS = [
 export default function ChartLegend() {
   return (
     <aside style={{
-      position: 'sticky',
-      top: 16,
-      alignSelf: 'flex-start',
+      position: 'fixed',
+      top: 80,
+      left: 72,
       width: 180,
-      flexShrink: 0,
+      maxHeight: 'calc(100vh - 100px)',
+      overflowY: 'auto',
       background: '#0f0f14',
       border: '1px solid #1a1a24',
       borderRadius: 10,
       padding: '14px 14px 12px',
       fontFamily: 'var(--font-geist-mono), monospace',
+      zIndex: 30,
     }}>
       <div style={{
         fontSize: 9,

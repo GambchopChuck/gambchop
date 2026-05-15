@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 import ChartLegend from '@/components/ChartLegend'
 
+
 // ─── Sort ─────────────────────────────────────────────────────────────────────
 
 type SortMode = 'az' | 'za' | 'best-record' | 'hot' | 'cold'
@@ -233,14 +234,19 @@ export default function LeaguePage() {
             Loading game data…
           </div>
         ) : (
-          <GambchopChart
-            data={sortedChartData}
-            memberTier={memberTier}
-            accent={meta.accent}
-            starredBetTypes={user ? starredBetTypes : undefined}
-            onStarClick={user ? handleStarClick : undefined}
-            lastUpdated={lastUpdated}
-          />
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', paddingLeft: 196 }}>
+            <ChartLegend />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <GambchopChart
+                data={sortedChartData}
+                memberTier={memberTier}
+                accent={meta.accent}
+                starredBetTypes={user ? starredBetTypes : undefined}
+                onStarClick={user ? handleStarClick : undefined}
+                lastUpdated={lastUpdated}
+              />
+            </div>
+          </div>
         )}
       </div>
 

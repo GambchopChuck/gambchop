@@ -11,6 +11,7 @@ import { fetchTeamOutcomes } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
+import ChartLegend from '@/components/ChartLegend'
 
 const BG     = '#0a0a0f'
 const CARD   = '#0f0f14'
@@ -293,16 +294,20 @@ export default function TeamPage() {
               Loading game data…
             </div>
           ) : (
-            <GambchopChart
-              data={chartData}
-              memberTier={memberTier}
-              accent={meta.accent}
-              onJoin={() => { setIsMember(true); openModal('join') }}
-              onUpgrade={() => openModal('pro')}
-              starredBetTypes={user ? starredBetTypes : undefined}
-              onStarClick={user ? handleStarClick : undefined}
-              lastUpdated={lastUpdated}
-            />
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', paddingLeft: 196 }}>
+              <ChartLegend />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <GambchopChart
+                  data={chartData}
+                  memberTier={memberTier}
+                  accent={meta.accent}
+                  onJoin={() => { setIsMember(true); openModal('join') }}
+                  onUpgrade={() => openModal('pro')}
+                  starredBetTypes={user ? starredBetTypes : undefined}
+                  onStarClick={user ? handleStarClick : undefined}
+                />
+              </div>
+            </div>
           )
         )}
       </div>
