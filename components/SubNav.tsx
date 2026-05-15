@@ -5,10 +5,9 @@ import { usePathname } from 'next/navigation'
 import { LEAGUES } from '@/lib/leagues-data'
 
 const FEATURES = [
-  { href: '/todays-board',       label: "Today's Board" },
-  { href: '/streak-leaderboard', label: 'Streak Leaders' },
-  { href: '/teams',              label: 'Teams'          },
-  { href: '/community',          label: 'Community'      },
+  { href: '/todays-board', label: 'Streaks on Streaks' },
+  { href: '/teams',        label: 'Teams'              },
+  { href: '/community',    label: 'Community'          },
 ]
 
 export default function SubNav() {
