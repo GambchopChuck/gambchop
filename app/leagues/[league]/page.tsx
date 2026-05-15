@@ -10,6 +10,7 @@ import type { TeamChartData } from '@/lib/leagues-data'
 import { fetchLeagueOutcomes, computeStreak } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
+import ChartLegend from '@/components/ChartLegend'
 
 // ─── Sort ─────────────────────────────────────────────────────────────────────
 
