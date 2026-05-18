@@ -37,17 +37,17 @@ export default function Sidebar() {
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               justifyContent: 'center', gap: 4,
               height: 56, width: '100%',
-              color: active ? '#22c55e' : '#71717a',
+              color: active ? '#22c55e' : '#ffffff',
               background: active ? '#22c55e0d' : 'transparent',
               borderLeft: active ? '2px solid #22c55e' : '2px solid transparent',
               transition: 'all 0.15s',
               cursor: 'pointer',
             }}
             onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#d4d4d8' }}
-            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#71717a' }}
+            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#ffffff' }}
             >
               <span style={{ fontSize: 18 }}>{icon}</span>
-              <span style={{ fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-nunito), sans-serif' }}>
                 {label}
               </span>
             </div>

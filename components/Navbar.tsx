@@ -73,10 +73,11 @@ export default function Navbar() {
         <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {NAV_LINKS.map(({ label, href }) => (
             <Link key={label} href={href} style={{
-              textDecoration: 'none', color: '#a1a1aa',
+              textDecoration: 'none', color: '#ffffff',
               fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
               fontWeight: 600, padding: '6px 12px', borderRadius: 6,
               transition: 'color 0.15s',
+              fontFamily: 'var(--font-nunito), sans-serif',
             }}>
               {label}
             </Link>
@@ -90,9 +91,9 @@ export default function Navbar() {
               <button
                 onClick={() => openModal('login')}
                 style={{
-                  background: 'none', border: 'none', color: '#52525b',
+                  background: 'none', border: 'none', color: '#ffffff',
                   fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-                  fontWeight: 600, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit',
+                  fontWeight: 600, padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-nunito), sans-serif',
                 }}
               >
                 Login
@@ -101,9 +102,9 @@ export default function Navbar() {
                 onClick={() => openModal('join')}
                 style={{
                   background: 'none', border: '1px solid #2a2a34', borderRadius: 6,
-                  color: '#a1a1aa', fontSize: 11, letterSpacing: '0.1em',
+                  color: '#ffffff', fontSize: 11, letterSpacing: '0.1em',
                   textTransform: 'uppercase', fontWeight: 700, padding: '7px 14px',
-                  cursor: 'pointer', fontFamily: 'inherit',
+                  cursor: 'pointer', fontFamily: 'var(--font-nunito), sans-serif',
                 }}
               >
                 Join Free
@@ -114,7 +115,7 @@ export default function Navbar() {
                   border: 'none', borderRadius: 6, color: '#000',
                   fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
                   fontWeight: 900, padding: '8px 16px', cursor: 'pointer',
-                  fontFamily: 'inherit',
+                  fontFamily: 'var(--font-nunito), sans-serif',
                   background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                   boxShadow: '0 0 16px rgba(34,197,94,0.4)',
                 }}

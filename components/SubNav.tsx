@@ -34,11 +34,12 @@ export default function SubNav() {
             <Link key={href} href={href} style={{ textDecoration: 'none' }}>
               <span style={{
                 fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: active ? '#22c55e' : '#a1a1aa',
+                color: active ? '#22c55e' : '#ffffff',
                 fontWeight: active ? 700 : 500,
                 padding: '0 14px', lineHeight: '36px', display: 'inline-block',
                 borderBottom: active ? '2px solid #22c55e' : '2px solid transparent',
                 transition: 'color 0.15s',
+                fontFamily: 'var(--font-nunito), sans-serif',
               }}>
                 {label}
               </span>
@@ -56,11 +57,12 @@ export default function SubNav() {
             <Link key={l.id} href={l.href} style={{ textDecoration: 'none' }}>
               <span style={{
                 fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: active ? l.accent : '#a1a1aa',
+                color: active ? l.accent : '#ffffff',
                 fontWeight: active ? 700 : 500,
                 padding: '0 12px', lineHeight: '36px', display: 'inline-block',
                 borderBottom: active ? `2px solid ${l.accent}` : '2px solid transparent',
                 transition: 'color 0.15s',
+                fontFamily: 'var(--font-nunito), sans-serif',
               }}>
                 {l.name}
               </span>
