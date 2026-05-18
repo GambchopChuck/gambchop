@@ -20,15 +20,15 @@ export default function LeagueCard({ league }: { league: League }) {
   return (
     <Link href={league.href} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
       <div
+        className="league-card"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           background: hovered ? '#131318' : '#0f0f14',
-          border: `1px solid ${hovered ? league.accent + '55' : '#1a1a24'}`,
+          border: '3px solid #84cc16',
           borderRadius: 12, padding: '24px 20px', cursor: 'pointer',
-          transition: 'all 0.2s', position: 'relative', overflow: 'hidden',
-          transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-          boxShadow: hovered ? `0 8px 32px ${league.accent}18` : 'none',
+          position: 'relative', overflow: 'hidden',
+          boxShadow: '0 0 12px rgba(132,204,22,0.35)',
           height: '100%', boxSizing: 'border-box',
         }}
       >
@@ -40,10 +40,10 @@ export default function LeagueCard({ league }: { league: League }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 28, lineHeight: 1 }}>{league.emoji}</span>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#000000', letterSpacing: '0.06em', textTransform: 'uppercase', WebkitTextStroke: '0.5px #84cc16', textShadow: '0 0 2px #84cc16, 0 0 2px #84cc16' }}>
                   {league.name}
                 </div>
-                <div style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: '#000000', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2, WebkitTextStroke: '0.5px #84cc16', textShadow: '0 0 2px #84cc16, 0 0 2px #84cc16' }}>
                   {league.full}
                 </div>
               </div>

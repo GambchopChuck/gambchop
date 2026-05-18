@@ -55,6 +55,12 @@ export default function HomePage() {
         @media (max-width: 600px) {
           .hero-headline { font-size: 28px; }
         }
+        @keyframes league-pulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(132,204,22,0.35); }
+          50% { transform: scale(1.03); box-shadow: 0 0 22px rgba(132,204,22,0.65); }
+        }
+        .league-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .league-card:hover, .league-card:active { animation: league-pulse 1.4s ease-in-out infinite; }
       `}</style>
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}
