@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono, Nunito } from 'next/font/google'
 import './globals.css'
 import Providers from '@/components/Providers'
 import Link from 'next/link'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
+const nunito = Nunito({ variable: '--font-nunito', subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Gambchop — Sports Betting Intelligence',
@@ -16,7 +17,7 @@ const footLink = { fontSize: 11, color: '#71717a', textDecoration: 'none', lineH
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable}`}>
       <body style={{ minHeight: '100vh', background: '#0a0a0f', margin: 0 }}>
         <Providers>
           {children}

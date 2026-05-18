@@ -40,10 +40,10 @@ export default function LeagueCard({ league }: { league: League }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 28, lineHeight: 1 }}>{league.emoji}</span>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#000000', letterSpacing: '0.06em', textTransform: 'uppercase', WebkitTextStroke: '0.5px #84cc16', textShadow: '0 0 2px #84cc16, 0 0 2px #84cc16' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#ffffff', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'var(--font-nunito), sans-serif' }}>
                   {league.name}
                 </div>
-                <div style={{ fontSize: 10, color: '#000000', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2, WebkitTextStroke: '0.5px #84cc16', textShadow: '0 0 2px #84cc16, 0 0 2px #84cc16' }}>
+                <div style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2, fontFamily: 'var(--font-nunito), sans-serif' }}>
                   {league.full}
                 </div>
               </div>
