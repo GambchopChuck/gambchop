@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import LeagueGrid from '@/components/LeagueGrid'
 import CommunityPreview from '@/components/CommunityPreview'
 import ActivationBanner from '@/components/ActivationBanner'
@@ -64,7 +65,25 @@ export default function HomePage() {
       `}</style>
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '60px 24px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden' }}>
+
+        {/* Background image — fills hero section, clipped by overflow:hidden */}
+        <Image
+          src="/images/hero-bg.jpg"
+          alt=""
+          fill
+          priority
+          style={{ objectFit: 'cover', objectPosition: 'center' }}
+        />
+
+        {/* Dark gradient overlay — left darker for text legibility, subtle brand tint */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to right, rgba(2,10,4,0.90) 0%, rgba(5,5,12,0.82) 45%, rgba(4,2,12,0.45) 100%)',
+        }} />
+
+        {/* Hero content — sits above image and overlay */}
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1400, margin: '0 auto', padding: '60px 24px' }}>
         <div className="hero-grid">
 
           {/* Left: kicker + headline */}
@@ -189,7 +208,8 @@ export default function HomePage() {
 
           </div>{/* /hero-laptop */}
         </div>{/* /hero-grid */}
-      </div>{/* /hero wrapper */}
+        </div>{/* /hero content */}
+      </div>{/* /hero outer */}
 
       <LeagueGrid />
       <CommunityPreview />
