@@ -19,8 +19,37 @@ export default function PersistentVideo() {
         background: '#07070c',
         padding: collapsed ? '7px 24px' : '14px 24px 18px',
         transition: 'padding 0.2s',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        {/* Background looping video fills the dark padding area behind the player */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0,
+          }}
+        >
+          <source src="/Luxury_Casino_Resort_A_person_stands_in_a_dimly_lit_room_their_GScRIkW0.mp4" type="video/mp4" />
+        </video>
+
+        {/* Subtle dark overlay — keeps background visible but improves contrast */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(10,10,15,0.45)',
+          zIndex: 0,
+        }} />
+
+        <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative', zIndex: 1 }}>
 
           {/* Title bar */}
           <div style={{
