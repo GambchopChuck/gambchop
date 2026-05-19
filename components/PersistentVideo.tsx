@@ -38,7 +38,7 @@ export default function PersistentVideo() {
             zIndex: 0,
           }}
         >
-          <source src="/Luxury_Casino_Resort_A_person_stands_in_a_dimly_lit_room_their_GScRIkW0.mp4" type="video/mp4" />
+          <source src="/sportsbook-bg.mp4" type="video/mp4" />
         </video>
 
         {/* Subtle dark overlay — keeps background visible but improves contrast */}
