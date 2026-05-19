@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useFilters } from '@/lib/filter-context'
-import FiltersDropdown from './FiltersDropdown'
 
 // TODO: Replace with real video before launch
 const VIDEO_ID = 'PLACEHOLDER_REPLACE_ME'
@@ -12,8 +10,6 @@ const CORNER_W    = 2
 
 export default function PersistentVideo() {
   const [collapsed, setCollapsed] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const { activeCount } = useFilters()
 
   return (
     <div style={{ fontFamily: 'var(--font-geist-mono), monospace' }}>
@@ -117,37 +113,6 @@ export default function PersistentVideo() {
 
         </div>
       </div>
-
-      {/* Filters toggle — below video, right-aligned */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 24px 0', maxWidth: 800, margin: '0 auto' }}>
-        <button
-          onClick={() => setFiltersOpen(v => !v)}
-          style={{
-            background: filtersOpen ? '#22c55e18' : 'none',
-            border: `1px solid ${filtersOpen ? '#22c55e55' : '#1a1a24'}`,
-            borderRadius: 5, color: filtersOpen ? '#22c55e' : '#52525b',
-            cursor: 'pointer', fontFamily: 'inherit',
-            fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
-            padding: '4px 10px', transition: 'all 0.15s',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          <span>◧</span>
-          <span>Filters</span>
-          {activeCount > 0 && (
-            <span style={{
-              background: '#22c55e', borderRadius: '50%',
-              width: 14, height: 14, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 8, color: '#000', fontWeight: 900,
-            }}>
-              {activeCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Filters dropdown */}
-      {filtersOpen && <FiltersDropdown onClose={() => setFiltersOpen(false)} />}
 
     </div>
   )

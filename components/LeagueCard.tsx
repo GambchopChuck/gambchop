@@ -48,17 +48,17 @@ export default function LeagueCard({ league }: { league: League }) {
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: 10, color: league.accent, fontWeight: 700, letterSpacing: '0.1em', background: league.accent + '18', padding: '4px 8px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 10, color: league.accent, fontWeight: 700, letterSpacing: '0.1em', background: league.accent + '18', padding: '4px 8px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap', fontFamily: 'var(--font-nunito), sans-serif' }}>
               {league.id === 'atp' ? 'ATP Tour' : league.id === 'wta' ? 'WTA Tour' : `${league.teams}+ ${league.id === 'wnba' || league.id === 'mlb' || league.id === 'nba' || league.id === 'nhl' || league.id === 'nfl' ? 'Teams' : 'Teams'}`}
             </div>
           </div>
 
-          <p style={{ fontSize: 12, color: '#71717a', lineHeight: 1.65, margin: 0, letterSpacing: '0.02em' }}>
+          <p style={{ fontSize: 12, color: '#ffffff', lineHeight: 1.65, margin: 0, letterSpacing: '0.02em', fontFamily: 'var(--font-nunito), sans-serif' }}>
             {league.description}
           </p>
 
           <div style={{ marginTop: 16 }}>
-            <span style={{ fontSize: 11, color: hovered ? league.accent : '#52525b', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'color 0.2s' }}>
+            <span style={{ fontSize: 11, color: hovered ? league.accent : '#ffffff', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'color 0.2s', fontFamily: 'var(--font-nunito), sans-serif' }}>
               {league.id === 'mlb' || league.href !== '#' ? 'View Analysis →' : 'Coming Soon'}
             </span>
           </div>

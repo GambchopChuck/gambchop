@@ -4,13 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const LINKS = [
-  { href: '/',             icon: '◈', label: 'Home'      },
-  { href: '/todays-board', icon: '▦', label: 'Streaks'   },
-  { href: '/teams',        icon: '▤', label: 'Teams'     },
-  { href: '/community',    icon: '◉', label: 'Community' },
-  { href: '/favorites',    icon: '⭐', label: 'Favorites' },
-  { href: '/pricing',      icon: '◈', label: 'Pricing'   },
-  { href: '/filters',      icon: '◧', label: 'Filters'   },
+  { href: '/',             label: 'Home'      },
+  { href: '/todays-board', label: 'Streaks'   },
+  { href: '/teams',        label: 'Teams'     },
+  { href: '/community',    label: 'Community' },
+  { href: '/favorites',    label: 'Favorites' },
+  { href: '/pricing',      label: 'Pricing'   },
+  { href: '/filters',      label: 'Filters'   },
 ]
 
 export default function Sidebar() {
@@ -22,9 +22,9 @@ export default function Sidebar() {
       width: 64, background: '#08080d',
       borderRight: '1px solid #1a1a24',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      paddingTop: 16, gap: 4, zIndex: 40,
+      paddingTop: 16, gap: 16, zIndex: 40,
     }}>
-      {LINKS.map(({ href, icon, label }) => {
+      {LINKS.map(({ href, label }) => {
         const active = path === href
         return (
           <Link
@@ -35,8 +35,8 @@ export default function Sidebar() {
           >
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', gap: 4,
-              height: 56, width: '100%',
+              justifyContent: 'center',
+              height: 36, width: '100%',
               color: active ? '#22c55e' : '#ffffff',
               background: active ? '#22c55e0d' : 'transparent',
               borderLeft: active ? '2px solid #22c55e' : '2px solid transparent',
@@ -46,7 +46,6 @@ export default function Sidebar() {
             onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#d4d4d8' }}
             onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.color = '#ffffff' }}
             >
-              <span style={{ fontSize: 18 }}>{icon}</span>
               <span style={{ fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-nunito), sans-serif' }}>
                 {label}
               </span>
