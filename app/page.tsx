@@ -56,12 +56,25 @@ export default function HomePage() {
         @media (max-width: 600px) {
           .hero-headline { font-size: 28px; }
         }
-        @keyframes league-pulse {
-          0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(132,204,22,0.35); }
-          50% { transform: scale(1.03); box-shadow: 0 0 22px rgba(132,204,22,0.65); }
+        @keyframes neon-breathe {
+          from { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 100%, white 40%), 0 0 22px -2px var(--accent), 0 0 42px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,.45); }
+          to   { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 100%, white 40%), 0 0 22px -2px var(--accent), 0 0 60px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,.45); }
         }
-        .league-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .league-card:hover, .league-card:active { animation: league-pulse 1.4s ease-in-out infinite; }
+        .league-card {
+          background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--accent) 100%, white 18%), color-mix(in srgb, var(--accent) 100%, black 22%));
+          border: 1px solid color-mix(in srgb, var(--accent) 100%, white 35%);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 100%, white 40%), 0 0 22px -2px var(--accent), 0 0 60px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,.45);
+          transition: box-shadow 0.2s ease, transform 0.2s ease;
+          animation: neon-breathe 4.5s ease-in-out infinite alternate;
+        }
+        .league-card:hover {
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 100%, white 40%), 0 0 31px -2px var(--accent), 0 0 84px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,.45);
+          transform: translateY(-3px);
+          animation-play-state: paused;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .league-card { animation: none !important; }
+        }
       `}</style>
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}

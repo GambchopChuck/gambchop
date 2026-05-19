@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 
 interface League {
   id: string
@@ -14,54 +13,77 @@ interface League {
   href: string
 }
 
+// Shared text style: Nunito, black, bold — applied to all card text
+const t = (extra?: object) => ({
+  color: '#000000',
+  fontFamily: 'var(--font-nunito), sans-serif',
+  fontWeight: 700,
+  ...extra,
+})
+
 export default function LeagueCard({ league }: { league: League }) {
-  const [hovered, setHovered] = useState(false)
+  const badgeLabel =
+    league.id === 'atp' ? 'ATP Tour' :
+    league.id === 'wta' ? 'WTA Tour' :
+    `${league.teams}+ Teams`
 
   return (
     <Link href={league.href} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
       <div
         className="league-card"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         style={{
-          background: hovered ? '#131318' : '#0f0f14',
-          border: '3px solid #84cc16',
-          borderRadius: 12, padding: '24px 20px', cursor: 'pointer',
-          position: 'relative', overflow: 'hidden',
-          boxShadow: '0 0 12px rgba(132,204,22,0.35)',
-          height: '100%', boxSizing: 'border-box',
-        }}
+          // --accent drives all CSS-class rules (background, border, shadows, animation)
+          '--accent': league.accent,
+          borderRadius: 12,
+          padding: '24px 20px',
+          cursor: 'pointer',
+          position: 'relative',
+          overflow: 'hidden',
+          height: '100%',
+          boxSizing: 'border-box',
+        } as React.CSSProperties}
       >
-        {/* Left accent bar */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: league.accent, borderRadius: '12px 0 0 12px', opacity: 0.85 }} />
+        <div style={{ paddingLeft: 4 }}>
 
-        <div style={{ paddingLeft: 12 }}>
+          {/* Header row: emoji + name/subtitle + badge */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 28, lineHeight: 1 }}>{league.emoji}</span>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#ffffff', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'var(--font-nunito), sans-serif' }}>
+                <div style={t({ fontSize: 16, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' })}>
                   {league.name}
                 </div>
-                <div style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2, fontFamily: 'var(--font-nunito), sans-serif' }}>
+                <div style={t({ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 })}>
                   {league.full}
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: 10, color: league.accent, fontWeight: 700, letterSpacing: '0.1em', background: league.accent + '18', padding: '4px 8px', borderRadius: 4, textTransform: 'uppercase', whiteSpace: 'nowrap', fontFamily: 'var(--font-nunito), sans-serif' }}>
-              {league.id === 'atp' ? 'ATP Tour' : league.id === 'wta' ? 'WTA Tour' : `${league.teams}+ ${league.id === 'wnba' || league.id === 'mlb' || league.id === 'nba' || league.id === 'nhl' || league.id === 'nfl' ? 'Teams' : 'Teams'}`}
+
+            {/* Badge — dark fill so black text stays legible on bright gradient */}
+            <div style={t({
+              fontSize: 10,
+              background: 'rgba(0,0,0,.16)',
+              padding: '4px 8px',
+              borderRadius: 4,
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            })}>
+              {badgeLabel}
             </div>
           </div>
 
-          <p style={{ fontSize: 12, color: '#ffffff', lineHeight: 1.65, margin: 0, letterSpacing: '0.02em', fontFamily: 'var(--font-nunito), sans-serif' }}>
+          {/* Description */}
+          <p style={t({ fontSize: 12, fontWeight: 600, lineHeight: 1.65, margin: 0, letterSpacing: '0.02em' })}>
             {league.description}
           </p>
 
+          {/* CTA */}
           <div style={{ marginTop: 16 }}>
-            <span style={{ fontSize: 11, color: hovered ? league.accent : '#ffffff', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'color 0.2s', fontFamily: 'var(--font-nunito), sans-serif' }}>
-              {league.id === 'mlb' || league.href !== '#' ? 'View Analysis →' : 'Coming Soon'}
+            <span style={t({ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' })}>
+              {league.href !== '#' ? 'View Analysis →' : 'Coming Soon'}
             </span>
           </div>
+
         </div>
       </div>
     </Link>
