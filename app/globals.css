@@ -5,12 +5,25 @@
 }
 
 :root {
-  --background: #05050f;
+  --background: #05060a;
   --foreground: #e2e8f0;
+  /* Dial between 0.10 (barely visible) and 0.40 (vivid) */
+  --bg-gradient-strength: 0.18;
+}
+
+/* Fixed ambient gradient — stays put while content scrolls */
+html {
+  background-color: var(--background);
+  background-image: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, var(--bg-gradient-strength)) 0%,
+    rgba(139, 92, 246, var(--bg-gradient-strength)) 100%
+  );
+  background-attachment: fixed;
 }
 
 body {
-  background: var(--background);
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
 }

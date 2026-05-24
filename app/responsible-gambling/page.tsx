@@ -11,7 +11,7 @@ const a = { color: '#22c55e', textDecoration: 'none' } as const
 
 export default function ResponsibleGamblingPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace' }}>
+    <div style={{ minHeight: '100vh' }}>
       <div style={{ borderBottom: '1px solid #1a1a24', padding: '40px 24px 28px' }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
           <div style={{ fontSize: 9, color: '#22c55e', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>Commitment</div>

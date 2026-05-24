@@ -387,7 +387,7 @@ export default function FavoritesPage() {
   if (!mounted || authLoading) return null
 
   if (!isMember) return (
-    <div style={{ paddingLeft: 80, paddingTop: 80, minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace' }}>
+    <div style={{ paddingLeft: 80, paddingTop: 80, minHeight: '100vh' }}>
       <LoginGate />
     </div>
   )
@@ -395,8 +395,7 @@ export default function FavoritesPage() {
   return (
     <div style={{
       paddingLeft: 80, paddingTop: 80, paddingRight: 0, paddingBottom: 56,
-      minHeight: '100vh', background: BG,
-      fontFamily: 'var(--font-geist-mono), monospace',
+      minHeight: '100vh',
     }}>
 
       {/* ─── Header ─────────────────────────────────────────────────────── */}

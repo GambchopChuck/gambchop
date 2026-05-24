@@ -24,7 +24,7 @@ const footLink = { fontSize: 11, color: '#71717a', textDecoration: 'none', lineH
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable}`}>
-      <body style={{ minHeight: '100vh', background: '#0a0a0f', margin: 0 }}>
+      <body style={{ minHeight: '100vh', margin: 0 }}>
         <Providers>
           {children}
           <footer style={{ borderTop: '1px solid #1a1a24', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace', marginTop: 40 }}>

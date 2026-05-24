@@ -13,7 +13,6 @@ import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 import ChartLegend from '@/components/ChartLegend'
 
-const BG     = '#0a0a0f'
 const CARD   = '#0f0f14'
 const BORDER = '#1a1a24'
 const TEXT   = '#f4f4f5'
@@ -162,7 +161,7 @@ export default function TeamPage() {
   const showStats = ready && memberTier !== 'none'
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace', padding: '0 0 80px' }}>
+    <div style={{ minHeight: '100vh', padding: '0 0 80px' }}>
 
       {/* Breadcrumb */}
       <div style={{ padding: '12px 24px', borderBottom: `1px solid #14141c` }}>

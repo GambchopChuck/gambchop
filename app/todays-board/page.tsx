@@ -210,7 +210,7 @@ export default function StreakBoardPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', paddingBottom: 80 }}>
 
       {/* Header */}
       <div style={{ borderBottom: '1px solid #1a1a24', padding: '24px 24px 20px' }}>

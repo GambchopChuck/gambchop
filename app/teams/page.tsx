@@ -8,7 +8,6 @@ import { slugify } from '@/lib/leagues-data'
 import { useAuth } from '@/lib/auth-context'
 import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 
-const BG     = '#0a0a0f'
 const CARD   = '#0f0f14'
 const BORDER = '#1a1a24'
 const TEXT   = '#f4f4f5'
@@ -139,7 +138,7 @@ export default function TeamsPage() {
     : LEAGUES.filter(l => l.id === activeLeague)
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace', padding: '0 0 80px' }}>
+    <div style={{ minHeight: '100vh', padding: '0 0 80px' }}>
 
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '24px 24px 20px' }}>

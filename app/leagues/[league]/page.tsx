@@ -158,7 +158,7 @@ export default function LeaguePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace' }}>
+    <div style={{ minHeight: '100vh' }}>
 
       {/* League header */}
       <div style={{ borderBottom: '1px solid #1a1a24', padding: '20px 24px' }}>

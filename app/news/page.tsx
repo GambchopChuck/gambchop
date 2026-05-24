@@ -8,7 +8,7 @@ const ARTICLES = [
 
 export default function NewsPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace', padding: '32px 24px' }}>
+    <div style={{ minHeight: '100vh', padding: '32px 24px' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <div style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 8 }}>Latest</div>

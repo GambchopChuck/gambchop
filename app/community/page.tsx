@@ -16,7 +16,6 @@ import {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const BG       = '#0a0a0f'
 const CARD     = '#0f0f14'
 const BORDER   = '#1a1a24'
 const TEXT     = '#f4f4f5'
@@ -417,7 +416,7 @@ export default function CommunityPage() {
   if (!user) return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, padding: '0 0 80px' }}>
+    <div style={{ minHeight: '100vh', padding: '0 0 80px' }}>
 
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '20px 24px' }}>

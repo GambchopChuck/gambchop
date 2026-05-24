@@ -1,6 +1,6 @@
 export default function MerchandisePage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', padding: '40px 24px' }}>
         <div style={{ fontSize: 48, marginBottom: 20 }}>👕</div>
         <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 12 }}>Coming Soon</div>

@@ -13,7 +13,7 @@ const STREAKS = [
 
 export default function StreakLeaderboardPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace', padding: '32px 24px' }}>
+    <div style={{ minHeight: '100vh', padding: '32px 24px' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         <div style={{ marginBottom: 32 }}>
