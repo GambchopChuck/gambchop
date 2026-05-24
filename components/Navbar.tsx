@@ -61,6 +61,7 @@ export default function Navbar() {
         <Link href="/" style={{ textDecoration: 'none' }}>
           <span style={{
             fontSize: 22, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase',
+            fontFamily: 'var(--font-geist-sans), sans-serif',
             background: 'linear-gradient(135deg, #22c55e 0%, #8b5cf6 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             filter: 'drop-shadow(0 0 16px rgba(34,197,94,0.35)) drop-shadow(0 0 32px rgba(139,92,246,0.2))',
