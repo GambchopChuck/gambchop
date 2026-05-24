@@ -41,7 +41,6 @@ export default function ChartLegend() {
       border: '1px solid #1a1a24',
       borderRadius: 10,
       padding: '14px 14px 12px',
-      fontFamily: 'var(--font-geist-mono), monospace',
       zIndex: 30,
     }}>
       <div style={{

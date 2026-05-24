@@ -72,11 +72,11 @@ const rec = {
 function wlColor(r: WL) { return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#52525b' }
 
 function RecordBadge({ r }: { r: WL }) {
-  return <span style={{ color: wlColor(r), fontSize: 10, fontFamily: 'monospace', fontWeight: 700 }}>&nbsp;({r.w}-{r.l})</span>
+  return <span style={{ color: wlColor(r), fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>&nbsp;({r.w}-{r.l})</span>
 }
 function OUBadge({ o, u }: { o: number; u: number }) {
   const color = o > u ? C.violet : o < u ? C.brown : '#52525b'
-  return <span style={{ color, fontSize: 10, fontFamily: 'monospace', fontWeight: 700 }}>&nbsp;({o}-{u})</span>
+  return <span style={{ color, fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>&nbsp;({o}-{u})</span>
 }
 
 // ─── Cells ────────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ const ROWS: RowMeta[] = [
 function GameCellFilled({ rowKey, game: _game, gi, filled }: { rowKey: RowKey; game: GameEntry; gi: number; filled: FilledRow }) {
   switch (rowKey) {
     case 'moneyline': return <WLCell result={filled.ml[gi]} />
-    case 'spread':    return <WLCell result={filled.sp[gi]} winLabel="COV" lossLabel="MIS" />
+    case 'spread':    return <WLCell result={filled.sp[gi]} winLabel="COV" lossLabel="L" />
     case 'ml-fav':    return <ConditionCell active={filled.fav[gi]}                                         result={filled.ml[gi]} color={C.gold}   glow={`0 0 10px ${C.gold}80`}   />
     case 'ml-dog':    return <ConditionCell active={filled.fav[gi]   === null ? null : !filled.fav[gi]}   result={filled.ml[gi]} color={C.orange} glow={`0 0 10px ${C.orange}80`} />
     case 'sp-fav':    return <ConditionCell active={filled.spFav[gi]}                                     result={filled.sp[gi]} color={C.royal}  glow={`0 0 10px ${C.royal}80`}  />
@@ -322,7 +322,7 @@ export default function GambchopChart({ data, memberTier, isPro, onJoin, onUpgra
   const handleJoin    = () => { if (onJoin) onJoin() }
 
   return (
-    <div style={{ width: '100%', fontFamily: 'var(--font-geist-mono), monospace' }}>
+    <div style={{ width: '100%' }}>
       <Legend lastUpdated={lastUpdated} />
 
       {/* Active filters bar */}

@@ -29,21 +29,20 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: '#0c0c10', border: `1px solid ${BORDER}`,
   borderRadius: 8, padding: '11px 14px', color: TEXT,
   fontSize: 12, letterSpacing: '0.03em', outline: 'none',
-  fontFamily: 'var(--font-geist-mono), monospace', boxSizing: 'border-box',
+  boxSizing: 'border-box',
 }
 
 const btnGreen: React.CSSProperties = {
   background: `linear-gradient(135deg, ${GREEN}, #16a34a)`, border: 'none', borderRadius: 8,
   color: '#000', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
   textTransform: 'uppercase', cursor: 'pointer', padding: '11px 20px',
-  fontFamily: 'var(--font-geist-mono), monospace', boxShadow: `0 0 16px ${GREEN}44`,
+  boxShadow: `0 0 16px ${GREEN}44`,
 }
 
 const btnGhost: React.CSSProperties = {
   background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8,
   color: SUB, fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
   textTransform: 'uppercase', cursor: 'pointer', padding: '10px 18px',
-  fontFamily: 'var(--font-geist-mono), monospace',
 }
 
 // ─── Pro Gate ─────────────────────────────────────────────────────────────────
@@ -418,7 +417,7 @@ export default function CommunityPage() {
   if (!user) return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace', padding: '0 0 80px' }}>
+    <div style={{ minHeight: '100vh', background: BG, padding: '0 0 80px' }}>
 
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '20px 24px' }}>

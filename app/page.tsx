@@ -32,7 +32,7 @@ const CHART_ROWS: Array<{ label: string; cells: Array<string | null> }> = [
 
 export default function HomePage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace' }}>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f' }}>
       <ActivationBanner />
 
       <style>{`

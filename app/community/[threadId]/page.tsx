@@ -33,21 +33,21 @@ const inputStyle: React.CSSProperties = {
   width: '100%', background: '#0c0c10', border: `1px solid ${BORDER}`,
   borderRadius: 8, padding: '11px 14px', color: TEXT,
   fontSize: 12, letterSpacing: '0.03em', outline: 'none',
-  fontFamily: 'var(--font-geist-mono), monospace', boxSizing: 'border-box',
+  boxSizing: 'border-box',
 }
 
 const btnGreen: React.CSSProperties = {
   background: `linear-gradient(135deg, ${GREEN}, #16a34a)`, border: 'none', borderRadius: 7,
   color: '#000', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em',
   textTransform: 'uppercase', cursor: 'pointer', padding: '9px 18px',
-  fontFamily: 'var(--font-geist-mono), monospace', boxShadow: `0 0 12px ${GREEN}33`,
+  boxShadow: `0 0 12px ${GREEN}33`,
 }
 
 const btnGhost: React.CSSProperties = {
   background: 'none', border: `1px solid ${BORDER}`, borderRadius: 7,
   color: MUTED, fontSize: 10, fontWeight: 600, letterSpacing: '0.1em',
   textTransform: 'uppercase', cursor: 'pointer', padding: '8px 14px',
-  fontFamily: 'var(--font-geist-mono), monospace', transition: 'all 0.15s',
+  transition: 'all 0.15s',
 }
 
 // ─── Flag Modal ───────────────────────────────────────────────────────────────
