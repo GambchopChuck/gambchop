@@ -41,14 +41,14 @@ export default function LeagueCard({ league }: { league: League }) {
   const ctaText = league.cta ?? (league.href !== '#' ? 'View Analysis →' : 'Coming Soon')
 
   return (
-    <Link href={league.href} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href={league.href} style={{ textDecoration: 'none', display: 'block', alignSelf: 'start' }}>
       <div
         className="league-card"
         style={{
           // --accent drives the CSS-class background, border, glow, and animation
           '--accent': league.accent,
           borderRadius: 12,
-          padding: '18px 24px',
+          padding: '12px 24px',
           cursor: 'pointer',
           position: 'relative',
           overflow: 'hidden',   // clips image to rounded corners; box-shadow glow is unaffected
@@ -86,12 +86,12 @@ export default function LeagueCard({ league }: { league: League }) {
         <div style={{ paddingLeft: 4, position: 'relative', zIndex: 2 }}>
 
           {/* Header row: name / subtitle + badge */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div>
               <div style={t({ fontSize: 16, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' })}>
                 {league.name}
               </div>
-              <div style={t({ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 })}>
+              <div style={t({ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
                 {league.full}
               </div>
             </div>
@@ -117,11 +117,11 @@ export default function LeagueCard({ league }: { league: League }) {
           <p style={t({
             fontSize: 12,
             fontWeight: 600,
-            lineHeight: 1.4,
+            lineHeight: 1.3,
             margin: 0,
             letterSpacing: '0.02em',
             display: '-webkit-box' as React.CSSProperties['display'],
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 1,
             WebkitBoxOrient: 'vertical' as const,
             overflow: 'hidden',
           } as React.CSSProperties)}>
@@ -129,7 +129,7 @@ export default function LeagueCard({ league }: { league: League }) {
           </p>
 
           {/* CTA */}
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 6 }}>
             <span style={t({ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' })}>
               {ctaText}
             </span>
