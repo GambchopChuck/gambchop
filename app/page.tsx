@@ -75,6 +75,13 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           .league-card { animation: none !important; }
         }
+        .hiw-section { padding: 100px 24px; }
+        .hiw-heading { font-size: clamp(32px, 5vw, 60px); font-weight: 700; margin: 0 0 28px; line-height: 1.06; color: #ffffff; letter-spacing: 0.01em; }
+        .hiw-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 56px; }
+        @media (max-width: 768px) {
+          .hiw-section { padding: 64px 20px; }
+          .hiw-cards { grid-template-columns: 1fr; gap: 20px; margin-top: 40px; }
+        }
       `}</style>
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}
@@ -223,6 +230,86 @@ export default function HomePage() {
         </div>{/* /hero-grid */}
         </div>{/* /hero content */}
       </div>{/* /hero outer */}
+
+      {/* ── How It Works ──────────────────────────────────────────────────── */}
+      <section className="hiw-section">
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+
+          {/* Eyebrow */}
+          <p style={{
+            fontSize: 14, fontWeight: 500, letterSpacing: '0.22em',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)',
+            margin: '0 0 20px',
+          }}>
+            How It Works
+          </p>
+
+          {/* Heading */}
+          <h2 className="hiw-heading">
+            Spot the patterns. Build smarter tickets.
+          </h2>
+
+          {/* Intro */}
+          <p style={{
+            fontSize: 18, fontWeight: 400, color: '#ffffff',
+            lineHeight: 1.55, maxWidth: 720, margin: 0,
+          }}>
+            Gambchop turns months of game results into a single color-coded view
+            so streaks, slumps, and trends jump off the page. Pair that visual
+            context with your personal favorites list and build off the broader
+            picture of history&#8212;not a hunch.
+          </p>
+
+          {/* Feature cards */}
+          <div className="hiw-cards">
+            {([
+              {
+                n: '01',
+                heading: 'Read the chart',
+                body: 'Every game becomes a colored square — green for wins, red for losses, purple for overs, baby blue for unders, amber for pushes. Scan a team\'s row and the streaks, slumps, and patterns show themselves.',
+              },
+              {
+                n: '02',
+                heading: 'Track your favorites',
+                body: 'Pin up to 16 team-and-bet-type combos to your favorites. Your most-watched matchups and markets stay one click away, side by side, so comparisons are instant.',
+              },
+              {
+                n: '03',
+                heading: 'Build your bet',
+                body: 'Stack the visual context with your own research. Spot a team riding a 7-game over streak or a favorite that keeps failing to cover, and walk into your sportsbook with a broader view of what\'s been happening.',
+              },
+            ] as const).map(({ n, heading, body }) => (
+              <div key={n} style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 12,
+                padding: '28px 28px 32px',
+              }}>
+                <div style={{
+                  fontSize: 14, fontWeight: 500, color: '#22c55e',
+                  letterSpacing: '0.18em', textTransform: 'uppercase',
+                  marginBottom: 18,
+                }}>
+                  {n}
+                </div>
+                <h3 style={{
+                  fontSize: 26, fontWeight: 600, color: '#ffffff',
+                  margin: '0 0 14px', letterSpacing: '0.01em', lineHeight: 1.2,
+                }}>
+                  {heading}
+                </h3>
+                <p style={{
+                  fontSize: 16, fontWeight: 400, color: '#ffffff',
+                  lineHeight: 1.5, margin: 0,
+                }}>
+                  {body}
+                </p>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
 
       <LeagueGrid />
       <CommunityPreview />
