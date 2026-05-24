@@ -33,3 +33,19 @@ body {
 ::-webkit-scrollbar-track { background: #0a0a1a; }
 ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* ── Browse Leagues grid ─────────────────────────────────────────────────── */
+/* Defined here (not in JSX) so it is processed in the static CSS bundle     */
+/* and available from the very first paint — no JS hydration required.       */
+.league-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1023px) {
+  .league-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 639px) {
+  .league-grid { grid-template-columns: 1fr; }
+}
