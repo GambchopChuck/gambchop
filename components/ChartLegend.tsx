@@ -31,17 +31,12 @@ const ITEMS = [
 export default function ChartLegend() {
   return (
     <aside style={{
-      position: 'fixed',
-      top: 80,
-      left: 72,
       width: 180,
-      maxHeight: 'calc(100vh - 100px)',
-      overflowY: 'auto',
+      flexShrink: 0,
       background: '#0f0f14',
       border: '1px solid #1a1a24',
       borderRadius: 10,
       padding: '14px 14px 12px',
-      zIndex: 30,
     }}>
       <div style={{
         fontSize: 9,
