@@ -24,7 +24,7 @@ interface League {
 // White text for legibility on the dark overlay that sits over the card background
 const t = (extra?: object) => ({
   color: '#ffffff',
-  fontFamily: 'var(--font-nunito), sans-serif',
+  fontFamily: 'var(--font-bebas), sans-serif',
   fontWeight: 700,
   ...extra,
 })
