@@ -221,7 +221,7 @@ function DateHeader({ year, month, daysInMonth, populatedDays }: {
         return (
           <div key={day} style={{ width: COL_W, minWidth: COL_W, flexShrink: 0, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <span style={{ fontSize: 7, color: '#2a2a34', letterSpacing: '0.05em' }}>{DOW[dow]}</span>
-            <span style={{ fontSize: 9, color: hasGame ? '#d4d4d8' : '#2a2a34', fontWeight: hasGame ? 700 : 400, letterSpacing: '0.02em' }}>{day}</span>
+            <span style={{ fontSize: 8, color: hasGame ? '#d4d4d8' : '#2a2a34', fontWeight: hasGame ? 700 : 400, letterSpacing: '0.01em' }}>{month}/{day}</span>
           </div>
         )
       })}
@@ -364,7 +364,6 @@ export default function GambchopChart({
   const [atStart, setAtStart] = useState(true)
   const [atEnd,   setAtEnd]   = useState(false)
   const scrollPosRef  = useRef(0)
-  const headerRef     = useRef<HTMLDivElement>(null)
   const teamRefs      = useRef<(HTMLDivElement | null)[]>([])
   const isSyncing     = useRef(false)
   const syncTimer     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -375,7 +374,7 @@ export default function GambchopChart({
   }
 
   function allScrollRefs(): (HTMLDivElement | null)[] {
-    return [headerRef.current, ...teamRefs.current]
+    return [...teamRefs.current]
   }
 
   function updateEdges(pos: number, el: HTMLDivElement | null) {
@@ -405,16 +404,6 @@ export default function GambchopChart({
     syncAllTo(pos, el)
   }
 
-  function handleHeaderScroll() {
-    if (isSyncing.current) return
-    const el = headerRef.current
-    if (!el) return
-    const pos = el.scrollLeft
-    scrollPosRef.current = pos
-    updateEdges(pos, el)
-    syncAllTo(pos, el)
-  }
-
   function scrollWeek(dir: -1 | 1) {
     const targetPos = Math.max(0, scrollPosRef.current + dir * SCROLL_WEEK)
     scrollPosRef.current = targetPos
@@ -426,7 +415,7 @@ export default function GambchopChart({
     // After smooth scroll animation (~400ms), re-check edges and release lock
     syncTimer.current = setTimeout(() => {
       isSyncing.current = false
-      const firstEl = teamRefs.current.find(r => r !== null) ?? headerRef.current
+      const firstEl = teamRefs.current.find(r => r !== null)
       if (firstEl) updateEdges(firstEl.scrollLeft, firstEl)
     }, 450)
   }
@@ -461,7 +450,7 @@ export default function GambchopChart({
       }
       syncTimer.current = setTimeout(() => {
         isSyncing.current = false
-        const firstEl = teamRefs.current.find(r => r !== null) ?? headerRef.current
+        const firstEl = teamRefs.current.find(r => r !== null)
         if (firstEl) updateEdges(firstEl.scrollLeft, firstEl)
       }, 450)
     })
@@ -470,7 +459,7 @@ export default function GambchopChart({
 
   // Re-check edges after data loads (scroll width may change)
   useEffect(() => {
-    const firstEl = teamRefs.current.find(r => r !== null) ?? headerRef.current
+    const firstEl = teamRefs.current.find(r => r !== null)
     if (firstEl) updateEdges(scrollPosRef.current, firstEl)
   }, [data.length, daysInMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -534,26 +523,6 @@ export default function GambchopChart({
         </div>
       )}
 
-      {/* ── Shared date header (hidden scrollbar, synced with all team containers) ── */}
-      <div style={{ position: 'relative' }}>
-        {!atStart && (
-          <div style={{ position: 'absolute', left: LABEL_W, top: 0, bottom: 0, width: 48, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to right, #0a0a0f, transparent)' }} />
-        )}
-        {!atEnd && (
-          <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 64, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to left, #0a0a0f, transparent)' }} />
-        )}
-        <div
-          ref={headerRef}
-          onScroll={handleHeaderScroll}
-          className="chart-scroll-hidden"
-          style={{ overflowX: 'auto' }}
-        >
-          <div style={{ minWidth: contentMinWidth }}>
-            <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
-          </div>
-        </div>
-      </div>
-
       {/* ── Per-team containers — each has its own scroll + synced arrows ── */}
       <div style={{ position: 'relative' }}>
         {/* No-member blur over the whole body */}
@@ -591,25 +560,6 @@ export default function GambchopChart({
 
           return (
             <div key={team.teamName} style={{ position: 'relative' }}>
-              {/* Repeat date header every 5 teams for readability */}
-              {ti > 0 && ti % 5 === 0 && (
-                <div style={{ position: 'relative' }}>
-                  {!atStart && (
-                    <div style={{ position: 'absolute', left: LABEL_W, top: 0, bottom: 0, width: 48, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to right, #0a0a0f, transparent)' }} />
-                  )}
-                  {!atEnd && (
-                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 64, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to left, #0a0a0f, transparent)' }} />
-                  )}
-                  <div className="chart-scroll-hidden" style={{ overflowX: 'auto' }}
-                    ref={el => { /* repeat headers don't need a named ref — they're synced via JS below */ void el }}
-                  >
-                    <div style={{ minWidth: contentMinWidth }}>
-                      <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Edge gradients per team */}
               {!atStart && (
                 <div style={{ position: 'absolute', left: LABEL_W, top: 0, bottom: 0, width: 48, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to right, #0a0a0f, transparent)' }} />
@@ -630,6 +580,7 @@ export default function GambchopChart({
                 style={{ overflowX: 'auto' }}
               >
                 <div style={{ minWidth: contentMinWidth }}>
+                  <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
                   {/* Team label row */}
                   <div style={{ display: 'flex', alignItems: 'stretch' }}>
                     <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0a0a0f', display: 'flex', alignItems: 'center' }}>
