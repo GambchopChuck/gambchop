@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { SEED_THREADS, TAG_COLORS, timeAgo, excerpt, Thread } from '@/lib/community'
@@ -87,7 +88,23 @@ export default function CommunityPreview() {
   const preview = filtered.slice(0, 4)
 
   return (
-    <section style={{ borderTop: `1px solid ${BORDER}`, maxWidth: 1400, margin: '0 auto', padding: '40px 24px 56px' }}>
+    <section style={{ borderTop: `1px solid ${BORDER}`, maxWidth: 1400, margin: '0 auto', padding: '40px 24px 56px', position: 'relative', overflow: 'hidden' }}>
+
+      {/* Background hero image */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <Image
+          src="/images/communityhero-bg.png"
+          alt=""
+          fill
+          sizes="(max-width: 1400px) 100vw, 1400px"
+          style={{ objectFit: 'cover', objectPosition: 'center top', opacity: 0.08 }}
+          priority={false}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.72) 100%)' }} />
+      </div>
+
+      {/* All section content sits above the background */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
@@ -190,6 +207,7 @@ export default function CommunityPreview() {
           </Link>
         </div>
       )}
+      </div>
     </section>
   )
 }
