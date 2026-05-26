@@ -83,15 +83,12 @@ export default function LeagueCard({ league }: { league: League }) {
 
         {/* ── Card content ─────────────────────────────────────────────────────
             Rendered above both the image and the overlay. */}
-        <div style={{ paddingLeft: 4, position: 'relative', zIndex: 2 }}>
+        <div className="font-bebas" style={{ paddingLeft: 4, position: 'relative', zIndex: 2 }}>
 
-          {/* Header row: name / subtitle + badge */}
+          {/* Header row: subtitle + badge */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div>
-              <div style={t({ fontSize: 16, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' })}>
-                {league.name}
-              </div>
-              <div style={t({ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
+              <div style={t({ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
                 {league.full}
               </div>
             </div>

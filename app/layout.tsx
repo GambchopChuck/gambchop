@@ -3,7 +3,13 @@ import { Geist, Geist_Mono, Nunito, Oswald } from 'next/font/google'
 import './globals.css'
 import Providers from '@/components/Providers'
 import Link from 'next/link'
+import { Bebas_Neue } from 'next/font/google'
 
+const bebasNeue = Bebas_Neue({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-bebas-neue',
+})
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
 const nunito = Nunito({ variable: '--font-nunito', subsets: ['latin'] })
@@ -23,7 +29,7 @@ const footLink = { fontSize: 11, color: '#71717a', textDecoration: 'none', lineH
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable} ${bebasNeue.variable}`} >
       <body style={{ minHeight: '100vh', margin: 0 }}>
         <Providers>
           {children}

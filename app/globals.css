@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  --font-bebas: var(--font-bebas-neue), sans-serif;
+}
+@theme {
   --font-family-sans: var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
 }
 
