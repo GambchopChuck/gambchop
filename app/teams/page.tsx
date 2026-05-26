@@ -5,83 +5,41 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LEAGUES } from '@/lib/leagues-data'
 import { slugify } from '@/lib/leagues-data'
-import { useAuth } from '@/lib/auth-context'
-import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 
 const CARD   = '#0f0f14'
 const BORDER = '#1a1a24'
 const TEXT   = '#f4f4f5'
 const MUTED  = '#52525b'
-const SUB    = '#a1a1aa'
 
 // ─── Team Card ────────────────────────────────────────────────────────────────
 
-function TeamCard({ name, leagueId, emoji, accent }: {
-  name: string; leagueId: string; emoji: string; accent: string
+function TeamCard({ name, leagueId, accent }: {
+  name: string; leagueId: string; accent: string
 }) {
   const router = useRouter()
-  const { isPro, memberTier } = useAuth()
-  const { isFollowing, toggleFollow, follows } = useUser()
-
   const [hovered, setHovered] = useState(false)
-  const slug      = slugify(name)
-  const href      = `/leagues/${leagueId}/${slug}`
-  const following = isFollowing(slug)
-  const atLimit   = !following && !isPro && follows.length >= FREE_FOLLOWS
-  const canFollow = memberTier !== 'none'
-
-  const handleFollow = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!canFollow || atLimit) return
-    toggleFollow(slug, leagueId, name)
-  }
+  const slug = slugify(name)
+  const href = `/leagues/${leagueId}/${slug}`
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div
-        onClick={() => router.push(href)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          background: hovered ? '#131318' : CARD,
-          border: `1px solid ${hovered ? accent + '55' : BORDER}`,
-          borderRadius: 10, padding: '16px 14px 40px',
-          cursor: 'pointer', transition: 'all 0.15s',
-          transform: hovered ? 'translateY(-2px)' : 'none',
-          boxShadow: hovered ? `0 6px 20px ${accent}18` : 'none',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          gap: 10, textAlign: 'center', position: 'relative', overflow: 'hidden',
-        }}
-      >
-        {hovered && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${accent}, transparent)`, opacity: 0.6 }} />}
-        <span style={{ fontSize: 28, lineHeight: 1 }}>{emoji}</span>
-        <div style={{ fontSize: 11, fontWeight: 800, color: hovered ? TEXT : SUB, letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.3 }}>{name}</div>
-        <div style={{ fontSize: 8, color: accent, background: accent + '18', border: `1px solid ${accent}33`, borderRadius: 3, padding: '2px 8px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>
-          View Chart →
-        </div>
-      </div>
-
-      {/* Follow button — outside the nav click area */}
-      {canFollow && (
-        <button
-          onClick={handleFollow}
-          style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: following ? `${accent}22` : atLimit ? '#1a1a24' : 'transparent',
-            border: 'none', borderTop: `1px solid ${following ? accent + '44' : '#1a1a24'}`,
-            borderRadius: '0 0 10px 10px',
-            color: following ? accent : atLimit ? MUTED : MUTED,
-            fontSize: 9, fontWeight: following ? 800 : 600,
-            letterSpacing: '0.12em', textTransform: 'uppercase',
-            cursor: atLimit ? 'default' : 'pointer',
-            padding: '8px 0', fontFamily: 'inherit',
-            transition: 'all 0.15s',
-          }}
-        >
-          {following ? `✓ Following` : atLimit ? `+ Follow (Pro)` : `+ Follow`}
-        </button>
-      )}
-    </div>
+    <button
+      onClick={() => router.push(href)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? '#131318' : CARD,
+        border: `1px solid ${hovered ? accent + '55' : BORDER}`,
+        borderRadius: 10, padding: '14px 12px',
+        cursor: 'pointer', transition: 'all 0.15s',
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        boxShadow: hovered ? `0 6px 20px ${accent}18` : 'none',
+        width: '100%', textAlign: 'center', fontFamily: 'inherit',
+        fontSize: 11, fontWeight: 800, color: '#ffffff',
+        letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.3,
+      }}
+    >
+      {name}
+    </button>
   )
 }
 
@@ -121,7 +79,7 @@ function LeagueSection({ id, name, full, emoji, accent, entities, entityType }: 
       {/* Team grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
         {entities.map(name => (
-          <TeamCard key={name} name={name} leagueId={id} emoji={emoji} accent={accent} />
+          <TeamCard key={name} name={name} leagueId={id} accent={accent} />
         ))}
       </div>
     </section>
