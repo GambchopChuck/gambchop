@@ -96,16 +96,15 @@ export default function HomePage() {
       </div>{/* /hero outer */}
 
       {/* ── How It Works ──────────────────────────────────────────────────── */}
-      <section className="hiw-section" style={{ position: 'relative', overflow: 'hidden', background: '#000' }}>
-        <Image
+      <section className="hiw-section" style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/images/stp-bg.png"
           alt=""
-          fill
-          style={{ objectFit: 'cover', objectPosition: 'center', opacity: 0.60, zIndex: 0 }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: 0.55, zIndex: 0 }}
         />
-        {/* Minimal overlay — just enough contrast for white text */}
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 0 }} />
-        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.30)', zIndex: 1 }} />
+        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 2 }}>
 
           {/* Eyebrow */}
           <p style={{
