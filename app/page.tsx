@@ -2,6 +2,7 @@ import Image from 'next/image'
 import LeagueGrid from '@/components/LeagueGrid'
 import CommunityPreview from '@/components/CommunityPreview'
 import ActivationBanner from '@/components/ActivationBanner'
+import { X, ShoppingBag } from 'lucide-react'
 
 
 export default function HomePage() {
@@ -94,6 +95,77 @@ export default function HomePage() {
         </div>{/* /hero-grid */}
         </div>{/* /hero content */}
       </div>{/* /hero outer */}
+
+      {/* ── Social divider bar ────────────────────────────────────────────── */}
+      <div style={{
+        width: '100%',
+        height: 60,
+        background: '#08080d',
+        borderTop: '1px solid #22c55e',
+        borderBottom: '1px solid #22c55e',
+        boxShadow: '0 -8px 32px rgba(34,197,94,0.25), 0 8px 32px rgba(34,197,94,0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
+
+          {/* X (Twitter) */}
+          <a href="#" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)"
+            style={{ color: '#71717a', display: 'flex', transition: 'color 0.2s, transform 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#22c55e'; (e.currentTarget as HTMLElement).style.transform='scale(1.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#71717a'; (e.currentTarget as HTMLElement).style.transform='scale(1)' }}
+          >
+            <X size={22} />
+          </a>
+
+          {/* Instagram */}
+          <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+            style={{ color: '#71717a', display: 'flex', transition: 'color 0.2s, transform 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#22c55e'; (e.currentTarget as HTMLElement).style.transform='scale(1.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#71717a'; (e.currentTarget as HTMLElement).style.transform='scale(1)' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+
+          {/* TikTok */}
+          <a href="#" target="_blank" rel="noopener noreferrer" aria-label="TikTok"
+            style={{ color: '#71717a', display: 'flex', transition: 'color 0.2s, transform 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#22c55e'; (e.currentTarget as HTMLElement).style.transform='scale(1.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#71717a'; (e.currentTarget as HTMLElement).style.transform='scale(1)' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.84 1.56V6.79a4.85 4.85 0 0 1-1.07-.1z"/>
+            </svg>
+          </a>
+
+          {/* YouTube */}
+          <a href="#" target="_blank" rel="noopener noreferrer" aria-label="YouTube"
+            style={{ color: '#71717a', display: 'flex', transition: 'color 0.2s, transform 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#22c55e'; (e.currentTarget as HTMLElement).style.transform='scale(1.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#71717a'; (e.currentTarget as HTMLElement).style.transform='scale(1)' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.41 19.1C5.12 19.56 12 19.56 12 19.56s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+              <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+
+          {/* Merchandise */}
+          <a href="/merchandise" aria-label="Merchandise"
+            style={{ color: '#71717a', display: 'flex', transition: 'color 0.2s, transform 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#22c55e'; (e.currentTarget as HTMLElement).style.transform='scale(1.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#71717a'; (e.currentTarget as HTMLElement).style.transform='scale(1)' }}
+          >
+            <ShoppingBag size={22} />
+          </a>
+
+        </div>
+      </div>
 
       {/* ── How It Works ──────────────────────────────────────────────────── */}
       <section
