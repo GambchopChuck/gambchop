@@ -24,8 +24,8 @@ interface League {
 // White text for legibility on the dark overlay that sits over the card background
 const t = (extra?: object) => ({
   color: '#ffffff',
-  fontFamily: 'var(--font-bebas), sans-serif',
-  fontWeight: 700,
+  fontFamily: 'var(--font-instrument-serif), serif',
+  fontWeight: 400,
   ...extra,
 })
 
@@ -84,7 +84,7 @@ export default function LeagueCard({ league }: { league: League }) {
 
         {/* ── Card content ─────────────────────────────────────────────────────
             Rendered above both the image and the overlay. */}
-        <div className="font-bebas" style={{ paddingLeft: 4, position: 'relative', zIndex: 2 }}>
+        <div style={{ paddingLeft: 4, position: 'relative', zIndex: 2 }}>
 
           {/* Header row: subtitle + badge */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>

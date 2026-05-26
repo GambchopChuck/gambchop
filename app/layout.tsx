@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Nunito, Oswald } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import Providers from '@/components/Providers'
 import Link from 'next/link'
@@ -9,6 +10,14 @@ const bebasNeue = Bebas_Neue({
   weight: '400',
   subsets: ['latin'],
   variable: '--font-bebas-neue',
+})
+
+const instrumentSerif = localFont({
+  src: [
+    { path: './fonts/InstrumentSerif-Regular.ttf', weight: '400', style: 'normal' },
+    { path: './fonts/InstrumentSerif-Italic.ttf',  weight: '400', style: 'italic' },
+  ],
+  variable: '--font-instrument-serif',
 })
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
@@ -29,7 +38,7 @@ const footLink = { fontSize: 11, color: '#71717a', textDecoration: 'none', lineH
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable} ${bebasNeue.variable}`} >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable} ${bebasNeue.variable} ${instrumentSerif.variable}`} >
       <body style={{ minHeight: '100vh', margin: 0 }}>
         <Providers>
           {children}
