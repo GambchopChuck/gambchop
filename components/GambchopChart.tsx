@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import type { TeamChartData, GameEntry, BetResult } from '@/lib/leagues-data'
 import type { MemberTier } from '@/lib/auth-context'
 import { useFilters } from '@/lib/filter-context'
@@ -215,9 +215,10 @@ function MonthNav({ year, month, onPrev, onNext, canPrev, canNext }: {
 
 // ─── Date header ─────────────────────────────────────────────────────────────
 
-const LABEL_W = 220
-const COL_W   = 40
-const DOW     = ['S','M','T','W','T','F','S']
+const LABEL_W    = 220
+const COL_W      = 40
+const SCROLL_WEEK = 7 * COL_W   // ~one week per arrow click
+const DOW        = ['S','M','T','W','T','F','S']
 
 function DateHeader({ year, month, daysInMonth, populatedDays }: {
   year: number; month: number; daysInMonth: number; populatedDays: Set<number>
@@ -341,7 +342,31 @@ export default function GambchopChart({
 
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate()
 
-  // Union of all game days across all teams — used to highlight the date header
+  // ── Scroll state ────────────────────────────────────────────────────────────
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [atStart, setAtStart] = useState(true)
+  const [atEnd,   setAtEnd]   = useState(false)
+
+  const checkEdges = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setAtStart(el.scrollLeft <= 0)
+    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2)
+  }, [])
+
+  function handleScroll() { checkEdges() }
+
+  function scrollWeek(dir: -1 | 1) {
+    scrollRef.current?.scrollBy({ left: dir * SCROLL_WEEK, behavior: 'smooth' })
+    // Update edge state after smooth scroll settles
+    setTimeout(checkEdges, 400)
+  }
+
+  // Re-check edges whenever data count or month changes (layout shifts)
+  useEffect(() => { checkEdges() }, [data.length, daysInMonth, checkEdges])
+
+  // Union of all game days across all teams — used for date header highlights and auto-scroll
   const allPopulatedDays = new Set<number>()
   for (const team of data) {
     for (const g of team.games) {
@@ -349,6 +374,25 @@ export default function GambchopChart({
       if (day > 0) allPopulatedDays.add(day)
     }
   }
+
+  // Auto-scroll: current month → center on latest game; past months → day 1
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || data.length === 0) return
+    requestAnimationFrame(() => {
+      const now = new Date()
+      const isCurrent = viewYear === now.getFullYear() && viewMonth === now.getMonth() + 1
+      if (!isCurrent || allPopulatedDays.size === 0) {
+        el.scrollTo({ left: 0, behavior: 'smooth' })
+      } else {
+        const lastDay = Math.max(...allPopulatedDays)
+        // Center the last game day in the visible (non-label) area
+        const target = Math.max(0, (lastDay - 1) * COL_W - (el.clientWidth - LABEL_W) / 2)
+        el.scrollTo({ left: target, behavior: 'smooth' })
+      }
+      setTimeout(checkEdges, 400)
+    })
+  }, [viewYear, viewMonth, data.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ width: '100%' }}>
@@ -410,187 +454,265 @@ export default function GambchopChart({
         </div>
       )}
 
-      <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
-        <div style={{ minWidth: LABEL_W + daysInMonth * COL_W + 24, position: 'relative' }}>
+      {/* ── Scroll region: sticky label column + horizontally scrollable grid ── */}
+      <div style={{ position: 'relative' }}>
 
-          {/* No-member blur over the whole chart body */}
-          {tier === 'none' && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 10, filter: 'blur(6px)', pointerEvents: 'none' }} aria-hidden />
-          )}
+        {/* Left fade gradient — visible once scrolled past day 1 */}
+        {!atStart && (
+          <div style={{
+            position: 'absolute', left: LABEL_W, top: 0, bottom: 0, width: 48,
+            zIndex: 25, pointerEvents: 'none',
+            background: 'linear-gradient(to right, #0a0a0f, transparent)',
+          }} />
+        )}
 
-          <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
+        {/* Right fade gradient — visible when more days exist off-screen */}
+        {!atEnd && (
+          <div style={{
+            position: 'absolute', right: 0, top: 0, bottom: 0, width: 64,
+            zIndex: 25, pointerEvents: 'none',
+            background: 'linear-gradient(to left, #0a0a0f, transparent)',
+          }} />
+        )}
 
-          {data.map((team, ti) => {
-            // Build day → games lookup for this team
-            const dayMap = new Map<number, GameEntry[]>()
-            for (const g of team.games) {
-              const day = parseInt(g.rawDate.split('-')[2] ?? '0', 10)
-              if (day > 0) {
-                if (!dayMap.has(day)) dayMap.set(day, [])
-                dayMap.get(day)!.push(g)
+        {/* Left scroll arrow */}
+        {!atStart && (
+          <button
+            className="scroll-arrow"
+            onClick={() => scrollWeek(-1)}
+            aria-label="Scroll left one week"
+            style={{
+              position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+              left: LABEL_W + 8, zIndex: 30,
+              width: 34, height: 34, borderRadius: '50%', padding: 0,
+              border: `1px solid ${C.green}55`, background: '#0c0c12ee',
+              color: C.green, fontSize: 22, lineHeight: '1', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(6px)', transition: 'border-color 0.15s, box-shadow 0.15s',
+              fontFamily: 'inherit', boxShadow: `0 0 12px #00000088`,
+            }}
+          >‹</button>
+        )}
+
+        {/* Right scroll arrow */}
+        {!atEnd && (
+          <button
+            className="scroll-arrow"
+            onClick={() => scrollWeek(1)}
+            aria-label="Scroll right one week"
+            style={{
+              position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+              right: 8, zIndex: 30,
+              width: 34, height: 34, borderRadius: '50%', padding: 0,
+              border: `1px solid ${C.green}55`, background: '#0c0c12ee',
+              color: C.green, fontSize: 22, lineHeight: '1', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(6px)', transition: 'border-color 0.15s, box-shadow 0.15s',
+              fontFamily: 'inherit', boxShadow: `0 0 12px #00000088`,
+            }}
+          >›</button>
+        )}
+
+        {/* Scrollable cell grid */}
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="chart-scroll"
+          style={{ overflowX: 'auto', paddingBottom: 16 }}
+        >
+          <div style={{ minWidth: LABEL_W + daysInMonth * COL_W + 24, position: 'relative' }}>
+
+            {/* No-member blur over the whole chart body */}
+            {tier === 'none' && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 10, filter: 'blur(6px)', pointerEvents: 'none' }} aria-hidden />
+            )}
+
+            <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
+
+            {data.map((team, ti) => {
+              // Build day → games lookup for this team
+              const dayMap = new Map<number, GameEntry[]>()
+              for (const g of team.games) {
+                const day = parseInt(g.rawDate.split('-')[2] ?? '0', 10)
+                if (day > 0) {
+                  if (!dayMap.has(day)) dayMap.set(day, [])
+                  dayMap.get(day)!.push(g)
+                }
               }
-            }
 
-            // Sorted list of game days for this team — determines freemium visibility
-            const populatedDays = Array.from(dayMap.keys()).sort((a, b) => a - b)
-            const visibleDaySet = tier === 'pro'
-              ? new Set(populatedDays)
-              : new Set(populatedDays.slice(-FREE_COLS))
+              // Sorted list of game days for this team — determines freemium visibility
+              const populatedDays = Array.from(dayMap.keys()).sort((a, b) => a - b)
+              const visibleDaySet = tier === 'pro'
+                ? new Set(populatedDays)
+                : new Set(populatedDays.slice(-FREE_COLS))
 
-            // Full-season games for records/streaks (fallback to month data)
-            const seasonTeam  = (seasonData ?? []).find(t => t.teamName === team.teamName)
-            const seasonGames = seasonTeam?.games ?? team.games
+              // Full-season games for records/streaks (fallback to month data)
+              const seasonTeam  = (seasonData ?? []).find(t => t.teamName === team.teamName)
+              const seasonGames = seasonTeam?.games ?? team.games
 
-            const mlStreak = computeStreak(seasonGames, 'moneyline')
-            const spStreak = computeStreak(seasonGames, 'spread')
-            const ouStreak = computeStreak(seasonGames, 'over_under')
-            const streakFor: Partial<Record<RowKey, typeof mlStreak>> = {
-              moneyline: mlStreak,
-              spread:    spStreak,
-              ou:        ouStreak,
-            }
+              const mlStreak = computeStreak(seasonGames, 'moneyline')
+              const spStreak = computeStreak(seasonGames, 'spread')
+              const ouStreak = computeStreak(seasonGames, 'over_under')
+              const streakFor: Partial<Record<RowKey, typeof mlStreak>> = {
+                moneyline: mlStreak,
+                spread:    spStreak,
+                ou:        ouStreak,
+              }
 
-            return (
-              <div key={team.teamName}>
-                {ti > 0 && ti % 5 === 0 && (
-                  <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
-                )}
+              return (
+                <div key={team.teamName}>
+                  {ti > 0 && ti % 5 === 0 && (
+                    <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
+                  )}
 
-                {/* Team label row */}
-                <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                  <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0a0a0f', display: 'flex', alignItems: 'center' }}>
-                    <div style={{ width: 3, alignSelf: 'stretch', background: accent, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>{team.teamName}</div>
-                      <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{populatedDays.length} Games</div>
+                  {/* Team label row */}
+                  <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                    <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0a0a0f', display: 'flex', alignItems: 'center' }}>
+                      <div style={{ width: 3, alignSelf: 'stretch', background: accent, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>{team.teamName}</div>
+                        <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{populatedDays.length} Games</div>
+                      </div>
                     </div>
+                    <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
                   </div>
-                  <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
-                </div>
 
-                {allRowsHidden && (
-                  <div style={{ padding: '14px 20px', fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    No rows selected — open filters to enable rows
-                  </div>
-                )}
+                  {allRowsHidden && (
+                    <div style={{ padding: '14px 20px', fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                      No rows selected — open filters to enable rows
+                    </div>
+                  )}
 
-                {ROWS.filter(row => visibleRows[ROW_VISIBLE_KEY[row.key]]).map((row, ri) => {
-                  const rowBg = ri % 2 === 0 ? '#0a0a0f' : '#0d0d14'
-                  return (
-                    <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
-                      {/* Label column */}
-                      <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
-                        <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
-                        <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
-                        {row.record(seasonGames)}
-                        {(() => {
-                          const s = streakFor[row.key]
-                          if (!s) return null
-                          const color = (s.type === 'W' || s.type === 'O') ? '#22c55e'
-                            : (s.type === 'L' || s.type === 'U') ? '#ef4444'
-                            : '#52525b'
+                  {ROWS.filter(row => visibleRows[ROW_VISIBLE_KEY[row.key]]).map((row, ri) => {
+                    const rowBg = ri % 2 === 0 ? '#0a0a0f' : '#0d0d14'
+                    return (
+                      <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
+                        {/* Label column — sticky so it stays visible while scrolling */}
+                        <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
+                          <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
+                          <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
+                          {row.record(seasonGames)}
+                          {(() => {
+                            const s = streakFor[row.key]
+                            if (!s) return null
+                            const color = (s.type === 'W' || s.type === 'O') ? '#22c55e'
+                              : (s.type === 'L' || s.type === 'U') ? '#ef4444'
+                              : '#52525b'
+                            return (
+                              <span style={{ fontSize: 9, color, fontWeight: 800, letterSpacing: '0.05em', marginLeft: 5, flexShrink: 0 }}>
+                                · {s.type}{s.count}
+                              </span>
+                            )
+                          })()}
+                          {onStarClick && (() => {
+                            const bt = ROW_STAR[row.key]
+                            if (!bt) return null
+                            const starred = starredBetTypes?.has(`${team.teamName}|${bt}`)
+                            return (
+                              <button
+                                onClick={e => { e.stopPropagation(); onStarClick(bt, team.teamName) }}
+                                title={starred ? 'Remove from favorites' : 'Add to favorites'}
+                                style={{
+                                  background: 'none', border: 'none', cursor: 'pointer',
+                                  padding: '4px 6px', lineHeight: 1, transition: 'color 0.15s',
+                                  fontSize: 15, color: starred ? '#eab308' : '#71717a',
+                                  marginLeft: 'auto',
+                                }}
+                              >
+                                {starred ? '★' : '☆'}
+                              </button>
+                            )
+                          })()}
+                        </div>
+
+                        {/* Calendar day columns */}
+                        {Array.from({ length: daysInMonth }, (_, i) => {
+                          const day   = i + 1
+                          const games = dayMap.get(day) ?? []
+                          const locked = tier !== 'none' && games.length > 0 && !visibleDaySet.has(day)
+
                           return (
-                            <span style={{ fontSize: 9, color, fontWeight: 800, letterSpacing: '0.05em', marginLeft: 5, flexShrink: 0 }}>
-                              · {s.type}{s.count}
-                            </span>
-                          )
-                        })()}
-                        {onStarClick && (() => {
-                          const bt = ROW_STAR[row.key]
-                          if (!bt) return null
-                          const starred = starredBetTypes?.has(`${team.teamName}|${bt}`)
-                          return (
-                            <button
-                              onClick={e => { e.stopPropagation(); onStarClick(bt, team.teamName) }}
-                              title={starred ? 'Remove from favorites' : 'Add to favorites'}
+                            <div
+                              key={day}
                               style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                padding: '4px 6px', lineHeight: 1, transition: 'color 0.15s',
-                                fontSize: 15, color: starred ? '#eab308' : '#71717a',
-                                marginLeft: 'auto',
+                                width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg,
+                                filter:        locked ? 'blur(3px)' : 'none',
+                                opacity:       locked ? 0.35 : 1,
+                                pointerEvents: locked ? 'none' : 'auto',
                               }}
                             >
-                              {starred ? '★' : '☆'}
-                            </button>
+                              {games.length === 0 ? (
+                                <div style={{ height: 34 }} />
+                              ) : games.length === 1 ? (
+                                <CalendarCell rowKey={row.key} game={games[0]} />
+                              ) : (
+                                <DoubleheaderCell rowKey={row.key} g1={games[0]} g2={games[1]} />
+                              )}
+                            </div>
                           )
-                        })()}
+                        })}
                       </div>
+                    )
+                  })}
 
-                      {/* Calendar day columns */}
-                      {Array.from({ length: daysInMonth }, (_, i) => {
-                        const day   = i + 1
-                        const games = dayMap.get(day) ?? []
-                        const locked = tier !== 'none' && games.length > 0 && !visibleDaySet.has(day)
+                  <div style={{ height: 10, borderBottom: ti < data.length - 1 ? '1px solid #16161e' : 'none' }} />
+                </div>
+              )
+            })}
 
-                        return (
-                          <div
-                            key={day}
-                            style={{
-                              width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg,
-                              filter:        locked ? 'blur(3px)' : 'none',
-                              opacity:       locked ? 0.35 : 1,
-                              pointerEvents: locked ? 'none' : 'auto',
-                            }}
-                          >
-                            {games.length === 0 ? (
-                              <div style={{ height: 34 }} />
-                            ) : games.length === 1 ? (
-                              <CalendarCell rowKey={row.key} game={games[0]} />
-                            ) : (
-                              <DoubleheaderCell rowKey={row.key} g1={games[0]} g2={games[1]} />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-
-                <div style={{ height: 10, borderBottom: ti < data.length - 1 ? '1px solid #16161e' : 'none' }} />
+            {/* No-member overlay */}
+            {tier === 'none' && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}>
+                <NoMemberOverlay onJoin={handleJoin} onPro={handleUpgrade} />
               </div>
-            )
-          })}
+            )}
 
-          {/* No-member overlay */}
-          {tier === 'none' && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}>
-              <NoMemberOverlay onJoin={handleJoin} onPro={handleUpgrade} />
-            </div>
-          )}
-
-          {/* Free-tier upgrade nudge — shown once when there are locked cells */}
-          {tier === 'free' && data.some(team => {
-            const populated = team.games.map(g => parseInt(g.rawDate.split('-')[2] ?? '0', 10)).filter(d => d > 0)
-            return populated.length > FREE_COLS
-          }) && showBanner === false && (
-            <div
-              style={{
-                position: 'sticky', bottom: 16, left: 0, right: 0,
-                display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 5,
-              }}
-            >
-              <button
-                onClick={handleUpgrade}
+            {/* Free-tier upgrade nudge — shown once when there are locked cells */}
+            {tier === 'free' && data.some(team => {
+              const populated = team.games.map(g => parseInt(g.rawDate.split('-')[2] ?? '0', 10)).filter(d => d > 0)
+              return populated.length > FREE_COLS
+            }) && showBanner === false && (
+              <div
                 style={{
-                  pointerEvents: 'all',
-                  background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-                  border: 'none', borderRadius: 8, padding: '10px 22px',
-                  color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
-                  textTransform: 'uppercase', cursor: 'pointer',
-                  boxShadow: '0 0 24px rgba(139,92,246,0.55)', fontFamily: 'inherit',
+                  position: 'sticky', bottom: 16, left: 0, right: 0,
+                  display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 5,
                 }}
               >
-                🔒 Go Pro — Unlock Full Month
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={handleUpgrade}
+                  style={{
+                    pointerEvents: 'all',
+                    background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+                    border: 'none', borderRadius: 8, padding: '10px 22px',
+                    color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
+                    textTransform: 'uppercase', cursor: 'pointer',
+                    boxShadow: '0 0 24px rgba(139,92,246,0.55)', fontFamily: 'inherit',
+                  }}
+                >
+                  🔒 Go Pro — Unlock Full Month
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </div>{/* end scroll region */}
 
       <style>{`
-        .cell      { display:flex; align-items:center; justify-content:center; height:34px; margin:0 3px; border-radius:5px; font-size:11px; letter-spacing:0.1em; }
-        .cell-half { flex:1; display:flex; align-items:stretch; }
+        .cell       { display:flex; align-items:center; justify-content:center; height:34px; margin:0 3px; border-radius:5px; font-size:11px; letter-spacing:0.1em; }
+        .cell-half  { flex:1; display:flex; align-items:stretch; }
         .cell-half .cell { height:100%; border-radius:0; margin:0; flex:1; }
+
+        /* Scrollbar — thin dark track, green thumb */
+        .chart-scroll::-webkit-scrollbar              { height: 4px; }
+        .chart-scroll::-webkit-scrollbar-track        { background: #0f0f14; border-radius: 2px; }
+        .chart-scroll::-webkit-scrollbar-thumb        { background: #22c55e44; border-radius: 2px; }
+        .chart-scroll::-webkit-scrollbar-thumb:hover  { background: #22c55e99; }
+
+        /* Scroll arrow hover glow */
+        .scroll-arrow:hover { border-color: #22c55e99 !important; box-shadow: 0 0 14px #22c55e44 !important; }
+
+        /* Hide scroll arrows on narrow mobile — rely on touch swipe */
+        @media (max-width: 600px) { .scroll-arrow { display: none !important; } }
       `}</style>
     </div>
   )
