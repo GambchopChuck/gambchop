@@ -13,17 +13,18 @@ const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 const GREEN  = '#22c55e'
 
-const RED_PALETTE = [
-  '#9B111E', // Ruby red
-  '#800020', // Burgundy
-  '#800000', // Maroon
-  '#733635', // Garnet
-  '#990F02', // Crimson
-  '#4A0000', // Oxblood
-  '#722F37', // Wine
-  '#7B1818', // Brick
-  '#960018', // Carmine
-  '#893F45', // Cordovan
+const LEAGUE_PALETTE = [
+  '#22c55e', // MLB green
+  '#f59e0b', // NBA amber
+  '#f97316', // NFL orange
+  '#3b82f6', // NHL blue
+  '#ef4444', // WNBA red
+  '#a855f7', // NCAAF purple
+  '#6366f1', // NCAAB indigo
+  '#ec4899', // NCAAWB pink
+  '#84cc16', // ATP lime
+  '#f0abfc', // WTA pink
+  '#0891b2', // College Baseball teal
 ]
 
 interface Category { label: string; tag: string | null; color: string }
@@ -43,7 +44,7 @@ const CATEGORIES: Category[] = [
 ]
 
 function ThreadPreviewCard({ thread, index }: { thread: Thread; index: number }) {
-  const cardAccent = RED_PALETTE[index % RED_PALETTE.length]
+  const cardAccent = LEAGUE_PALETTE[index % LEAGUE_PALETTE.length]
   const tagAccent  = thread.tags.length > 0 ? (TAG_COLORS[thread.tags[0]] ?? '#94a3b8') : '#94a3b8'
   return (
     <Link href={`/community/${thread.id}`} style={{ textDecoration: 'none', display: 'block' }}>
