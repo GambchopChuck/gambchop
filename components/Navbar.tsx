@@ -12,7 +12,6 @@ const NAV_LINKS = [
   { label: 'Pricing',     href: '/pricing'     },
   { label: 'Merchandise', href: '/merchandise' },
   { label: 'News',        href: '/news'        },
-  { label: 'Filters',     href: '/filters'     },
 ] as const
 
 export default function Navbar() {
