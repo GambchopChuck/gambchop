@@ -152,12 +152,11 @@ export default function HomePage() {
                 body: 'Stack the visual context with your own research. Spot a team riding a 7-game over streak or a favorite that keeps failing to cover, and walk into your sportsbook with a broader view of what\'s been happening.',
               },
             ] as const).map(({ n, heading, body }) => (
-              <div key={n} style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
+              <div key={n} className="league-card" style={{
+                '--accent': '#22c55e',
                 borderRadius: 12,
                 padding: '28px 28px 32px',
-              }}>
+              } as React.CSSProperties}>
                 <div style={{
                   fontSize: 14, fontWeight: 500, color: '#22c55e',
                   letterSpacing: '0.18em', textTransform: 'uppercase',
