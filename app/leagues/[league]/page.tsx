@@ -5,13 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import GambchopChart from '@/components/GambchopChart'
-import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
+import { LEAGUE_MAP, LEAGUE_SEASONS, generateCalendarMonthData, generateSeasonData, slugify } from '@/lib/leagues-data'
 import type { TeamChartData } from '@/lib/leagues-data'
-import { fetchLeagueOutcomes, computeStreak } from '@/lib/chart-data'
+import { fetchLeagueOutcomesByMonth, fetchLeagueSeasonOutcomes, computeStreak } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 import ChartLegend from '@/components/ChartLegend'
-
 
 // ─── Sort ─────────────────────────────────────────────────────────────────────
 
@@ -38,22 +37,56 @@ export default function LeaguePage() {
   const meta = LEAGUE_MAP[leagueId]
   if (!meta) return notFound()
 
-  // MLB → real Supabase data; all other leagues → mock fallback
-  const [chartData, setChartData]     = useState<TeamChartData[]>(() => generateChartData(meta.entities, 10))
-  const [dataLoading, setDataLoading] = useState(leagueId === 'mlb')
+  // ── Month navigation ────────────────────────────────────────────────────────
+  const today = new Date()
+  const [viewYear,  setViewYear]  = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1) // 1-indexed
+
+  const seasonWindow = LEAGUE_SEASONS[leagueId]
+  const seasonStartYM = seasonWindow ? seasonWindow.startYear * 12 + seasonWindow.startMonth : 0
+  const todayYM       = today.getFullYear() * 12 + (today.getMonth() + 1)
+  const viewYM        = viewYear * 12 + viewMonth
+  const canPrevMonth  = viewYM > seasonStartYM
+  const canNextMonth  = viewYM < todayYM
+
+  function handlePrevMonth() {
+    if (!canPrevMonth) return
+    setViewMonth(m => {
+      if (m === 1) { setViewYear(y => y - 1); return 12 }
+      return m - 1
+    })
+  }
+  function handleNextMonth() {
+    if (!canNextMonth) return
+    setViewMonth(m => {
+      if (m === 12) { setViewYear(y => y + 1); return 1 }
+      return m + 1
+    })
+  }
+
+  // ── Data ────────────────────────────────────────────────────────────────────
+  const [monthData,  setMonthData]  = useState<TeamChartData[]>([])
+  const [seasonData, setSeasonData] = useState<TeamChartData[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
-    if (leagueId !== 'mlb') return
-    fetchLeagueOutcomes('mlb').then(data => {
-      if (data.length > 0) {
-        setChartData(data)
-      } else {
-        console.warn('[gambchop] fetchLeagueOutcomes returned empty — using mock fallback')
-      }
+    setDataLoading(true)
+    if (leagueId === 'mlb') {
+      Promise.all([
+        fetchLeagueOutcomesByMonth('mlb', viewYear, viewMonth),
+        fetchLeagueSeasonOutcomes('mlb'),
+      ]).then(([month, season]) => {
+        setMonthData(month.length  ? month  : generateCalendarMonthData(meta.entities, viewYear, viewMonth, leagueId))
+        setSeasonData(season.length ? season : generateSeasonData(meta.entities, leagueId))
+        setDataLoading(false)
+      })
+    } else {
+      setMonthData(generateCalendarMonthData(meta.entities, viewYear, viewMonth, leagueId))
+      setSeasonData(generateSeasonData(meta.entities, leagueId))
       setDataLoading(false)
-    })
-  }, [leagueId])
+    }
+  }, [leagueId, viewYear, viewMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (leagueId !== 'mlb') return
@@ -66,9 +99,7 @@ export default function LeaguePage() {
         .order('completed_at', { ascending: false })
         .limit(1)
         .single()
-        .then(({ data }) => {
-          if (data?.completed_at) setLastUpdated(data.completed_at as string)
-        })
+        .then(({ data }) => { if (data?.completed_at) setLastUpdated(data.completed_at as string) })
     })
   }, [leagueId])
 
@@ -85,40 +116,42 @@ export default function LeaguePage() {
     localStorage.setItem(LEAGUE_SORT_LS_KEY, mode)
   }
 
+  // Sort monthData order using seasonData metrics for consistency
   const sortedChartData = useMemo((): TeamChartData[] => {
-    const sorted = [...chartData]
+    const sorted = [...monthData]
+    const getSeason = (name: string) => seasonData.find(t => t.teamName === name)?.games ?? []
+
     switch (sortMode) {
-      case 'az':
-        return sorted.sort((a, b) => a.teamName.localeCompare(b.teamName))
-      case 'za':
-        return sorted.sort((a, b) => b.teamName.localeCompare(a.teamName))
+      case 'az': return sorted.sort((a, b) => a.teamName.localeCompare(b.teamName))
+      case 'za': return sorted.sort((a, b) => b.teamName.localeCompare(a.teamName))
       case 'best-record': {
-        const rate = (d: TeamChartData) => {
-          const w = d.games.filter(g => g.moneylineResult === 'win').length
-          const l = d.games.filter(g => g.moneylineResult === 'loss').length
+        const rate = (name: string) => {
+          const g = getSeason(name)
+          const w = g.filter(x => x.moneylineResult === 'win').length
+          const l = g.filter(x => x.moneylineResult === 'loss').length
           return (w + l) === 0 ? -1 : w / (w + l)
         }
-        return sorted.sort((a, b) => {
-          const diff = rate(b) - rate(a)
-          return diff !== 0 ? diff : a.teamName.localeCompare(b.teamName)
-        })
+        return sorted.sort((a, b) => rate(b.teamName) - rate(a.teamName) || a.teamName.localeCompare(b.teamName))
       }
       case 'hot':
         return sorted.sort((a, b) => {
-          const aW = computeStreak(a.games, 'moneyline')?.type === 'W' ? (computeStreak(a.games, 'moneyline')?.count ?? 0) : 0
-          const bW = computeStreak(b.games, 'moneyline')?.type === 'W' ? (computeStreak(b.games, 'moneyline')?.count ?? 0) : 0
-          return aW !== bW ? bW - aW : a.teamName.localeCompare(b.teamName)
+          const cnt = (name: string) => {
+            const s = computeStreak(getSeason(name), 'moneyline')
+            return s?.type === 'W' ? (s.count ?? 0) : 0
+          }
+          return cnt(b.teamName) - cnt(a.teamName) || a.teamName.localeCompare(b.teamName)
         })
       case 'cold':
         return sorted.sort((a, b) => {
-          const aL = computeStreak(a.games, 'moneyline')?.type === 'L' ? (computeStreak(a.games, 'moneyline')?.count ?? 0) : 0
-          const bL = computeStreak(b.games, 'moneyline')?.type === 'L' ? (computeStreak(b.games, 'moneyline')?.count ?? 0) : 0
-          return aL !== bL ? bL - aL : a.teamName.localeCompare(b.teamName)
+          const cnt = (name: string) => {
+            const s = computeStreak(getSeason(name), 'moneyline')
+            return s?.type === 'L' ? (s.count ?? 0) : 0
+          }
+          return cnt(b.teamName) - cnt(a.teamName) || a.teamName.localeCompare(b.teamName)
         })
-      default:
-        return sorted
+      default: return sorted
     }
-  }, [chartData, sortMode])
+  }, [monthData, seasonData, sortMode])
 
   // ── Favorites ────────────────────────────────────────────────────────────────
   const [allFavorites, setAllFavorites] = useState<Favorite[]>([])
@@ -239,6 +272,13 @@ export default function LeaguePage() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <GambchopChart
                 data={sortedChartData}
+                seasonData={seasonData}
+                viewYear={viewYear}
+                viewMonth={viewMonth}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                canPrevMonth={canPrevMonth}
+                canNextMonth={canNextMonth}
                 memberTier={memberTier}
                 accent={meta.accent}
                 starredBetTypes={user ? starredBetTypes : undefined}

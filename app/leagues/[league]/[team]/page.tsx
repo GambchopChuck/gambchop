@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import GambchopChart from '@/components/GambchopChart'
-import { LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
-import type { TeamChartData } from '@/lib/leagues-data'
-import { fetchTeamOutcomes } from '@/lib/chart-data'
+import { LEAGUE_MAP, LEAGUE_SEASONS, generateCalendarMonthGames, generateSeasonData, slugify } from '@/lib/leagues-data'
+import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
+import { fetchTeamOutcomesByMonth, fetchTeamSeasonOutcomes } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { useUser, FREE_FOLLOWS } from '@/lib/user-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
@@ -19,6 +19,44 @@ const TEXT   = '#f4f4f5'
 const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function wl(games: GameEntry[], pred: (g: GameEntry) => boolean, win: (g: GameEntry) => boolean, loss: (g: GameEntry) => boolean): string {
+  const sub = games.filter(pred)
+  return `${sub.filter(win).length}-${sub.filter(loss).length}`
+}
+
+function computeStats(games: GameEntry[], isPlayer: boolean) {
+  const mlW  = (g: GameEntry) => g.moneylineResult === 'win'
+  const mlL  = (g: GameEntry) => g.moneylineResult === 'loss'
+  const spW  = (g: GameEntry) => g.spreadResult    === 'win'
+  const spL  = (g: GameEntry) => g.spreadResult    === 'loss'
+  const all  = () => true
+  const fav  = (g: GameEntry) =>  g.isFavorite
+  const dog  = (g: GameEntry) => !g.isFavorite
+  const home = (g: GameEntry) =>  g.isHome
+  const away = (g: GameEntry) => !g.isHome
+  const overs  = games.filter(g => g.ouResult === 'over').length
+  const unders = games.filter(g => g.ouResult === 'under').length
+
+  if (isPlayer) return [
+    { label: 'ML Record',   value: wl(games, all,  mlW, mlL), color: '#22c55e' },
+    { label: 'Fav Record',  value: wl(games, fav,  mlW, mlL), color: '#eab308' },
+    { label: 'Dog Record',  value: wl(games, dog,  mlW, mlL), color: '#f97316' },
+    { label: 'O/U',         value: `${overs}-${unders}`,       color: '#8b5cf6' },
+  ]
+  return [
+    { label: 'ML Record',   value: wl(games, all,  mlW, mlL), color: '#22c55e' },
+    { label: 'Spread ATS',  value: wl(games, all,  spW, spL), color: '#3b82f6' },
+    { label: 'Home',        value: wl(games, home, mlW, mlL), color: '#14b8a6' },
+    { label: 'Away',        value: wl(games, away, mlW, mlL), color: '#94a3b8' },
+    { label: 'As Favorite', value: wl(games, fav,  mlW, mlL), color: '#eab308' },
+    { label: 'As Underdog', value: wl(games, dog,  mlW, mlL), color: '#f97316' },
+    { label: 'Over',        value: `${overs}-${unders}`,       color: '#8b5cf6' },
+    { label: 'Under',       value: `${unders}-${overs}`,       color: '#b45309' },
+  ]
+}
+
 function StatBlock({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '14px 18px', minWidth: 100, textAlign: 'center' }}>
@@ -28,17 +66,7 @@ function StatBlock({ label, value, color }: { label: string; value: string; colo
   )
 }
 
-function hash(s: string): number {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-
-function fakeRecord(seed: number, offset: number): string {
-  const w = 3 + ((seed + offset) % 8)
-  const l = 2 + ((seed + offset + 3) % 6)
-  return `${w}-${l}`
-}
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TeamPage() {
   const params = useParams<{ league: string; team: string }>()
@@ -54,33 +82,53 @@ export default function TeamPage() {
   const [ready, setReady] = useState(false)
   useEffect(() => { setReady(true) }, [])
 
-  // MLB → real Supabase data; all other leagues → mock fallback
-  const [chartData, setChartData]     = useState<TeamChartData[]>([])
+  // ── Month navigation ────────────────────────────────────────────────────────
+  const today = new Date()
+  const [viewYear,  setViewYear]  = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1)
+
+  const seasonWindow  = LEAGUE_SEASONS[leagueId]
+  const seasonStartYM = seasonWindow ? seasonWindow.startYear * 12 + seasonWindow.startMonth : 0
+  const todayYM       = today.getFullYear() * 12 + (today.getMonth() + 1)
+  const viewYM        = viewYear * 12 + viewMonth
+  const canPrevMonth  = viewYM > seasonStartYM
+  const canNextMonth  = viewYM < todayYM
+
+  function handlePrevMonth() {
+    if (!canPrevMonth) return
+    setViewMonth(m => { if (m === 1) { setViewYear(y => y - 1); return 12 } return m - 1 })
+  }
+  function handleNextMonth() {
+    if (!canNextMonth) return
+    setViewMonth(m => { if (m === 12) { setViewYear(y => y + 1); return 1 } return m + 1 })
+  }
+
+  // ── Data ────────────────────────────────────────────────────────────────────
+  const [monthGames,  setMonthGames]  = useState<GameEntry[]>([])
+  const [seasonGames, setSeasonGames] = useState<GameEntry[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
     if (!meta || !entity) return
-    if (leagueId !== 'mlb') {
-      setChartData(generateChartData([entity], 10))
+    setDataLoading(true)
+
+    if (leagueId === 'mlb') {
+      Promise.all([
+        fetchTeamOutcomesByMonth('mlb', teamSlug, viewYear, viewMonth),
+        fetchTeamSeasonOutcomes('mlb', teamSlug),
+      ]).then(([month, season]) => {
+        setMonthGames(month.length   ? month   : generateCalendarMonthGames(entity, viewYear, viewMonth, leagueId))
+        setSeasonGames(season.length ? season  : generateSeasonData([entity], leagueId)[0]?.games ?? [])
+        setDataLoading(false)
+      })
+    } else {
+      setMonthGames(generateCalendarMonthGames(entity, viewYear, viewMonth, leagueId))
+      setSeasonGames(generateSeasonData([entity], leagueId)[0]?.games ?? [])
       setDataLoading(false)
-      return
     }
-    fetchTeamOutcomes('mlb', teamSlug, 10).then(games => {
-      if (games.length > 0) {
-        setChartData([{
-          teamName:     entity,
-          abbreviation: entity.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
-          games,
-        }])
-      } else {
-        console.warn('[gambchop] fetchTeamOutcomes returned empty — using mock fallback')
-        setChartData(generateChartData([entity], 10))
-      }
-      setDataLoading(false)
-    })
-  }, [leagueId, teamSlug, entity])   // eslint-disable-line react-hooks/exhaustive-deps
-    
+  }, [leagueId, teamSlug, entity, viewYear, viewMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (leagueId !== 'mlb') return
     import('@/lib/supabase').then(({ supabase }) => {
@@ -92,12 +140,30 @@ export default function TeamPage() {
         .order('completed_at', { ascending: false })
         .limit(1)
         .single()
-        .then(({ data }) => {
-          if (data?.completed_at) setLastUpdated(data.completed_at as string)
-        })
+        .then(({ data }) => { if (data?.completed_at) setLastUpdated(data.completed_at as string) })
     })
   }, [leagueId])
 
+  // Wrap month games into TeamChartData for the chart component
+  const chartData: TeamChartData[] = useMemo(() => {
+    if (!entity) return []
+    return [{
+      teamName:     entity,
+      abbreviation: entity.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
+      games:        monthGames,
+    }]
+  }, [entity, monthGames])
+
+  const seasonChartData: TeamChartData[] = useMemo(() => {
+    if (!entity) return []
+    return [{
+      teamName:     entity,
+      abbreviation: entity.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
+      games:        seasonGames,
+    }]
+  }, [entity, seasonGames])
+
+  // ── Favorites ────────────────────────────────────────────────────────────────
   const [teamFavorites, setTeamFavorites] = useState<Favorite[]>([])
   const [favError, setFavError]           = useState<string | null>(null)
 
@@ -137,27 +203,8 @@ export default function TeamPage() {
 
   if (!meta || !entity) return notFound()
 
-  const seed     = hash(entity)
   const isPlayer = meta.entityType === 'player'
-
-  const stats = isPlayer
-    ? [
-        { label: 'ML Record',   value: fakeRecord(seed, 0), color: '#22c55e' },
-        { label: 'Fav Record',  value: fakeRecord(seed, 1), color: '#eab308' },
-        { label: 'Dog Record',  value: fakeRecord(seed, 2), color: '#f97316' },
-        { label: 'O/U',         value: fakeRecord(seed, 3), color: '#8b5cf6' },
-      ]
-    : [
-        { label: 'ML Record',   value: fakeRecord(seed, 0), color: '#22c55e' },
-        { label: 'Spread ATS',  value: fakeRecord(seed, 1), color: '#3b82f6' },
-        { label: 'Home',        value: fakeRecord(seed, 2), color: '#14b8a6' },
-        { label: 'Away',        value: fakeRecord(seed, 3), color: '#94a3b8' },
-        { label: 'As Favorite', value: fakeRecord(seed, 4), color: '#eab308' },
-        { label: 'As Underdog', value: fakeRecord(seed, 5), color: '#f97316' },
-        { label: 'Over',        value: `${4 + seed % 5}-${3 + (seed + 2) % 4}`, color: '#8b5cf6' },
-        { label: 'Under',       value: `${3 + seed % 4}-${4 + (seed + 1) % 5}`, color: '#b45309' },
-      ]
-
+  const stats    = computeStats(seasonGames, isPlayer)
   const showStats = ready && memberTier !== 'none'
 
   return (
@@ -198,7 +245,7 @@ export default function TeamPage() {
                 )}
                 {memberTier === 'free' && (
                   <div style={{ fontSize: 9, color: '#22c55e', background: '#22c55e0d', border: '1px solid #22c55e33', borderRadius: 6, padding: '6px 12px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Free · Last 3 Games
+                    Free · Last 3 Game Days
                   </div>
                 )}
                 {memberTier === 'pro' && (
@@ -256,7 +303,7 @@ export default function TeamPage() {
                 Join to View {isPlayer ? 'Player' : 'Team'} Charts
               </div>
               <p style={{ fontSize: 11, color: MUTED, margin: 0, lineHeight: 1.6 }}>
-                Free members see the last 3 games. Pro members get the full season for every {isPlayer ? 'player' : 'team'}.
+                Free members see the last 3 game days. Pro members get the full season for every {isPlayer ? 'player' : 'team'}.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
@@ -276,10 +323,6 @@ export default function TeamPage() {
           </div>
         )}
 
-        <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', padding: '0 12px 12px' }}>
-          {memberTier === 'pro' ? 'Last 10 Games — Full Season' : memberTier === 'free' ? 'Last 10 Games — Free Preview (3 shown)' : 'Last 10 Games'}
-        </div>
-
         {favError && (
           <div style={{ margin: '0 12px 12px', background: '#ef444418', border: '1px solid #ef444444', borderRadius: 8, padding: '10px 14px', fontSize: 11, color: '#ef4444', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{favError}</span>
@@ -298,12 +341,20 @@ export default function TeamPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <GambchopChart
                   data={chartData}
+                  seasonData={seasonChartData}
+                  viewYear={viewYear}
+                  viewMonth={viewMonth}
+                  onPrevMonth={handlePrevMonth}
+                  onNextMonth={handleNextMonth}
+                  canPrevMonth={canPrevMonth}
+                  canNextMonth={canNextMonth}
                   memberTier={memberTier}
                   accent={meta.accent}
                   onJoin={() => { setIsMember(true); openModal('join') }}
                   onUpgrade={() => openModal('pro')}
                   starredBetTypes={user ? starredBetTypes : undefined}
                   onStarClick={user ? handleStarClick : undefined}
+                  lastUpdated={lastUpdated}
                 />
               </div>
             </div>

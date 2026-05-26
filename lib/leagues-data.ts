@@ -4,13 +4,14 @@ export type EntityType = 'team' | 'player'
 export type BetResult = 'win' | 'loss' | 'push' | null
 
 export interface GameEntry {
-  date: string
+  rawDate: string            // ISO YYYY-MM-DD; empty string for legacy mock entries
+  date: string               // display format M/D
   opponent: string
   isHome: boolean
   isFavorite: boolean
   isSpreadFavorite: boolean
   isDivisionGame: boolean
-  restDays: number           // 0 = back-to-back, 1, 2, 3+
+  restDays: number
   moneylineResult: BetResult
   spreadResult: BetResult
   ouResult: 'over' | 'under' | 'push' | null
@@ -34,6 +35,51 @@ export interface LeagueMeta {
   href: string
 }
 
+// ─── Season Windows ───────────────────────────────────────────────────────────
+// Current active seasons as of 2026. startMonth/endMonth are 1-indexed.
+
+export interface SeasonWindow {
+  startYear: number
+  startMonth: number
+  endYear: number
+  endMonth: number
+}
+
+export const LEAGUE_SEASONS: Record<string, SeasonWindow> = {
+  mlb:    { startYear: 2026, startMonth: 4,  endYear: 2026, endMonth: 9  },
+  nba:    { startYear: 2025, startMonth: 10, endYear: 2026, endMonth: 6  },
+  nfl:    { startYear: 2025, startMonth: 9,  endYear: 2026, endMonth: 2  },
+  nhl:    { startYear: 2025, startMonth: 10, endYear: 2026, endMonth: 6  },
+  ncaaf:  { startYear: 2025, startMonth: 9,  endYear: 2026, endMonth: 1  },
+  ncaab:  { startYear: 2025, startMonth: 11, endYear: 2026, endMonth: 4  },
+  ncaawb: { startYear: 2025, startMonth: 11, endYear: 2026, endMonth: 4  },
+  wnba:   { startYear: 2026, startMonth: 5,  endYear: 2026, endMonth: 9  },
+  atp:    { startYear: 2026, startMonth: 1,  endYear: 2026, endMonth: 11 },
+  wta:    { startYear: 2026, startMonth: 1,  endYear: 2026, endMonth: 11 },
+  ncaabl: { startYear: 2026, startMonth: 2,  endYear: 2026, endMonth: 6  },
+}
+
+// Probability that a given team plays on any given calendar day within their season.
+// Approximates real schedule density per sport.
+const GAME_FREQ: Record<string, number> = {
+  mlb:    0.72,   // ~162 games / 183-day season ≈ .88 but accounting for scheduled off days
+  nba:    0.45,
+  nfl:    0.14,   // ~1 game/week
+  nhl:    0.43,
+  ncaaf:  0.13,   // ~1 game/week (Saturdays)
+  ncaab:  0.30,
+  ncaawb: 0.30,
+  wnba:   0.33,
+  atp:    0.25,
+  wta:    0.25,
+  ncaabl: 0.52,
+}
+
+// Probability of a doubleheader on a game day (MLB only)
+const DOUBLE_FREQ: Record<string, number> = {
+  mlb: 0.07,
+}
+
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 export function slugify(s: string) {
@@ -51,42 +97,167 @@ function seeded(seed: number, index: number): number {
   return x - Math.floor(x)
 }
 
-// ─── Mock Data Generator ──────────────────────────────────────────────────────
+function isInSeason(year: number, month: number, w: SeasonWindow): boolean {
+  const ym    = year * 12 + month
+  const start = w.startYear * 12 + w.startMonth
+  const end   = w.endYear   * 12 + w.endMonth
+  return ym >= start && ym <= end
+}
+
+function isoDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function fmtDate(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return `${m}/${d}`
+}
+
+function makeAbbr(name: string): string {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)
+}
+
+// ─── Mock Data (legacy — used by streak board) ────────────────────────────────
 
 const RESULTS: BetResult[] = ['win', 'win', 'win', 'loss', 'loss', 'push']
 const OU_RESULTS = ['over', 'over', 'under', 'under', 'push'] as const
 
 export function generateMockGames(entityName: string, count = 10): GameEntry[] {
-  const seed = hash(entityName)
-  const opponents = ['@OPP1', 'OPP2', '@OPP3', 'OPP4', '@OPP5', 'OPP6', '@OPP7', 'OPP8', '@OPP9', 'OPP10',
-    '@OPP11', 'OPP12', '@OPP13', 'OPP14', '@OPP15', 'OPP16', '@OPP17', 'OPP18', '@OPP19', 'OPP20']
-
-  // Last 2 games are "not yet played" — shows forward-fill streak effect
+  const seed      = hash(entityName)
+  const opponents = ['@OPP1','OPP2','@OPP3','OPP4','@OPP5','OPP6','@OPP7','OPP8','@OPP9','OPP10',
+    '@OPP11','OPP12','@OPP13','OPP14','@OPP15','OPP16','@OPP17','OPP18','@OPP19','OPP20']
   const played = count - 2
 
   return Array.from({ length: count }, (_, i) => {
     const r = (offset: number) => seeded(seed, i * 7 + offset)
     const hasResult = i < played
     return {
+      rawDate: '',
       date: `G${i + 1}`,
       opponent: opponents[i % opponents.length],
-      isHome:          r(0) > 0.5,
-      isFavorite:      r(1) > 0.45,
+      isHome:           r(0) > 0.5,
+      isFavorite:       r(1) > 0.45,
       isSpreadFavorite: r(2) > 0.45,
-      isDivisionGame:  r(6) > 0.6,
-      restDays:        Math.floor(r(7) * 4),   // 0-3
-      moneylineResult: hasResult ? RESULTS[Math.floor(r(3) * RESULTS.length)] : null,
-      spreadResult:    hasResult ? RESULTS[Math.floor(r(4) * RESULTS.length)] : null,
-      ouResult:        hasResult ? OU_RESULTS[Math.floor(r(5) * OU_RESULTS.length)] : null,
+      isDivisionGame:   r(6) > 0.6,
+      restDays:         Math.floor(r(7) * 4),
+      moneylineResult:  hasResult ? RESULTS[Math.floor(r(3) * RESULTS.length)] : null,
+      spreadResult:     hasResult ? RESULTS[Math.floor(r(4) * RESULTS.length)] : null,
+      ouResult:         hasResult ? OU_RESULTS[Math.floor(r(5) * OU_RESULTS.length)] : null,
     }
   })
 }
 
 export function generateChartData(entities: string[], count = 10): TeamChartData[] {
   return entities.map(name => ({
-    teamName: name,
-    abbreviation: name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
-    games: generateMockGames(name, count),
+    teamName:     name,
+    abbreviation: makeAbbr(name),
+    games:        generateMockGames(name, count),
+  }))
+}
+
+// ─── Calendar Mock Generator ──────────────────────────────────────────────────
+
+function makeMockGame(dateStr: string, daySeed: number, gameNum: number): GameEntry {
+  const r = (offset: number) => seeded(daySeed + gameNum * 50, offset)
+  return {
+    rawDate:          dateStr,
+    date:             fmtDate(dateStr),
+    opponent:         'OPP',
+    isHome:           r(1) > 0.5,
+    isFavorite:       r(2) > 0.45,
+    isSpreadFavorite: r(3) > 0.45,
+    isDivisionGame:   r(8) > 0.6,
+    restDays:         0,
+    moneylineResult:  RESULTS[Math.floor(r(4) * RESULTS.length)],
+    spreadResult:     RESULTS[Math.floor(r(5) * RESULTS.length)],
+    ouResult:         OU_RESULTS[Math.floor(r(6) * OU_RESULTS.length)],
+  }
+}
+
+// Generates calendar-aware mock data for one team for one month.
+// Returns GameEntry[] sorted oldest-first with correct rawDate/date fields.
+export function generateCalendarMonthGames(
+  entityName: string,
+  year: number,
+  month: number,    // 1-indexed
+  leagueId: string,
+): GameEntry[] {
+  const window = LEAGUE_SEASONS[leagueId]
+  if (!window || !isInSeason(year, month, window)) return []
+
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const freq        = GAME_FREQ[leagueId] ?? 0.5
+  const doubleFreq  = DOUBLE_FREQ[leagueId] ?? 0
+  const today       = new Date()
+  // Clamp: don't generate games past today
+  const lastDay     = (year === today.getFullYear() && month === today.getMonth() + 1)
+    ? today.getDate()
+    : daysInMonth
+
+  const baseSeed = hash(entityName + String(year) + String(month))
+  const games: GameEntry[] = []
+
+  for (let day = 1; day <= lastDay; day++) {
+    const daySeed = baseSeed + day * 100
+    const r = (offset: number) => seeded(daySeed, offset)
+    if (r(0) > freq) continue
+
+    const dateStr = isoDate(year, month, day)
+    games.push(makeMockGame(dateStr, daySeed, 0))
+    if (doubleFreq > 0 && r(20) < doubleFreq) {
+      games.push(makeMockGame(dateStr, daySeed, 1))
+    }
+  }
+
+  return games
+}
+
+// Generates TeamChartData[] for all teams for one calendar month.
+export function generateCalendarMonthData(
+  entities: string[],
+  year: number,
+  month: number,
+  leagueId: string,
+): TeamChartData[] {
+  return entities.map(name => ({
+    teamName:     name,
+    abbreviation: makeAbbr(name),
+    games:        generateCalendarMonthGames(name, year, month, leagueId),
+  }))
+}
+
+// Generates full-season TeamChartData[] for all teams (all months up to today).
+export function generateSeasonData(
+  entities: string[],
+  leagueId: string,
+): TeamChartData[] {
+  const window = LEAGUE_SEASONS[leagueId]
+  if (!window) return entities.map(n => ({ teamName: n, abbreviation: makeAbbr(n), games: [] }))
+
+  const today = new Date()
+  const months: { year: number; month: number }[] = []
+  let y = window.startYear, m = window.startMonth
+
+  while (true) {
+    // Stop when we go past today or past season end
+    if (y > today.getFullYear() || (y === today.getFullYear() && m > today.getMonth() + 1)) break
+    if (y > window.endYear   || (y === window.endYear   && m > window.endMonth)) break
+    months.push({ year: y, month: m })
+    m++; if (m > 12) { m = 1; y++ }
+  }
+
+  const teamGames = new Map<string, GameEntry[]>()
+  for (const { year, month } of months) {
+    for (const { teamName, games } of generateCalendarMonthData(entities, year, month, leagueId)) {
+      if (!teamGames.has(teamName)) teamGames.set(teamName, [])
+      teamGames.get(teamName)!.push(...games)
+    }
+  }
+
+  return entities.map(name => ({
+    teamName:     name,
+    abbreviation: makeAbbr(name),
+    games:        teamGames.get(name) ?? [],
   }))
 }
 
