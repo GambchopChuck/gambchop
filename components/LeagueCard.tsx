@@ -41,7 +41,7 @@ export default function LeagueCard({ league }: { league: League }) {
   const ctaText = league.cta ?? (league.href !== '#' ? 'View Analysis →' : 'Coming Soon')
 
   return (
-    <Link href={league.href} style={{ textDecoration: 'none', display: 'block', alignSelf: 'start' }}>
+    <Link href={league.href} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
       <div
         className="league-card"
         style={{
@@ -53,6 +53,7 @@ export default function LeagueCard({ league }: { league: League }) {
           position: 'relative',
           overflow: 'hidden',   // clips image to rounded corners; box-shadow glow is unaffected
           boxSizing: 'border-box',
+          flex: 1,
         } as React.CSSProperties}
       >
         {/* ── Background sport image ────────────────────────────────────────────
