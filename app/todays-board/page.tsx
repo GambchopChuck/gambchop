@@ -254,6 +254,29 @@ export default function StreakBoardPage() {
         </div>
       </div>
 
+      {/* Horizontal legend */}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 14px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+          background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 8,
+          padding: '10px 16px',
+        }}>
+          <span style={{ fontSize: 8, color: '#3f3f46', letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, flexShrink: 0 }}>Legend</span>
+          {([
+            { bg: C_GREEN,  label: 'Win / Cover' },
+            { bg: C_RED,    label: 'Loss / Miss'  },
+            { bg: C_WHITE,  label: 'Push'          },
+            { bg: C_VIOLET, label: 'Over'          },
+            { bg: C_BROWN,  label: 'Under'         },
+          ] as const).map(({ bg, label }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 12, height: 12, background: bg, borderRadius: 3, flexShrink: 0 }} />
+              <span style={{ fontSize: 9, color: '#a1a1aa', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Streak rows */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
         {loading ? (
