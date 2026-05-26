@@ -9,7 +9,7 @@ const CORNER_SIZE = 18
 const CORNER_W    = 2
 
 export default function PersistentVideo() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   return (
     <div style={{ fontFamily: 'var(--font-geist-mono), monospace' }}>
@@ -17,10 +17,12 @@ export default function PersistentVideo() {
       {/* Video section */}
       <div style={{
         background: '#07070c',
-        padding: collapsed ? '7px 24px' : '14px 24px 18px',
+        padding: collapsed ? '9px 24px' : '14px 24px 18px',
         transition: 'padding 0.2s',
         position: 'relative',
         overflow: 'hidden',
+        borderTop: '1px solid #1a1a24',
+        borderBottom: '1px solid #1a1a24',
       }}>
         {/* Background looping video fills the dark padding area behind the player */}
         <video
@@ -41,11 +43,12 @@ export default function PersistentVideo() {
           <source src="/sportsbook-bg.mp4" type="video/mp4" />
         </video>
 
-        {/* Subtle dark overlay — keeps background visible but improves contrast */}
+        {/* Overlay — opaque when collapsed so strip reads as a solid bar */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(10,10,15,0.45)',
+          background: collapsed ? 'rgba(7,7,12,0.94)' : 'rgba(10,10,15,0.45)',
+          transition: 'background 0.2s',
           zIndex: 0,
         }} />
 
@@ -66,7 +69,7 @@ export default function PersistentVideo() {
             <span style={{ fontSize: 9, color: '#22c55e', letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 800 }}>
               Gambchop Daily
             </span>
-            <span style={{ fontSize: 8, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 8, color: '#71717a', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               Yesterday&apos;s Recap · Today&apos;s Preview
             </span>
 
@@ -74,13 +77,14 @@ export default function PersistentVideo() {
             <button
               onClick={() => setCollapsed(v => !v)}
               style={{
-                background: 'none', border: '1px solid #1a1a24', borderRadius: 4,
-                color: '#3f3f46', cursor: 'pointer', fontFamily: 'inherit',
+                background: 'none', border: '1px solid #27272a', borderRadius: 4,
+                color: '#a1a1aa', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: 8, letterSpacing: '0.12em', textTransform: 'uppercase',
                 padding: '3px 9px', transition: 'color 0.15s, border-color 0.15s', flexShrink: 0,
+                marginLeft: 'auto',
               }}
             >
-              {collapsed ? '▼ Expand' : '▲ Hide'}
+              {collapsed ? '▼ Expand' : '▲ Collapse'}
             </button>
           </div>
 

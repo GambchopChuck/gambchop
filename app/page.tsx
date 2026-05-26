@@ -84,7 +84,7 @@ export default function HomePage() {
               fontFamily: 'var(--font-geist-mono), monospace',
               margin: '0 0 24px',
             }}>
-              &ldquo;A chance is better than no chance&rdquo;
+              Your sports data assistant.
             </p>
             <h1 className="hero-headline">
               A broader view of sports results and outcomes.
