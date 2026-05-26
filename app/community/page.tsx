@@ -416,7 +416,7 @@ export default function CommunityPage() {
   if (!user) return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
 
   return (
-    <div style={{ minHeight: '100vh', padding: '0 0 80px' }}>
+    <div style={{ minHeight: '100vh', padding: '0 0 80px', fontFamily: 'var(--font-oswald), sans-serif' }}>
 
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '20px 24px' }}>

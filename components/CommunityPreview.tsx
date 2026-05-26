@@ -88,7 +88,7 @@ export default function CommunityPreview() {
   const preview = filtered.slice(0, 4)
 
   return (
-    <section style={{ borderTop: `1px solid ${BORDER}`, maxWidth: 1400, margin: '0 auto', padding: '40px 24px 56px', position: 'relative', overflow: 'hidden' }}>
+    <section style={{ borderTop: `1px solid ${BORDER}`, maxWidth: 1400, margin: '0 auto', padding: '40px 24px 56px', position: 'relative', overflow: 'hidden', fontFamily: 'var(--font-oswald), sans-serif' }}>
 
       {/* Background hero image */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
