@@ -44,7 +44,18 @@ export default function LeagueGrid() {
   const allTiles = [...orderedLeagues, STREAKS_TILE]
 
   return (
-    <section style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 80px' }}>
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
+
+      {/* Background video */}
+      <video
+        autoPlay muted loop playsInline
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18, zIndex: 0 }}
+      >
+        <source src="/images/002_A_person_stands_in_a_dimly_lit_room_their_GScRIkW0.mp4" type="video/mp4" />
+      </video>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.72) 100%)', zIndex: 0 }} />
+
+    <section style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 80px', position: 'relative', zIndex: 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'var(--font-nunito), sans-serif' }}>Browse</div>
@@ -88,5 +99,6 @@ export default function LeagueGrid() {
         ))}
       </div>
     </section>
+    </div>
   )
 }
