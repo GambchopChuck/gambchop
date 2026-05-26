@@ -12,6 +12,19 @@ const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 const GREEN  = '#22c55e'
 
+const RED_PALETTE = [
+  '#9B111E', // Ruby red
+  '#800020', // Burgundy
+  '#800000', // Maroon
+  '#733635', // Garnet
+  '#990F02', // Crimson
+  '#4A0000', // Oxblood
+  '#722F37', // Wine
+  '#7B1818', // Brick
+  '#960018', // Carmine
+  '#893F45', // Cordovan
+]
+
 interface Category { label: string; tag: string | null; color: string }
 
 const CATEGORIES: Category[] = [
@@ -28,13 +41,18 @@ const CATEGORIES: Category[] = [
   { label: 'WTA',    tag: '#WTA',    color: '#f0abfc'              },
 ]
 
-function ThreadPreviewCard({ thread }: { thread: Thread }) {
-  const accent = thread.tags.length > 0 ? (TAG_COLORS[thread.tags[0]] ?? '#94a3b8') : '#94a3b8'
+function ThreadPreviewCard({ thread, index }: { thread: Thread; index: number }) {
+  const cardAccent = RED_PALETTE[index % RED_PALETTE.length]
+  const tagAccent  = thread.tags.length > 0 ? (TAG_COLORS[thread.tags[0]] ?? '#94a3b8') : '#94a3b8'
   return (
     <Link href={`/community/${thread.id}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div style={{
-        background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10,
-        padding: '14px 16px', borderLeft: `3px solid ${accent}`,
+        background: `radial-gradient(circle at 50% 35%, color-mix(in srgb, ${cardAccent} 100%, white 18%), color-mix(in srgb, ${cardAccent} 100%, black 22%))`,
+        border: `1px solid color-mix(in srgb, ${cardAccent} 100%, white 35%)`,
+        boxShadow: `0 0 0 1px color-mix(in srgb, ${cardAccent} 100%, white 40%), 0 0 22px -2px ${cardAccent}, 0 0 60px -6px ${cardAccent}, inset 0 1px 0 rgba(255,255,255,.45)`,
+        borderRadius: 12,
+        padding: '14px 20px',
+        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
       }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: TEXT, marginBottom: 5, lineHeight: 1.4, letterSpacing: '0.02em' }}>
           {thread.title}
@@ -43,7 +61,7 @@ function ThreadPreviewCard({ thread }: { thread: Thread }) {
           {excerpt(thread.content, 85)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, color: MUTED, letterSpacing: '0.08em', flexWrap: 'wrap' }}>
-          <span style={{ color: accent }}>@{thread.username}</span>
+          <span style={{ color: tagAccent }}>@{thread.username}</span>
           <span>·</span>
           <span>{timeAgo(thread.created_at)}</span>
           <span>·</span>
@@ -161,7 +179,7 @@ export default function CommunityPreview() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {preview.map(t => <ThreadPreviewCard key={t.id} thread={t} />)}
+          {preview.map((t, i) => <ThreadPreviewCard key={t.id} thread={t} index={i} />)}
           <Link href="/community" style={{
             textDecoration: 'none', textAlign: 'center', display: 'block',
             fontSize: 10, color: MUTED, border: `1px solid ${BORDER}`,
