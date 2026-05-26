@@ -98,10 +98,10 @@ export default function CommunityPreview() {
           alt=""
           fill
           sizes="(max-width: 1400px) 100vw, 1400px"
-          style={{ objectFit: 'cover', objectPosition: 'center top', opacity: 0.08 }}
+          style={{ objectFit: 'cover', objectPosition: 'center top', opacity: 0.22 }}
           priority={false}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.72) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.50) 100%)' }} />
       </div>
 
       {/* All section content sits above the background */}
