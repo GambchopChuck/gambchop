@@ -30,13 +30,12 @@ const ITEMS = [
 
 export default function ChartLegend() {
   return (
-    <aside style={{
-      position: 'fixed',
+    <aside className="chart-legend" style={{
+      position: 'sticky',
       top: 80,
-      left: 72,
+      alignSelf: 'flex-start',
+      flexShrink: 0,
       width: 180,
-      maxHeight: 'calc(100vh - 100px)',
-      overflowY: 'auto',
       background: '#0f0f14',
       border: '1px solid #1a1a24',
       borderRadius: 10,

@@ -52,3 +52,10 @@ body {
 @media (max-width: 639px) {
   .league-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Chart legend ─────────────────────────────────────────────────────────── */
+/* Hide the sticky vertical legend on screens that don't have room for it.    */
+/* The horizontal inline legend bar above the chart covers the same info.     */
+@media (max-width: 1279px) {
+  .chart-legend { display: none; }
+}

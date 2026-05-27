@@ -267,7 +267,7 @@ export default function LeaguePage() {
             Loading game data…
           </div>
         ) : (
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', paddingLeft: 196 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
             <ChartLegend />
             <div style={{ flex: 1, minWidth: 0 }}>
               <GambchopChart
