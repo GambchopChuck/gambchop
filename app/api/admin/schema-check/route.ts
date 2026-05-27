@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
 
   type GameRow = { id: string; game_date: string; game_time: string; external_id: string }
   const dryRun = ((games ?? []) as GameRow[]).map(g => {
-    const reconstructed = `${g.game_date}T${g.game_time}Z`
-    const eastern = new Date(reconstructed).toLocaleDateString('en-CA', {
+    // game_time is timestamptz — parse it directly, no reconstruction needed
+    const eastern = new Date(g.game_time).toLocaleDateString('en-CA', {
       timeZone: 'America/New_York',
     })
     return {
