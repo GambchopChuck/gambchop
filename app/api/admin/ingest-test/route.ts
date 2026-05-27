@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { fetchScores, fetchOdds, fetchMLBStatsScores, type Bookmaker } from '@/lib/odds-api'
-import { slugify, computeOutcomes } from '@/lib/ingestion'
+import { slugify, computeOutcomes, mlbGameDate } from '@/lib/ingestion'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 
     // ── 5. Resolve gamePk from MLB Stats API ──────────────────────────────────
     // Use the game date as both start and end to fetch only that day's games.
-    const gameDate = new Date(game.commence_time).toISOString().slice(0, 10)
+    const gameDate = mlbGameDate(game.commence_time)
     console.log(`[ingest-test] resolving gamePk via MLB Stats API for date: ${gameDate}...`)
     const mlbStatsGames = await fetchMLBStatsScores(gameDate, gameDate)
 

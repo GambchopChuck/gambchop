@@ -24,7 +24,7 @@ export const maxDuration = 60   // Vercel Hobby max; upgrade plan for longer
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { fetchScores, fetchMLBStatsScores, type GameScore } from '@/lib/odds-api'
-import { slugify, computeOutcomes } from '@/lib/ingestion'
+import { slugify, computeOutcomes, mlbGameDate } from '@/lib/ingestion'
 
 export async function GET(req: NextRequest) {
   // ── 1. Token auth ──────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export async function GET(req: NextRequest) {
         const homeScore = parseInt(homeEntry.score, 10)
         const awayScore = parseInt(awayEntry.score, 10)
         const commence  = new Date(game.commence_time)
-        const gameDate  = commence.toISOString().slice(0, 10)
+        const gameDate  = mlbGameDate(game.commence_time)
         const season    = commence.getUTCFullYear()
 
         // Upsert game — update scores/status if already exists

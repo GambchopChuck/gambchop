@@ -3,6 +3,15 @@ import type { GameOdds } from './odds-api'
 
 // ─── slugify ──────────────────────────────────────────────────────────────────
 
+// Converts a UTC ISO timestamp to the US/Eastern calendar date (YYYY-MM-DD).
+// MLB games played in evening PT/CT/MT time cross midnight UTC, so
+// toISOString() gives the wrong date. Eastern is the canonical MLB time zone.
+export function mlbGameDate(commenceTime: string): string {
+  return new Date(commenceTime).toLocaleDateString('en-CA', {
+    timeZone: 'America/New_York',
+  })
+}
+
 export function slugify(name: string): string {
   return name
     .toLowerCase()

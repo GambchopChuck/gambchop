@@ -17,7 +17,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { fetchOdds } from '@/lib/odds-api'
-import { slugify, extractLine } from '@/lib/ingestion'
+import { slugify, extractLine, mlbGameDate } from '@/lib/ingestion'
 
 const ACTIVE_LEAGUES: { slug: string; oddsApiKey: string }[] = [
   { slug: 'mlb', oddsApiKey: 'baseball_mlb' },
@@ -150,7 +150,7 @@ async function captureLeagueOdds(
         }
 
         const commence = new Date(game.commence_time)
-        const gameDate = commence.toISOString().slice(0, 10)
+        const gameDate = mlbGameDate(game.commence_time)
         const season   = commence.getUTCFullYear()
 
         // Upsert stub game row. onConflict matches the score cron's key, so if
