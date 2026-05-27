@@ -101,10 +101,45 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── 4. Baltimore Orioles full May 2026 moneyline history, ordered by (game_date, game_time) ─
+  const { data: oriolesTeamRow } = await supabaseAdmin
+    .from('teams').select('id, name').eq('slug', 'baltimore-orioles').single()
+  let oriolesHistory = null
+  if (oriolesTeamRow) {
+    const { data: oriolesGames } = await supabaseAdmin
+      .from('games')
+      .select('id, game_date, game_time, external_id')
+      .eq('league_id', mlbId)
+      .eq('status', 'final')
+      .gte('game_date', '2026-05-01')
+      .lte('game_date', '2026-05-31')
+      .or(`home_team_id.eq.${oriolesTeamRow.id},away_team_id.eq.${oriolesTeamRow.id}`)
+      .order('game_date', { ascending: true })
+      .order('game_time', { ascending: true })
+    if (oriolesGames) {
+      const gameIds = oriolesGames.map(g => g.id)
+      const { data: oriolesOutcomes } = await supabaseAdmin
+        .from('team_game_outcomes')
+        .select('game_id, moneyline_result, was_home, own_score, opponent_score')
+        .eq('team_id', oriolesTeamRow.id)
+        .in('game_id', gameIds)
+      const outcomeMap = new Map((oriolesOutcomes ?? []).map(o => [o.game_id, o]))
+      oriolesHistory = oriolesGames.map(g => ({
+        game_date:        g.game_date,
+        game_time:        g.game_time,
+        moneyline_result: outcomeMap.get(g.id)?.moneyline_result ?? null,
+        was_home:         outcomeMap.get(g.id)?.was_home ?? null,
+        own_score:        outcomeMap.get(g.id)?.own_score ?? null,
+        opponent_score:   outcomeMap.get(g.id)?.opponent_score ?? null,
+      }))
+    }
+  }
+
   return NextResponse.json({
     dates_with_doubleheaders: dhDates,
     team_doubleheaders_count: doubleheaders.length,
     recent_doubleheaders: recentDH,
     outcome_verification: outcomeCheck,
+    orioles_may_history: oriolesHistory,
   })
 }

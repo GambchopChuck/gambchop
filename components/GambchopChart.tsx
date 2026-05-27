@@ -110,7 +110,7 @@ function CalendarCell({ rowKey, game }: { rowKey: RowKey; game: GameEntry }) {
 
 function DoubleheaderCell({ rowKey, g1, g2 }: { rowKey: RowKey; g1: GameEntry; g2: GameEntry }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', margin: '0 3px', gap: 1, borderRadius: 5, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 34, margin: '0 3px', gap: 1, borderRadius: 5, overflow: 'hidden' }}>
       <div className="cell-half"><CalendarCell rowKey={rowKey} game={g1} /></div>
       <div className="cell-half"><CalendarCell rowKey={rowKey} game={g2} /></div>
     </div>
@@ -643,7 +643,7 @@ export default function GambchopChart({
                         {/* Calendar day columns */}
                         {Array.from({ length: daysInMonth }, (_, i) => {
                           const day   = i + 1
-                          const games = dayMap.get(day) ?? []
+                          const games = (dayMap.get(day) ?? []).sort((a, b) => a.rawTime.localeCompare(b.rawTime))
                           const locked = tier !== 'none' && games.length > 0 && !visibleDaySet.has(day)
                           return (
                             <div key={day} style={{

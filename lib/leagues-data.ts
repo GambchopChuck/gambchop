@@ -5,6 +5,7 @@ export type BetResult = 'win' | 'loss' | 'push' | null
 
 export interface GameEntry {
   rawDate: string            // ISO YYYY-MM-DD; empty string for legacy mock entries
+  rawTime: string            // ISO timestamptz string from game_time; used to order doubleheaders
   date: string               // display format M/D
   opponent: string
   isHome: boolean
@@ -133,6 +134,7 @@ export function generateMockGames(entityName: string, count = 10): GameEntry[] {
     const hasResult = i < played
     return {
       rawDate: '',
+      rawTime: '',
       date: `G${i + 1}`,
       opponent: opponents[i % opponents.length],
       isHome:           r(0) > 0.5,
@@ -161,6 +163,7 @@ function makeMockGame(dateStr: string, daySeed: number, gameNum: number): GameEn
   const r = (offset: number) => seeded(daySeed + gameNum * 50, offset)
   return {
     rawDate:          dateStr,
+    rawTime:          '',
     date:             fmtDate(dateStr),
     opponent:         'OPP',
     isHome:           r(1) > 0.5,

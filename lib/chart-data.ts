@@ -56,14 +56,16 @@ type RawOutcome = {
 
 type RawGameRow = {
   game_date: string
+  game_time: string
   outcomes:  RawOutcome[]
 }
 
 // ─── Outcome → GameEntry ──────────────────────────────────────────────────────
 
-function outcomeToEntry(o: RawOutcome, opponentName: string, gameDate: string): GameEntry {
+function outcomeToEntry(o: RawOutcome, opponentName: string, gameDate: string, gameTime: string): GameEntry {
   return {
     rawDate:          gameDate,
+    rawTime:          gameTime,
     date:             fmtDate(gameDate),
     opponent:         o.was_home ? opponentName : `@${opponentName}`,
     isHome:           o.was_home,
@@ -88,6 +90,7 @@ function withRestDays(entries: GameEntry[], rawDates: string[]): GameEntry[] {
 
 const OUTCOME_SELECT = `
   game_date,
+  game_time,
   outcomes:team_game_outcomes(
     team_id,
     was_home, was_ml_favorite, was_spread_favorite,
@@ -138,7 +141,7 @@ async function fetchLeagueGameRowsByMonth(
 
 // ─── Helper: rows → TeamChartData[] ──────────────────────────────────────────
 
-type Pair = { entry: GameEntry; date: string }
+type Pair = { entry: GameEntry; date: string; time: string }
 
 function rowsToTeamMap(rows: RawGameRow[]): Map<string, { name: string; pairs: Pair[] }> {
   const teamMap = new Map<string, { name: string; pairs: Pair[] }>()
@@ -150,8 +153,9 @@ function rowsToTeamMap(rows: RawGameRow[]): Map<string, { name: string; pairs: P
       const other = row.outcomes.find(o => o.team_id !== outcome.team_id)
       const opponentName = other?.team?.name ?? 'OPP'
       teamMap.get(t.slug)!.pairs.push({
-        entry: outcomeToEntry(outcome, opponentName, row.game_date),
+        entry: outcomeToEntry(outcome, opponentName, row.game_date, row.game_time),
         date:  row.game_date,
+        time:  row.game_time,
       })
     }
   }
@@ -260,8 +264,9 @@ export async function fetchTeamOutcomes(
       if (!mine) continue
       const other = row.outcomes.find(o => o.team_id !== mine.team_id)
       pairs.push({
-        entry: outcomeToEntry(mine, other?.team?.name ?? 'OPP', row.game_date),
+        entry: outcomeToEntry(mine, other?.team?.name ?? 'OPP', row.game_date, row.game_time),
         date:  row.game_date,
+        time:  row.game_time,
       })
     }
 
@@ -297,8 +302,9 @@ export async function fetchTeamOutcomesByMonth(
       if (!mine) continue
       const other = row.outcomes.find(o => o.team_id !== mine.team_id)
       pairs.push({
-        entry: outcomeToEntry(mine, other?.team?.name ?? 'OPP', row.game_date),
+        entry: outcomeToEntry(mine, other?.team?.name ?? 'OPP', row.game_date, row.game_time),
         date:  row.game_date,
+        time:  row.game_time,
       })
     }
 
@@ -328,8 +334,9 @@ export async function fetchTeamSeasonOutcomes(
       if (!mine) continue
       const other = row.outcomes.find(o => o.team_id !== mine.team_id)
       pairs.push({
-        entry: outcomeToEntry(mine, other?.team?.name ?? 'OPP', row.game_date),
+        entry: outcomeToEntry(mine, other?.team?.name ?? 'OPP', row.game_date, row.game_time),
         date:  row.game_date,
+        time:  row.game_time,
       })
     }
 
@@ -350,6 +357,14 @@ export function computeStreak(
   games:  GameEntry[],
   metric: 'moneyline' | 'spread' | 'over_under',
 ): StreakResult | null {
+  // Sort chronologically (date ASC, then time ASC within the same date) so
+  // doubleheader games are ordered by start time. Walk backward from the end.
+  const sorted = [...games].sort((a, b) =>
+    a.rawDate !== b.rawDate
+      ? a.rawDate.localeCompare(b.rawDate)
+      : a.rawTime.localeCompare(b.rawTime)
+  )
+
   const get = (g: GameEntry): string | null => {
     if (metric === 'moneyline') return g.moneylineResult
     if (metric === 'spread')    return g.spreadResult
@@ -364,8 +379,8 @@ export function computeStreak(
   }
 
   let ref: string | null = null
-  for (let i = games.length - 1; i >= 0; i--) {
-    const r = get(games[i])
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const r = get(sorted[i])
     if (!isSkip(r)) { ref = r; break }
   }
   if (ref === null) return null
@@ -376,8 +391,8 @@ export function computeStreak(
       : (ref === 'win'  ? 'W' : 'L')
 
   let count = 0
-  for (let i = games.length - 1; i >= 0; i--) {
-    const r = get(games[i])
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const r = get(sorted[i])
     if (isSkip(r))  continue
     if (r === ref)  count++
     else            break
