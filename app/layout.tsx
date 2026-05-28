@@ -1,15 +1,35 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Nunito, Oswald } from 'next/font/google'
+import { Geist, Geist_Mono, Nunito, Oswald, Bebas_Neue, Fraunces, Inter_Tight, JetBrains_Mono } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
 import Providers from '@/components/Providers'
 import Link from 'next/link'
-import { Bebas_Neue } from 'next/font/google'
 
 const bebasNeue = Bebas_Neue({
   weight: '400',
   subsets: ['latin'],
   variable: '--font-bebas-neue',
+})
+
+const fraunces = Fraunces({
+  variable: '--font-fraunces',
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+})
+
+const interTight = Inter_Tight({
+  variable: '--font-inter-tight',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains',
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
 })
 
 const instrumentSerif = localFont({
@@ -38,7 +58,7 @@ const footLink = { fontSize: 11, color: '#71717a', textDecoration: 'none', lineH
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable} ${bebasNeue.variable} ${instrumentSerif.variable}`} >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable} ${bebasNeue.variable} ${instrumentSerif.variable} ${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}>
       <body style={{ minHeight: '100vh', margin: 0 }}>
         <Providers>
           {children}

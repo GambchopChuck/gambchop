@@ -37,6 +37,21 @@ body {
 ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
 
+/* ── Community page design tokens ───────────────────────────────────────── */
+@theme {
+  --color-canvas:     #0A0A0B;
+  --color-surface:    #121215;
+  --color-elevated:   #18181C;
+  --color-hairline:   #1F1F23;
+  --color-strong:     #2A2A30;
+  --color-pri:        #F5F5F4;
+  --color-sec:        #A1A1AA;
+  --color-muted-c:    #71717A;
+  --color-faint:      #52525B;
+  --color-accent:     #C5F84A;
+  --color-accent-dim: #8FB833;
+}
+
 /* ── Browse Leagues grid ─────────────────────────────────────────────────── */
 /* Defined here (not in JSX) so it is processed in the static CSS bundle     */
 /* and available from the very first paint — no JS hydration required.       */
