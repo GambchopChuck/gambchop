@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 
 // ─── Font stacks ─────────────────────────────────────────────────────────────
@@ -37,7 +38,13 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
   const lbHref = isProUser ? '/leaderboard' : '/pricing'
 
   return (
-    <section className="fp-section" style={{ backgroundImage: 'url(/images/also-featured-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+    <section className="fp-section" style={{ position: 'relative', overflow: 'hidden' }}>
+      <Image
+        src="/images/also-featured-bg.png"
+        alt=""
+        fill
+        style={{ objectFit: 'cover', objectPosition: 'center' }}
+      />
       <style>{`
         .fp-section { padding: 96px 0; }
         .fp-container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
@@ -101,7 +108,7 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
         }
       `}</style>
 
-      <div className="fp-container">
+      <div className="fp-container" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Section header */}
         <div className="fp-header">
