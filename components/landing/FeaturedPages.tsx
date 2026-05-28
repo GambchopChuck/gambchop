@@ -37,7 +37,7 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
   const lbHref = isProUser ? '/leaderboard' : '/pricing'
 
   return (
-    <section className="fp-section" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(/images/also-featured-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+    <section className="fp-section" style={{ backgroundImage: 'url(/images/also-featured-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
       <style>{`
         .fp-section { padding: 96px 0; }
         .fp-container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
