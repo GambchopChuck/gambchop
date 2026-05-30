@@ -9,8 +9,8 @@ const LINKS = [
   { href: '/teams',        label: 'Teams'     },
   { href: '/community',    label: 'Community' },
   { href: '/favorites',    label: 'Favorites' },
+  { href: '/news',         label: 'News'      },
   { href: '/pricing',      label: 'Pricing'   },
-  { href: '/filters',      label: 'Filters'   },
 ]
 
 export default function Sidebar() {
