@@ -110,6 +110,7 @@ function PodiumCard({ row, cfg, countUnit, isCenter = false }: PodiumCardProps) 
       className={isCenter ? 'podium-card podium-card-center' : 'podium-card'}
       style={{
         height: cfg.height,
+        minWidth: 0,
         background: '#121215',
         border: `1px solid ${cfg.borderColor}`,
         borderRadius: 12,
@@ -118,6 +119,7 @@ function PodiumCard({ row, cfg, countUnit, isCenter = false }: PodiumCardProps) 
         display: 'flex',
         flexDirection: 'column',
         cursor: 'default',
+        overflow: 'hidden',
         transition: 'box-shadow 250ms ease-out, transform 250ms ease-out',
         '--hover-glow': cfg.hoverGlow,
       } as React.CSSProperties}
@@ -151,7 +153,7 @@ function PodiumCard({ row, cfg, countUnit, isCenter = false }: PodiumCardProps) 
       </div>
 
       {/* Team identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 24, minWidth: 0 }}>
         <div style={{
           width: cfg.squareSize, height: cfg.squareSize, borderRadius: 4,
           background: row.teamColor, flexShrink: 0,
@@ -160,6 +162,8 @@ function PodiumCard({ row, cfg, countUnit, isCenter = false }: PodiumCardProps) 
           fontFamily: SERIF, fontSize: cfg.nameFontSize, fontWeight: 400,
           color: T.pri, lineHeight: 1.15, fontStyle: 'normal',
           transition: 'color 250ms ease-out',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          minWidth: 0,
         }}>
           {row.team}
         </span>
@@ -206,10 +210,12 @@ function EmptyBronzeCard() {
   return (
     <div style={{
       height: 340,
+      minWidth: 0,
       background: '#121215',
       border: `1px solid ${T.hairline}`,
       borderRadius: 12,
       padding: 24,
+      overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
     }}>
@@ -294,7 +300,7 @@ export default function Podium({ category }: PodiumProps) {
         className="podium-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1.15fr 1fr',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr)',
           gap: 24,
           alignItems: 'end',
         }}
