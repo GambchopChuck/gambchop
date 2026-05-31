@@ -27,7 +27,7 @@ const CELL_COLOR: Record<Outcome, string | null> = {
 
 function ChartStrip({ outcomes }: { outcomes: Outcome[] }) {
   return (
-    <div className="rl-chart-strip" style={{ display: 'flex', gap: 2 }}>
+    <div className="rl-chart-strip" style={{ display: 'flex', gap: 2, minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
       {outcomes.map((o, i) => {
         const bg = CELL_COLOR[o]
         return (

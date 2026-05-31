@@ -35,7 +35,7 @@ interface ChartStripProps {
 
 function ChartStrip({ outcomes, cellWidth, cellHeight, gap = 2 }: ChartStripProps) {
   return (
-    <div style={{ display: 'flex', gap, overflowX: 'auto', scrollbarWidth: 'none' }}>
+    <div style={{ display: 'flex', gap, overflowX: 'auto', scrollbarWidth: 'none', minWidth: 0, width: '100%' }}>
       {outcomes.map((o, i) => {
         const bg = CELL_COLOR[o]
         return (

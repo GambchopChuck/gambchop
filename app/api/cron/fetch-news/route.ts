@@ -2,21 +2,32 @@ export const runtime     = 'nodejs'
 export const dynamic     = 'force-dynamic'
 export const maxDuration = 60
 
-// Fetches sports news from NewsAPI /everything for 6 leagues, upserts into
-// news_articles. Runs daily at 6am UTC via Vercel cron.
+// Fetches sports news from NewsAPI /v2/top-headlines?category=sports for 6 leagues,
+// validates each article against sport-specific keywords, and upserts into news_articles.
+// Runs daily at 6am UTC via Vercel cron.
 // Protected by CRON_SECRET (Vercel-managed) or INGESTION_ADMIN_TOKEN (local dev).
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const SPORT_QUERIES: { sport: string; q: string }[] = [
-  { sport: 'MLB',  q: 'MLB baseball betting odds spread moneyline' },
-  { sport: 'NBA',  q: 'NBA basketball betting odds spread moneyline' },
-  { sport: 'NFL',  q: 'NFL football betting odds spread moneyline' },
-  { sport: 'NHL',  q: 'NHL hockey betting odds spread puck line' },
-  { sport: 'WNBA', q: 'WNBA basketball betting odds' },
-  { sport: 'ATP',  q: 'ATP tennis betting odds Wimbledon Grand Slam' },
+  { sport: 'MLB',  q: 'MLB baseball' },
+  { sport: 'NBA',  q: 'NBA basketball' },
+  { sport: 'NFL',  q: 'NFL football' },
+  { sport: 'NHL',  q: 'NHL hockey' },
+  { sport: 'WNBA', q: 'WNBA' },
+  { sport: 'ATP',  q: 'ATP tennis' },
 ]
+
+// Article must match at least one keyword to be saved; non-matching articles are dropped
+const SPORT_KEYWORDS: Record<string, RegExp> = {
+  MLB:  /\b(MLB|baseball|World Series|ALCS|NLCS|home run|pitcher|batting|bullpen)\b/i,
+  NBA:  /\b(NBA|basketball|playoff|Finals|dunk|three.pointer|point guard)\b/i,
+  NFL:  /\b(NFL|football|Super Bowl|touchdown|quarterback|gridiron)\b/i,
+  NHL:  /\b(NHL|hockey|puck|Stanley Cup|goalie|power play|hat trick)\b/i,
+  WNBA: /\b(WNBA|women.s basketball)\b/i,
+  ATP:  /\b(ATP|WTA|tennis|Wimbledon|Grand Slam|US Open|French Open|Australian Open|Roland Garros|serve|deuce)\b/i,
+}
 
 type NewsApiArticle = {
   source: { id: string | null; name: string }
@@ -40,6 +51,7 @@ type NewsApiResponse = {
 type SportResult = {
   sport: string
   fetched: number
+  skipped: number
   upserted: number
   error?: string
 }
@@ -89,10 +101,10 @@ export async function GET(req: NextRequest) {
 
 async function fetchAndStore(apiKey: string, sport: string, q: string): Promise<SportResult> {
   try {
-    const url = new URL('https://newsapi.org/v2/everything')
-    url.searchParams.set('q', q)
+    const url = new URL('https://newsapi.org/v2/top-headlines')
+    url.searchParams.set('category', 'sports')
     url.searchParams.set('language', 'en')
-    url.searchParams.set('sortBy', 'publishedAt')
+    url.searchParams.set('q', q)
     url.searchParams.set('pageSize', '20')
     url.searchParams.set('apiKey', apiKey)
 
@@ -110,11 +122,20 @@ async function fetchAndStore(apiKey: string, sport: string, q: string): Promise<
       a => a.url && a.title && a.title !== '[Removed]',
     )
 
-    if (articles.length === 0) {
-      return { sport, fetched: 0, upserted: 0 }
+    // Drop any article whose headline+description doesn't mention the expected sport
+    const matched = articles.filter(a => {
+      const text = `${a.title} ${a.description ?? ''}`
+      return SPORT_KEYWORDS[sport]?.test(text) ?? false
+    })
+
+    const skipped = articles.length - matched.length
+
+    if (matched.length === 0) {
+      console.log(`[fetch-news:${sport}] 0 matched (${skipped} skipped out of ${articles.length} fetched)`)
+      return { sport, fetched: articles.length, skipped, upserted: 0 }
     }
 
-    const rows = articles.map(a => ({
+    const rows = matched.map(a => ({
       external_id:  a.url,
       headline:     a.title,
       summary:      a.description ?? null,
@@ -131,12 +152,12 @@ async function fetchAndStore(apiKey: string, sport: string, q: string): Promise<
 
     if (error) throw new Error(`Supabase upsert: ${error.message}`)
 
-    console.log(`[fetch-news:${sport}] upserted ${rows.length} articles`)
-    return { sport, fetched: articles.length, upserted: rows.length }
+    console.log(`[fetch-news:${sport}] upserted ${rows.length} (${skipped} skipped)`)
+    return { sport, fetched: articles.length, skipped, upserted: rows.length }
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[fetch-news:${sport}] error: ${msg}`)
-    return { sport, fetched: 0, upserted: 0, error: msg }
+    return { sport, fetched: 0, skipped: 0, upserted: 0, error: msg }
   }
 }
