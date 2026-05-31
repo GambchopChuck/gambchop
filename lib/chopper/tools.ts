@@ -1,4 +1,30 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { computeStreak, type StreakType } from '@/lib/streaks/computeStreak'
+import { fetchLeagueOutcomes } from '@/lib/chart-data'
+import type { GameEntry } from '@/lib/leagues-data'
+
+// =============================================================================
+// League normalizer
+// Accepts any casing or alias the model might send and returns the canonical slug.
+// =============================================================================
+
+function normalizeLeague(input: string): string {
+  if (!input) return ''
+  const lower = input.toLowerCase().trim()
+  const aliases: Record<string, string> = {
+    'baseball':                    'mlb',
+    'major league baseball':       'mlb',
+    'basketball':                  'nba',
+    'national basketball association': 'nba',
+    'football':                    'nfl',
+    'national football league':    'nfl',
+    'hockey':                      'nhl',
+    'national hockey league':      'nhl',
+    'college football':            'ncaaf',
+    'college basketball':          'ncaab',
+  }
+  return aliases[lower] ?? lower
+}
 
 // =============================================================================
 // Types
@@ -59,7 +85,7 @@ export async function searchSubject(params: { query: string; league?: string }) 
     .or(`name.ilike.%${params.query}%,abbreviation.ilike.%${params.query}%`)
 
   if (params.league) {
-    teamQuery = teamQuery.eq('leagues.name', params.league)
+    teamQuery = teamQuery.eq('leagues.slug', normalizeLeague(params.league))
   }
 
   const { data: teams, error } = await teamQuery.limit(10)
@@ -248,40 +274,39 @@ export async function getCurrentStreaks(params: {
   direction?: 'win' | 'loss' | 'over' | 'under'
 }) {
   const minLength = params.min_length ?? 3
-  const filter = getRowFilter(params.chart_row)
+  const slug = normalizeLeague(params.league)
 
-  let query: any = supabaseAdmin
-    .from('team_game_outcomes')
-    .select(
-      `team_id, game_date, ${filter.resultColumn}, teams!inner(name, leagues!inner(name))`
-    )
-    .eq('teams.leagues.name', params.league)
+  // Use the same data pipeline as the Streak Board — single source of truth.
+  // fetchLeagueOutcomes resolves the league by slug (not name) and returns
+  // each team's last 10 final games, enough to detect any streak up to 10.
+  const teamData = await fetchLeagueOutcomes(slug, 10)
+  if (!teamData.length) return { streaks: [] }
 
-  for (const ctx of filter.contextFilters) {
-    query = query.eq(ctx.column, ctx.value)
+  // Map each ChartRow to the computeStreak metric + an optional game pre-filter.
+  // Specialized rows (home, away, ml_favorite, etc.) filter the game list first,
+  // then run the streak algorithm on the filtered subset.
+  const rowConfig: Record<ChartRow, {
+    metric: 'moneyline' | 'spread' | 'over_under'
+    gameFilter?: (g: GameEntry) => boolean
+  }> = {
+    moneyline:       { metric: 'moneyline' },
+    spread:          { metric: 'spread' },
+    over_under:      { metric: 'over_under' },
+    ml_favorite:     { metric: 'moneyline', gameFilter: (g) => g.isFavorite },
+    ml_underdog:     { metric: 'moneyline', gameFilter: (g) => !g.isFavorite },
+    spread_favorite: { metric: 'spread',    gameFilter: (g) => g.isSpreadFavorite },
+    spread_dog:      { metric: 'spread',    gameFilter: (g) => !g.isSpreadFavorite },
+    home:            { metric: 'moneyline', gameFilter: (g) => g.isHome },
+    away:            { metric: 'moneyline', gameFilter: (g) => !g.isHome },
   }
 
-  if (filter.excludeNullResult) {
-    query = query.not(filter.resultColumn, 'is', null)
+  const { metric, gameFilter } = rowConfig[params.chart_row]
+
+  // Map direction param to the StreakType letter computeStreak returns.
+  const dirToType: Record<string, StreakType> = {
+    win: 'W', loss: 'L', over: 'O', under: 'U',
   }
-
-  const { data, error } = await query
-    .order('team_id', { ascending: true })
-    .order('game_date', { ascending: false })
-
-  if (error) {
-    console.error('getCurrentStreaks error:', error)
-    return { streaks: [] }
-  }
-
-  const rows = (data ?? []) as Array<Record<string, any>>
-  const byTeam = new Map<string, Array<Record<string, any>>>()
-
-  for (const row of rows) {
-    const list = byTeam.get(row.team_id) ?? []
-    list.push(row)
-    byTeam.set(row.team_id, list)
-  }
+  const targetType = params.direction ? dirToType[params.direction] : null
 
   const streaks: Array<{
     subject_name: string
@@ -290,34 +315,20 @@ export async function getCurrentStreaks(params: {
     last_outcome_date: string
   }> = []
 
-  for (const [, teamRows] of byTeam) {
-    if (teamRows.length === 0) continue
+  for (const team of teamData) {
+    const games = gameFilter ? team.games.filter(gameFilter) : team.games
+    const result = computeStreak(games, metric)
+    if (!result) continue
+    if (result.count < minLength) continue
+    if (targetType && result.type !== targetType) continue
 
-    const mostRecent = teamRows[0]
-    const mostRecentResult = mostRecent[filter.resultColumn] as string | null
-    if (!mostRecentResult || mostRecentResult === 'push') continue
-    if (params.direction && mostRecentResult !== params.direction) continue
-
-    let length = 1
-    for (let i = 1; i < teamRows.length; i++) {
-      const next = teamRows[i][filter.resultColumn] as string | null
-      if (next === mostRecentResult) length++
-      else break
-    }
-
-    if (length >= minLength) {
-      const teamObj = mostRecent.teams as { name?: string } | { name?: string }[] | null
-      const teamName = Array.isArray(teamObj)
-        ? teamObj[0]?.name ?? 'unknown'
-        : teamObj?.name ?? 'unknown'
-
-      streaks.push({
-        subject_name: teamName,
-        streak_length: length,
-        streak_type: mostRecentResult,
-        last_outcome_date: mostRecent.game_date,
-      })
-    }
+    const lastGame = team.games[team.games.length - 1]
+    streaks.push({
+      subject_name:      team.teamName,
+      streak_length:     result.count,
+      streak_type:       result.type,
+      last_outcome_date: lastGame?.rawDate ?? '',
+    })
   }
 
   streaks.sort((a, b) => b.streak_length - a.streak_length)
@@ -362,7 +373,7 @@ async function querySplitSide(params: {
   let query: any = supabaseAdmin
     .from('team_game_outcomes')
     .select(`${filter.resultColumn}, teams!inner(leagues!inner(name))`)
-    .eq('teams.leagues.name', params.league)
+    .eq('teams.leagues.slug', normalizeLeague(params.league))
 
   for (const ctx of filter.contextFilters) {
     query = query.eq(ctx.column, ctx.value)
@@ -426,7 +437,7 @@ export async function getLeaders(params: {
     .select(
       `team_id, ${filter.resultColumn}, teams!inner(name, leagues!inner(name))`
     )
-    .eq('teams.leagues.name', params.league)
+    .eq('teams.leagues.slug', normalizeLeague(params.league))
 
   for (const ctx of filter.contextFilters) {
     query = query.eq(ctx.column, ctx.value)

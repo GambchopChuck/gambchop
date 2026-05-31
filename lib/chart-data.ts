@@ -349,54 +349,7 @@ export async function fetchTeamSeasonOutcomes(
 }
 
 // ─── computeStreak ────────────────────────────────────────────────────────────
+// computeStreak moved to lib/streaks/computeStreak.ts (single source of truth for streak detection)
 
-export type StreakType   = 'W' | 'L' | 'P' | 'O' | 'U'
-export type StreakResult = { count: number; type: StreakType }
-
-export function computeStreak(
-  games:  GameEntry[],
-  metric: 'moneyline' | 'spread' | 'over_under',
-): StreakResult | null {
-  // Sort chronologically (date ASC, then time ASC within the same date) so
-  // doubleheader games are ordered by start time. Walk backward from the end.
-  const sorted = [...games].sort((a, b) =>
-    a.rawDate !== b.rawDate
-      ? a.rawDate.localeCompare(b.rawDate)
-      : a.rawTime.localeCompare(b.rawTime)
-  )
-
-  const get = (g: GameEntry): string | null => {
-    if (metric === 'moneyline') return g.moneylineResult
-    if (metric === 'spread')    return g.spreadResult
-    return g.ouResult
-  }
-
-  const isSkip = (r: string | null): boolean => {
-    if (r === null) return true
-    return metric === 'over_under'
-      ? r !== 'over' && r !== 'under'
-      : r !== 'win'  && r !== 'loss'
-  }
-
-  let ref: string | null = null
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const r = get(sorted[i])
-    if (!isSkip(r)) { ref = r; break }
-  }
-  if (ref === null) return null
-
-  const type: StreakType =
-    metric === 'over_under'
-      ? (ref === 'over' ? 'O' : 'U')
-      : (ref === 'win'  ? 'W' : 'L')
-
-  let count = 0
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const r = get(sorted[i])
-    if (isSkip(r))  continue
-    if (r === ref)  count++
-    else            break
-  }
-
-  return { count, type }
-}
+export type { StreakType, StreakResult } from './streaks/computeStreak'
+export { computeStreak } from './streaks/computeStreak'
