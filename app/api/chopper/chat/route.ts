@@ -6,7 +6,7 @@ import {
   getSessionAvailability,
   recordSessionMessage,
 } from '@/lib/chopper/sessions'
-import { CHOPPER_SYSTEM_PROMPT } from '@/lib/chopper/system-prompt'
+import { buildChopperSystemPrompt } from '@/lib/chopper/system-prompt'
 import {
   identifyChartContent,
   searchSubject,
@@ -84,11 +84,14 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: 'getCurrentStreaks',
     description:
-      'Returns active streaks across a league for a chart row, at or above a minimum length. Use for questions like "who is on the longest losing streak this week".',
+      'Returns active streaks across a league (or all active leagues) for a chart row, at or above a minimum length. Use for questions like "who is on the longest losing streak", "what teams are on under streaks". When no league is specified, pass league: "all" to search every active league.',
     input_schema: {
       type: 'object',
       properties: {
-        league: { type: 'string' },
+        league: {
+          type: 'string',
+          description: 'League slug ("mlb") or "all" to query every active league. Omit or pass "all" when the user does not specify a league.',
+        },
         chart_row: {
           type: 'string',
           enum: [
@@ -103,13 +106,14 @@ const TOOLS: Anthropic.Tool[] = [
             'over_under',
           ],
         },
-        min_length: { type: 'integer', description: 'Minimum streak length. Defaults to 3.' },
+        min_length: { type: 'integer', description: 'Minimum streak length to include. Defaults to 3.' },
         direction: {
           type: 'string',
           enum: ['win', 'loss', 'over', 'under'],
+          description: 'Filter to only streaks in this direction. Omit to return all directions.',
         },
       },
-      required: ['league', 'chart_row'],
+      required: ['chart_row'],
     },
   },
   {
@@ -130,11 +134,14 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'getLeaders',
-    description: 'Returns the top N teams in a given category over a date range.',
+    description: 'Returns the top N teams in a given category over a date range, across one or all active leagues. Use for questions like "who has the most moneyline wins in the last 14 days", "which team leads in overs this month". When no league is specified, pass league: "all".',
     input_schema: {
       type: 'object',
       properties: {
-        league: { type: 'string' },
+        league: {
+          type: 'string',
+          description: 'League slug ("mlb") or "all" to query every active league. Omit or pass "all" when the user does not specify a league.',
+        },
         category: {
           type: 'string',
           enum: [
@@ -148,11 +155,14 @@ const TOOLS: Anthropic.Tool[] = [
             'ml_underdog_wins',
           ],
         },
-        start_date: { type: 'string' },
-        end_date: { type: 'string' },
-        limit: { type: 'integer', description: 'Defaults to 10.' },
+        start_date: {
+          type: 'string',
+          description: 'ISO date YYYY-MM-DD. Compute from natural language: "last 14 days" = today minus 14, "this month" = first of current month.',
+        },
+        end_date: { type: 'string', description: 'ISO date YYYY-MM-DD. Usually omit (defaults to today).' },
+        limit: { type: 'integer', description: 'Number of teams to return. Defaults to 10.' },
       },
-      required: ['league', 'category'],
+      required: ['category'],
     },
   },
 ]
@@ -293,7 +303,7 @@ export async function POST(req: NextRequest) {
       const response = await anthropic.messages.create({
         model: MODEL,
         max_tokens: 2048,
-        system: CHOPPER_SYSTEM_PROMPT,
+        system: buildChopperSystemPrompt(new Date().toISOString().split('T')[0]),
         tools: TOOLS,
         messages: conversationMessages,
       })

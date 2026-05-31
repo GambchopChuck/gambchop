@@ -4,26 +4,41 @@ import { fetchLeagueOutcomes } from '@/lib/chart-data'
 import type { GameEntry } from '@/lib/leagues-data'
 
 // =============================================================================
+// Active leagues — slugs that have real outcome data in the database.
+// Expand this list as new leagues are ingested.
+// =============================================================================
+
+const ACTIVE_LEAGUES = ['mlb']
+
+// =============================================================================
 // League normalizer
 // Accepts any casing or alias the model might send and returns the canonical slug.
+// 'all' / '' / undefined → returns ACTIVE_LEAGUES (handled by callers).
 // =============================================================================
 
 function normalizeLeague(input: string): string {
   if (!input) return ''
   const lower = input.toLowerCase().trim()
   const aliases: Record<string, string> = {
-    'baseball':                    'mlb',
-    'major league baseball':       'mlb',
-    'basketball':                  'nba',
+    'baseball':                        'mlb',
+    'major league baseball':           'mlb',
+    'basketball':                      'nba',
     'national basketball association': 'nba',
-    'football':                    'nfl',
-    'national football league':    'nfl',
-    'hockey':                      'nhl',
-    'national hockey league':      'nhl',
-    'college football':            'ncaaf',
-    'college basketball':          'ncaab',
+    'football':                        'nfl',
+    'national football league':        'nfl',
+    'hockey':                          'nhl',
+    'national hockey league':          'nhl',
+    'college football':                'ncaaf',
+    'college basketball':              'ncaab',
   }
   return aliases[lower] ?? lower
+}
+
+// Returns the list of slugs to query given a league param.
+// 'all', '', undefined → all active leagues. Otherwise normalizes the input.
+function resolveLeagueSlugs(league?: string): string[] {
+  if (!league || league.toLowerCase().trim() === 'all') return ACTIVE_LEAGUES
+  return [normalizeLeague(league)]
 }
 
 // =============================================================================
@@ -268,31 +283,14 @@ export async function getRecord(params: {
 // =============================================================================
 
 export async function getCurrentStreaks(params: {
-  league: string
+  league?: string
   chart_row: ChartRow
   min_length?: number
   direction?: 'win' | 'loss' | 'over' | 'under'
 }) {
   const minLength = params.min_length ?? 3
-  const slug = normalizeLeague(params.league)
+  const slugs = resolveLeagueSlugs(params.league)
 
-  console.log('[getCurrentStreaks] params:', JSON.stringify(params))
-  console.log('[getCurrentStreaks] slug:', slug)
-
-  // Use the same data pipeline as the Streak Board — single source of truth.
-  // fetchLeagueOutcomes resolves the league by slug (not name) and returns
-  // each team's last 10 final games, enough to detect any streak up to 10.
-  const teamData = await fetchLeagueOutcomes(slug, 10)
-  console.log('[getCurrentStreaks] teamData.length:', teamData.length)
-  if (teamData.length > 0) {
-    const sample = teamData[0]
-    console.log('[getCurrentStreaks] sample team:', sample.teamName, 'games:', sample.games.length)
-  }
-  if (!teamData.length) return { streaks: [] }
-
-  // Map each ChartRow to the computeStreak metric + an optional game pre-filter.
-  // Specialized rows (home, away, ml_favorite, etc.) filter the game list first,
-  // then run the streak algorithm on the filtered subset.
   const rowConfig: Record<ChartRow, {
     metric: 'moneyline' | 'spread' | 'over_under'
     gameFilter?: (g: GameEntry) => boolean
@@ -310,42 +308,40 @@ export async function getCurrentStreaks(params: {
 
   const { metric, gameFilter } = rowConfig[params.chart_row]
 
-  // Map direction param to the StreakType letter computeStreak returns.
   const dirToType: Record<string, StreakType> = {
     win: 'W', loss: 'L', over: 'O', under: 'U',
   }
   const targetType = params.direction ? dirToType[params.direction] : null
-  console.log('[getCurrentStreaks] metric:', metric, 'targetType:', targetType, 'minLength:', minLength)
 
-  const streaks: Array<{
+  const allStreaks: Array<{
+    league: string
     subject_name: string
     streak_length: number
     streak_type: string
     last_outcome_date: string
   }> = []
 
-  for (const team of teamData) {
-    const games = gameFilter ? team.games.filter(gameFilter) : team.games
-    const result = computeStreak(games, metric)
-    if (team.teamName.toLowerCase().includes('phillies') || team.teamName.toLowerCase().includes('dodger')) {
-      console.log(`[getCurrentStreaks] ${team.teamName}: streak=${JSON.stringify(result)}, games=${games.length}`)
+  for (const slug of slugs) {
+    const teamData = await fetchLeagueOutcomes(slug, 10)
+    for (const team of teamData) {
+      const games = gameFilter ? team.games.filter(gameFilter) : team.games
+      const result = computeStreak(games, metric)
+      if (!result) continue
+      if (result.count < minLength) continue
+      if (targetType && result.type !== targetType) continue
+      const lastGame = team.games[team.games.length - 1]
+      allStreaks.push({
+        league:            slug.toUpperCase(),
+        subject_name:      team.teamName,
+        streak_length:     result.count,
+        streak_type:       result.type,
+        last_outcome_date: lastGame?.rawDate ?? '',
+      })
     }
-    if (!result) continue
-    if (result.count < minLength) continue
-    if (targetType && result.type !== targetType) continue
-
-    const lastGame = team.games[team.games.length - 1]
-    streaks.push({
-      subject_name:      team.teamName,
-      streak_length:     result.count,
-      streak_type:       result.type,
-      last_outcome_date: lastGame?.rawDate ?? '',
-    })
   }
 
-  console.log('[getCurrentStreaks] final streaks:', JSON.stringify(streaks))
-  streaks.sort((a, b) => b.streak_length - a.streak_length)
-  return { streaks }
+  allStreaks.sort((a, b) => b.streak_length - a.streak_length)
+  return { streaks: allStreaks }
 }
 
 // =============================================================================
@@ -423,21 +419,22 @@ async function querySplitSide(params: {
 // =============================================================================
 
 export async function getLeaders(params: {
-  league: string
+  league?: string
   category: LeaderCategory
   start_date?: string
   end_date?: string
   limit?: number
 }) {
   const limit = params.limit ?? 10
+  const slugs = resolveLeagueSlugs(params.league)
 
   const categoryMap: Record<LeaderCategory, { row: ChartRow; target: string }> = {
-    moneyline_wins: { row: 'moneyline', target: 'win' },
-    spread_covers: { row: 'spread', target: 'win' },
-    overs: { row: 'over_under', target: 'over' },
-    unders: { row: 'over_under', target: 'under' },
-    home_wins: { row: 'home', target: 'win' },
-    away_wins: { row: 'away', target: 'win' },
+    moneyline_wins:   { row: 'moneyline',  target: 'win'   },
+    spread_covers:    { row: 'spread',     target: 'win'   },
+    overs:            { row: 'over_under', target: 'over'  },
+    unders:           { row: 'over_under', target: 'under' },
+    home_wins:        { row: 'home',       target: 'win'   },
+    away_wins:        { row: 'away',       target: 'win'   },
     ml_favorite_wins: { row: 'ml_favorite', target: 'win' },
     ml_underdog_wins: { row: 'ml_underdog', target: 'win' },
   }
@@ -445,55 +442,54 @@ export async function getLeaders(params: {
   const { row: chartRow, target } = categoryMap[params.category]
   const filter = getRowFilter(chartRow)
 
-  let query: any = supabaseAdmin
-    .from('team_game_outcomes')
-    .select(
-      `team_id, ${filter.resultColumn}, teams!inner(name, leagues!inner(name))`
-    )
-    .eq('teams.leagues.slug', normalizeLeague(params.league))
+  // Collect counts across all requested leagues. Key = `slug:team_id` to avoid
+  // cross-league collisions when two leagues share a team_id format.
+  const counts = new Map<string, { name: string; league: string; matching: number; total: number }>()
 
-  for (const ctx of filter.contextFilters) {
-    query = query.eq(ctx.column, ctx.value)
-  }
+  for (const slug of slugs) {
+    let query: any = supabaseAdmin
+      .from('team_game_outcomes')
+      .select(`team_id, ${filter.resultColumn}, teams!inner(name, leagues!inner(name))`)
+      .eq('teams.leagues.slug', slug)
 
-  if (filter.excludeNullResult) {
-    query = query.not(filter.resultColumn, 'is', null)
-  }
+    for (const ctx of filter.contextFilters) {
+      query = query.eq(ctx.column, ctx.value)
+    }
+    if (filter.excludeNullResult) {
+      query = query.not(filter.resultColumn, 'is', null)
+    }
+    if (params.start_date) query = query.gte('game_date', params.start_date)
+    if (params.end_date)   query = query.lte('game_date', params.end_date)
 
-  if (params.start_date) query = query.gte('game_date', params.start_date)
-  if (params.end_date) query = query.lte('game_date', params.end_date)
+    const { data, error } = await query
+    if (error) {
+      console.error('getLeaders error:', error)
+      continue
+    }
 
-  const { data, error } = await query
+    for (const row of (data ?? []) as Array<Record<string, any>>) {
+      const teamObj = row.teams as { name?: string } | { name?: string }[] | null
+      const teamName = Array.isArray(teamObj)
+        ? teamObj[0]?.name ?? 'unknown'
+        : teamObj?.name ?? 'unknown'
 
-  if (error) {
-    console.error('getLeaders error:', error)
-    return { leaders: [] }
-  }
-
-  const rows = (data ?? []) as Array<Record<string, any>>
-
-  const counts = new Map<string, { name: string; matching: number; total: number }>()
-  for (const row of rows) {
-    const teamObj = row.teams as { name?: string } | { name?: string }[] | null
-    const teamName = Array.isArray(teamObj)
-      ? teamObj[0]?.name ?? 'unknown'
-      : teamObj?.name ?? 'unknown'
-
-    const result = row[filter.resultColumn] as string | null
-    const current = counts.get(row.team_id) ?? { name: teamName, matching: 0, total: 0 }
-    current.total++
-    if (result === target) current.matching++
-    counts.set(row.team_id, current)
+      const key = `${slug}:${row.team_id}`
+      const current = counts.get(key) ?? { name: teamName, league: slug.toUpperCase(), matching: 0, total: 0 }
+      current.total++
+      if ((row[filter.resultColumn] as string | null) === target) current.matching++
+      counts.set(key, current)
+    }
   }
 
   const leaders = Array.from(counts.values())
     .sort((a, b) => b.matching - a.matching)
     .slice(0, limit)
     .map((entry, index) => ({
-      rank: index + 1,
-      subject_name: entry.name,
-      count: entry.matching,
-      total_games: entry.total,
+      rank:          index + 1,
+      league:        entry.league,
+      subject_name:  entry.name,
+      count:         entry.matching,
+      total_games:   entry.total,
     }))
 
   return { leaders }
