@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 
-const BG     = '#7CFC00'   // radiant lime green — full page background
+const BG     = 'linear-gradient(135deg, #22c55e 0%, #8b5cf6 100%)'
 const BORDER = '#000000'   // black borders for definition
 const TEXT   = '#000000'   // black for primary text — high contrast on lime
 const MUTED  = '#1a1a1a'   // dark grey for secondary text — still readable on lime
@@ -94,6 +94,7 @@ function ChopperShell({ children }: { children: React.ReactNode }) {
       fontFamily: FONT,
       paddingLeft: 80,
       background: BG,
+      backgroundAttachment: 'fixed',
     }}>
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 32px 80px' }}>
         {children}
