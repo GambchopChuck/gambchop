@@ -69,7 +69,7 @@ export default function CategoryPills() {
       </div>
 
       {/* Podium — 48px below pills */}
-      <div style={{ marginTop: 48 }}>
+      <div style={{ marginTop: 48, overflow: 'visible' }}>
         <Podium category={activeCategory} />
       </div>
 

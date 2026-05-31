@@ -63,14 +63,35 @@ export default function ChopperClient() {
     const style = document.createElement('style')
     style.id = styleId
     style.innerHTML = `
-      @keyframes chopperPortalDrift {
-        0%   { background-position: 0% 50%, 100% 50%; }
-        50%  { background-position: 100% 50%, 0% 50%; }
-        100% { background-position: 0% 50%, 100% 50%; }
+      @keyframes chopperPortalWarp {
+        0%   { background-position: 0% 50%, 100% 50%, 50% 50%; }
+        50%  { background-position: 100% 50%, 0% 50%, 50% 50%; }
+        100% { background-position: 0% 50%, 100% 50%, 50% 50%; }
+      }
+      @keyframes chopperSpeedLines {
+        0%   { transform: translateX(0%); opacity: 0.35; }
+        50%  { opacity: 0.55; }
+        100% { transform: translateX(-50%); opacity: 0.35; }
       }
       @keyframes chopperGlowPulse {
-        0%, 100% { opacity: 0.4; transform: scale(1); }
-        50%      { opacity: 0.7; transform: scale(1.04); }
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50%      { opacity: 0.9; transform: scale(1.08); }
+      }
+      @keyframes chopperCardFloat1 {
+        0%, 100% { transform: translateY(0px) translateX(0px); }
+        50%      { transform: translateY(-8px) translateX(2px); }
+      }
+      @keyframes chopperCardFloat2 {
+        0%, 100% { transform: translateY(0px) translateX(0px); }
+        50%      { transform: translateY(-6px) translateX(-3px); }
+      }
+      @keyframes chopperCardFloat3 {
+        0%, 100% { transform: translateY(0px) translateX(0px); }
+        50%      { transform: translateY(-10px) translateX(2px); }
+      }
+      @keyframes chopperCardFloat4 {
+        0%, 100% { transform: translateY(0px) translateX(0px); }
+        50%      { transform: translateY(-7px) translateX(-2px); }
       }
     `
     document.head.appendChild(style)
@@ -115,7 +136,8 @@ export default function ChopperClient() {
 // ═════════════════════════════════════════════════════════════════════════════
 
 function ChopperShell({ children, thinking = false }: { children: React.ReactNode; thinking?: boolean }) {
-  const driftDuration = thinking ? '4s' : '16s'
+  const warpDuration       = thinking ? '3s'  : '14s'
+  const speedLinesDuration = thinking ? '0.8s' : '4s'
 
   return (
     <div style={{
@@ -125,23 +147,46 @@ function ChopperShell({ children, thinking = false }: { children: React.ReactNod
       position: 'relative',
       overflow: 'hidden',
       background: `
-        linear-gradient(120deg, #22c55e 0%, #8b5cf6 50%, #22c55e 100%),
-        linear-gradient(240deg, #8b5cf6 0%, #22c55e 50%, #8b5cf6 100%)
+        radial-gradient(ellipse 80% 50% at center, rgba(255,255,255,0.18) 0%, transparent 70%),
+        linear-gradient(90deg, #22c55e 0%, #8b5cf6 50%, #22c55e 100%),
+        linear-gradient(270deg, #8b5cf6 0%, #22c55e 50%, #8b5cf6 100%)
       `,
-      backgroundSize: '300% 300%, 300% 300%',
-      backgroundPosition: '0% 50%, 100% 50%',
-      backgroundBlendMode: 'screen',
-      animation: `chopperPortalDrift ${driftDuration} ease-in-out infinite`,
-      transition: 'animation-duration 1s ease-out',
+      backgroundSize: '100% 100%, 200% 100%, 200% 100%',
+      backgroundPosition: '50% 50%, 0% 50%, 100% 50%',
+      backgroundBlendMode: 'normal, multiply, normal',
+      animation: `chopperPortalWarp ${warpDuration} ease-in-out infinite`,
     }}>
-      {/* Soft radial glow layer that pulses while thinking */}
+      {/* Horizontal speed-line streaks for warp illusion */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.25) 0%, transparent 60%)',
+        background: `repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          transparent 40px,
+          rgba(255, 255, 255, 0.08) 40px,
+          rgba(255, 255, 255, 0.08) 42px,
+          transparent 42px,
+          transparent 120px,
+          rgba(255, 255, 255, 0.12) 120px,
+          rgba(255, 255, 255, 0.12) 124px,
+          transparent 124px,
+          transparent 220px
+        )`,
+        backgroundSize: '600px 100%',
+        animation: `chopperSpeedLines ${speedLinesDuration} linear infinite`,
         pointerEvents: 'none',
-        animation: thinking ? 'chopperGlowPulse 1.2s ease-in-out infinite' : 'none',
-        opacity: thinking ? 1 : 0.5,
+        mixBlendMode: 'overlay',
+      }} />
+
+      {/* Center glow that pulses while thinking */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(ellipse 60% 40% at center, rgba(255, 255, 255, 0.35) 0%, transparent 50%)',
+        pointerEvents: 'none',
+        animation: thinking ? 'chopperGlowPulse 1s ease-in-out infinite' : 'none',
+        opacity: thinking ? 1 : 0.6,
         transition: 'opacity 0.6s ease-out',
       }} />
 
@@ -640,25 +685,63 @@ function Banner({ children, color, icon }: { children: React.ReactNode; color: s
 }
 
 function EmptyState({ onExampleClick }: { onExampleClick: (text: string) => void }) {
+  const floatAnimations = [
+    'chopperCardFloat1 6s ease-in-out infinite',
+    'chopperCardFloat2 7s ease-in-out infinite',
+    'chopperCardFloat3 5.5s ease-in-out infinite',
+    'chopperCardFloat4 6.5s ease-in-out infinite',
+  ]
+
   return (
     <div style={{ textAlign: 'center', padding: '20px 0' }}>
-      <div style={{ fontSize: 9, color: TEXT, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 14 }}>
+      <div style={{
+        fontSize: 9,
+        color: '#000000',
+        letterSpacing: '0.25em',
+        textTransform: 'uppercase',
+        fontWeight: 700,
+        marginBottom: 24,
+        textShadow: '0 1px 2px rgba(255,255,255,0.4)',
+      }}>
         Try one of these
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, maxWidth: 640, margin: '0 auto' }}>
-        {EXAMPLE_PROMPTS.map((p) => (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: 16,
+        maxWidth: 720,
+        margin: '0 auto',
+      }}>
+        {EXAMPLE_PROMPTS.map((p, i) => (
           <button
             key={p}
             onClick={() => onExampleClick(p)}
             style={{
-              background: 'transparent', border: `2px solid #000000`, borderRadius: 10,
-              padding: '14px 16px', cursor: 'pointer',
-              fontFamily: FONT, fontSize: 11, color: TEXT,
-              letterSpacing: '0.02em', textAlign: 'left', lineHeight: 1.5,
-              transition: 'background 150ms',
+              background: 'rgba(255, 255, 255, 0.92)',
+              border: '2px solid #000000',
+              borderRadius: 14,
+              padding: '18px 18px',
+              cursor: 'pointer',
+              fontFamily: FONT,
+              fontSize: 12,
+              color: '#000000',
+              letterSpacing: '0.02em',
+              textAlign: 'left',
+              lineHeight: 1.5,
+              fontWeight: 500,
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.12)',
+              backdropFilter: 'blur(8px)',
+              animation: floatAnimations[i % floatAnimations.length],
+              transition: 'transform 200ms ease-out, box-shadow 200ms ease-out',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'
+              e.currentTarget.style.boxShadow = '0 14px 32px rgba(0, 0, 0, 0.25), 0 4px 10px rgba(0, 0, 0, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = ''
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.12)'
+            }}
           >
             {p}
           </button>
