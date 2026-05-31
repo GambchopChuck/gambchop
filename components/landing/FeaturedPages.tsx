@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 
 // ─── Font stacks ─────────────────────────────────────────────────────────────
@@ -39,14 +38,44 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
 
   return (
     <section className="fp-section" style={{ position: 'relative', overflow: 'hidden' }}>
-      <Image
-        src="/images/also-featured-bg.png"
-        alt=""
-        fill
-        style={{ objectFit: 'cover', objectPosition: 'center' }}
+      {/* Background image layer */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          backgroundImage: "url('/images/also-featured-bg.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+        aria-hidden="true"
       />
+
+      {/* Dark overlay for card contrast */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 10,
+          backgroundColor: 'rgba(10, 10, 11, 0.72)',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Edge fade — blends section into surrounding bg-canvas */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 11,
+          background: 'linear-gradient(to bottom, #0A0A0B 0%, transparent 15%, transparent 85%, #0A0A0B 100%)',
+        }}
+        aria-hidden="true"
+      />
+
       <style>{`
-        .fp-section { padding: 96px 0; }
+        .fp-section { padding: 120px 0; }
         .fp-container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
         .fp-header { margin-bottom: 56px; }
 
@@ -108,7 +137,7 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
         }
       `}</style>
 
-      <div className="fp-container" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="fp-container" style={{ position: 'relative', zIndex: 20 }}>
 
         {/* Section header */}
         <div className="fp-header">
@@ -121,7 +150,7 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
         <div className="fp-grid">
 
           {/* ── LEFT: Streaks on Streaks ─────────────────────────────── */}
-          <Link href="/streaks" className="fp-card" aria-label="Explore Streaks on Streaks">
+          <Link href="/todays-board" className="fp-card" aria-label="Explore Streaks on Streaks">
 
             {/* Block 1: Title */}
             <h3 style={{ fontFamily: SERIF, fontSize: 36, fontWeight: 400, color: '#ffffff', margin: '0 0 24px', lineHeight: 1.1 }}>

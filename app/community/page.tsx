@@ -480,15 +480,28 @@ export default function CommunityPage() {
   return (
     <div style={{ minHeight: '100vh', fontFamily: SANS }}>
 
+      <style>{`
+        .community-headline {
+          font-family: var(--font-oswald), sans-serif;
+          font-weight: 700;
+          font-size: 120px;
+          line-height: 0.9;
+          letter-spacing: -0.02em;
+          color: #F5F5F4;
+          margin: 0;
+          text-transform: uppercase;
+        }
+        @media (max-width: 1099px) { .community-headline { font-size: 80px; } }
+        @media (max-width: 767px)  { .community-headline { font-size: 56px; } }
+      `}</style>
+
       {/* Hero */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 48px 40px' }}>
         <div style={{ fontFamily: MONO, fontSize: 10, color: T.accent, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 16 }}>
           Gambchop — Community
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
-          <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 64, fontWeight: 400, color: T.pri, margin: 0, lineHeight: 1.0 }}>
-            Where Bettors Talk
-          </h1>
+          <h1 className="community-headline">SPARK UP</h1>
           <button onClick={() => setShowNew(true)} style={{
             background: T.accent, border: 'none', borderRadius: 6,
             color: '#000', fontFamily: SANS, fontSize: 12, fontWeight: 700,
@@ -498,7 +511,18 @@ export default function CommunityPage() {
             + New Topic
           </button>
         </div>
-        <p style={{ fontFamily: SANS, fontSize: 13, color: T.muted, marginTop: 16, marginBottom: 0 }}>
+
+        {/* Summary paragraphs */}
+        <div style={{ marginTop: 32, marginBottom: 32, maxWidth: 620 }}>
+          <p style={{ fontFamily: SANS, fontSize: 17, fontWeight: 400, color: T.sec, lineHeight: 1.6, margin: 0 }}>
+            The community board is where Gambchop members trade reads on what the charts are showing — streaks worth watching, splits that don&apos;t add up, runners, and more. Bring your angle.
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 17, fontWeight: 400, color: T.sec, lineHeight: 1.6, margin: '16px 0 0' }}>
+            Posting and replying helps you see different approaches, perspectives, and energy towards a play.
+          </p>
+        </div>
+
+        <p style={{ fontFamily: SANS, fontSize: 13, color: T.muted, marginTop: 0, marginBottom: 0 }}>
           Logged in as <span style={{ color: T.sec }}>@{user.username}</span>
           {' · '}
           <span style={{ color: threadsRemaining(user.userId) > 0 ? T.sec : '#ef4444' }}>

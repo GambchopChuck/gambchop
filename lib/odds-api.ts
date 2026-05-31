@@ -115,7 +115,7 @@ export function fetchOdds(
   markets: string = 'h2h,spreads,totals',
 ): Promise<OddsApiResponse<GameOdds[]>> {
   return oddsApiFetch<GameOdds[]>(
-    `/v4/sports/${sport}/odds?regions=${regions}&markets=${markets}&oddsFormat=american&apiKey=${apiKey()}`,
+    `/v4/sports/${sport}/odds?regions=${regions}&markets=${markets}&oddsFormat=american&eventStatus=upcoming&apiKey=${apiKey()}`,
   )
 }
 

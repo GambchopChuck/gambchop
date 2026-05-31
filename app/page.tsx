@@ -2,7 +2,7 @@ import Image from 'next/image'
 import LeagueGrid from '@/components/LeagueGrid'
 import CommunityPreview from '@/components/CommunityPreview'
 import ActivationBanner from '@/components/ActivationBanner'
-import FeaturedPages from '@/components/landing/FeaturedPages'
+import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
 import { X, ShoppingBag } from 'lucide-react'
 
 
@@ -246,8 +246,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <FeaturedPages />
       <LeagueGrid />
+      <FeaturedPagesWithAuth />
       <CommunityPreview />
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '20px 24px', textAlign: 'center' }}>

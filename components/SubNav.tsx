@@ -2,23 +2,59 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LEAGUES } from '@/lib/leagues-data'
 
-const FEATURES = [
-  { href: '/todays-board', label: 'Streaks on Streaks' },
-  { href: '/teams',        label: 'Teams'              },
-  { href: '/community',    label: 'Community'          },
-]
+const MONO = 'var(--font-jetbrains), "JetBrains Mono", monospace'
+
+function SoonBadge() {
+  return (
+    <span style={{
+      marginLeft: 8,
+      display: 'inline-block',
+      border: '1px solid #1F1F23',
+      borderRadius: 2,
+      padding: '2px 6px',
+      fontFamily: MONO,
+      fontSize: 9,
+      fontWeight: 500,
+      letterSpacing: '0.15em',
+      textTransform: 'uppercase' as const,
+      color: '#52525B',
+      lineHeight: 1,
+      verticalAlign: 'middle',
+    }}>
+      SOON
+    </span>
+  )
+}
 
 export default function SubNav() {
   const path = usePathname()
+
+  const streaksActive     = path === '/todays-board'
+  const leaderboardActive = path === '/leaderboard'
+  const chopperActive     = path === '/chopper'
+
+  const linkStyle = (active: boolean, accentColor = '#22c55e') => ({
+    fontSize: 10,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase' as const,
+    color: active ? accentColor : '#ffffff',
+    fontWeight: active ? 700 : 500,
+    padding: '0 14px',
+    lineHeight: '36px',
+    display: 'inline-block',
+    borderBottom: active ? `2px solid ${accentColor}` : '2px solid transparent',
+    transition: 'color 0.15s',
+    fontFamily: 'var(--font-nunito), sans-serif',
+    textDecoration: 'none',
+  })
 
   return (
     <div style={{
       borderBottom: '1px solid #14141c',
       background: '#0a0a0f',
       overflowX: 'auto',
-      scrollbarWidth: 'none',
+      scrollbarWidth: 'none' as const,
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 0,
@@ -27,48 +63,43 @@ export default function SubNav() {
         height: 36,
         whiteSpace: 'nowrap',
       }}>
-        {/* Feature links */}
-        {FEATURES.map(({ href, label }) => {
-          const active = path === href
-          return (
-            <Link key={href} href={href} style={{ textDecoration: 'none' }}>
-              <span style={{
-                fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: active ? '#22c55e' : '#ffffff',
-                fontWeight: active ? 700 : 500,
-                padding: '0 14px', lineHeight: '36px', display: 'inline-block',
-                borderBottom: active ? '2px solid #22c55e' : '2px solid transparent',
-                transition: 'color 0.15s',
-                fontFamily: 'var(--font-nunito), sans-serif',
-              }}>
-                {label}
-              </span>
-            </Link>
-          )
-        })}
 
-        {/* Divider */}
-        <span style={{ color: '#1a1a24', padding: '0 8px', fontSize: 12 }}>|</span>
+        {/* STREAKS ON STREAKS */}
+        <Link href="/todays-board" style={{ textDecoration: 'none' }}>
+          <span style={linkStyle(streaksActive)}>Streaks on Streaks</span>
+        </Link>
 
-        {/* League links */}
-        {LEAGUES.map(l => {
-          const active = path.startsWith(`/leagues/${l.id}`)
-          return (
-            <Link key={l.id} href={l.href} style={{ textDecoration: 'none' }}>
-              <span style={{
-                fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: active ? l.accent : '#ffffff',
-                fontWeight: active ? 700 : 500,
-                padding: '0 12px', lineHeight: '36px', display: 'inline-block',
-                borderBottom: active ? `2px solid ${l.accent}` : '2px solid transparent',
-                transition: 'color 0.15s',
-                fontFamily: 'var(--font-nunito), sans-serif',
-              }}>
-                {l.name}
-              </span>
-            </Link>
-          )
-        })}
+        {/* LEADERBOARD */}
+        <Link href="/leaderboard" style={{ textDecoration: 'none' }}>
+          <span style={linkStyle(leaderboardActive)}>Leaderboard</span>
+        </Link>
+
+        {/* CHOPPER — AI AGENT */}
+        <Link href="/chopper" style={{ textDecoration: 'none' }}>
+          <span style={linkStyle(chopperActive)}>Chopper — AI Agent</span>
+        </Link>
+
+        {/* STATS (non-clickable) */}
+        <span style={{
+          fontSize: 10,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: '#A1A1AA',
+          fontWeight: 500,
+          padding: '0 14px',
+          lineHeight: '36px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          borderBottom: '2px solid transparent',
+          opacity: 0.5,
+          cursor: 'not-allowed',
+          fontFamily: 'var(--font-nunito), sans-serif',
+          userSelect: 'none',
+        }}>
+          Stats
+          <SoonBadge />
+        </span>
+
       </div>
     </div>
   )

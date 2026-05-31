@@ -15,8 +15,7 @@ const TEXT   = '#f4f4f5'
 const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 const GREEN  = '#22c55e'
-const PURPLE = '#8b5cf6'
-const AMBER  = '#f59e0b'
+const BLUE   = '#60A5FA'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -75,20 +74,20 @@ function Cross() {
   return <span style={{ color: MUTED, flexShrink: 0, fontSize: 13, lineHeight: 1 }}>✕</span>
 }
 
-function FeatureRow({ label, included }: { label: string; included: boolean }) {
+function FeatureRow({ label, included, checkColor = GREEN }: { label: string; included: boolean; checkColor?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${BORDER}` }}>
-      {included ? <Check /> : <Cross />}
+      {included ? <Check color={checkColor} /> : <Cross />}
       <span style={{ fontSize: 11, color: included ? SUB : MUTED, letterSpacing: '0.02em' }}>{label}</span>
     </div>
   )
 }
 
-function ProFeatureRow({ label, highlight }: { label: string; highlight: boolean }) {
+function ProFeatureRow({ label }: { label: string; highlight: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${BORDER}` }}>
-      <Check color={highlight ? AMBER : GREEN} />
-      <span style={{ fontSize: 11, color: highlight ? TEXT : SUB, fontWeight: highlight ? 700 : 400, letterSpacing: '0.02em' }}>
+      <Check color={GREEN} />
+      <span style={{ fontSize: 11, color: SUB, fontWeight: 400, letterSpacing: '0.02em' }}>
         {label}
       </span>
     </div>
@@ -122,17 +121,22 @@ function FAQ({ q, a }: { q: string; a: string }) {
 function FreeCard({ onJoin }: { onJoin: () => void }) {
   const { memberTier } = useAuth()
   const isMember = memberTier !== 'none'
+  const [hovered, setHovered] = useState(false)
 
   return (
     <div style={{
-      background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
-      padding: '32px 28px', display: 'flex', flexDirection: 'column',
+      background: CARD,
+      border: `1px solid ${BLUE}`,
+      borderRadius: 16,
+      padding: '32px 28px',
+      display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
+      boxShadow: `0 0 50px rgba(96, 165, 250, 0.18), inset 0 0 30px rgba(96, 165, 250, 0.04)`,
     }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${BORDER}, transparent)` }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${BLUE}, transparent)` }} />
 
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>
+        <div style={{ fontSize: 9, color: BLUE, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>
           Free Plan
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
@@ -145,7 +149,7 @@ function FreeCard({ onJoin }: { onJoin: () => void }) {
       </div>
 
       <div style={{ flex: 1, marginBottom: 28 }}>
-        {FREE_FEATURES.map(f => <FeatureRow key={f.label} {...f} />)}
+        {FREE_FEATURES.map(f => <FeatureRow key={f.label} {...f} checkColor={BLUE} />)}
       </div>
 
       {isMember ? (
@@ -160,11 +164,15 @@ function FreeCard({ onJoin }: { onJoin: () => void }) {
       ) : (
         <button
           onClick={onJoin}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           style={{
-            width: '100%', padding: '13px', borderRadius: 8, border: `1px solid #2a2a34`,
-            background: 'transparent', color: SUB, fontSize: 11, fontWeight: 700,
+            width: '100%', padding: '13px', borderRadius: 8,
+            border: `1px solid ${BLUE}`,
+            background: hovered ? 'rgba(96, 165, 250, 0.08)' : 'transparent',
+            color: BLUE, fontSize: 11, fontWeight: 700,
             letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
-            fontFamily: 'inherit',
+            fontFamily: 'inherit', transition: 'background 150ms ease-out',
           }}
         >
           Get Started Free
@@ -191,21 +199,23 @@ function ProCard({
   const period   = monthly ? '/month' : '/year'
   const perMonth = monthly ? null : '$15/mo'
 
+  const [btnHovered, setBtnHovered] = useState(false)
+
   return (
     <div style={{
-      background: `linear-gradient(160deg, #0f0f18, #0a0a0f)`,
-      border: `1px solid ${PURPLE}55`,
+      background: CARD,
+      border: `1.5px solid ${GREEN}`,
       borderRadius: 16, padding: '32px 28px',
       display: 'flex', flexDirection: 'column',
       position: 'relative', overflow: 'hidden',
-      boxShadow: `0 0 40px ${PURPLE}18, 0 0 80px ${PURPLE}08`,
+      boxShadow: `0 0 80px rgba(34, 197, 94, 0.35), inset 0 0 40px rgba(34, 197, 94, 0.08)`,
     }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${PURPLE}, transparent)` }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${GREEN}, transparent)` }} />
 
       {billing === 'annual' && (
         <div style={{
           position: 'absolute', top: 16, right: 16,
-          background: AMBER, color: '#000', fontSize: 8, fontWeight: 900,
+          background: GREEN, color: '#0A0A0B', fontSize: 8, fontWeight: 900,
           letterSpacing: '0.12em', textTransform: 'uppercase',
           padding: '3px 10px', borderRadius: 4,
         }}>
@@ -214,7 +224,7 @@ function ProCard({
       )}
 
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 9, color: PURPLE, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>
+        <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>
           ⚡ Pro — {monthly ? 'Monthly' : 'Annual'}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
@@ -222,7 +232,7 @@ function ProCard({
           <span style={{ fontSize: 12, color: MUTED, letterSpacing: '0.06em' }}>{period}</span>
         </div>
         {perMonth && (
-          <div style={{ fontSize: 10, color: AMBER, letterSpacing: '0.06em', marginBottom: 8, fontWeight: 700 }}>
+          <div style={{ fontSize: 10, color: GREEN, letterSpacing: '0.06em', marginBottom: 8, fontWeight: 700 }}>
             {perMonth} — billed annually
           </div>
         )}
@@ -238,8 +248,8 @@ function ProCard({
       {isPro ? (
         <div style={{
           width: '100%', padding: '13px', borderRadius: 8, textAlign: 'center',
-          background: `${PURPLE}18`, border: `1px solid ${PURPLE}55`,
-          fontSize: 11, fontWeight: 700, color: PURPLE, letterSpacing: '0.1em',
+          background: `${GREEN}18`, border: `1px solid ${GREEN}55`,
+          fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: '0.1em',
           textTransform: 'uppercase', boxSizing: 'border-box',
         }}>
           ⚡ Active Plan
@@ -248,13 +258,16 @@ function ProCard({
         <button
           onClick={onUpgrade}
           disabled={loading}
+          onMouseEnter={() => setBtnHovered(true)}
+          onMouseLeave={() => setBtnHovered(false)}
           style={{
             width: '100%', padding: '14px', borderRadius: 8, border: 'none',
-            background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`,
-            color: '#fff', fontSize: 11, fontWeight: 900,
+            background: btnHovered && !loading ? '#16A34A' : GREEN,
+            color: '#0A0A0B', fontSize: 11, fontWeight: 900,
             letterSpacing: '0.12em', textTransform: 'uppercase',
             cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-            boxShadow: `0 0 24px ${PURPLE}55`, opacity: loading ? 0.7 : 1,
+            transition: 'background 150ms ease-out',
+            opacity: loading ? 0.7 : 1,
           }}
         >
           {loading ? 'Redirecting…' : billing === 'annual' ? 'Start Annual — 3-Day Trial' : 'Start Monthly — 3-Day Trial'}
@@ -294,7 +307,7 @@ function ComparisonTable() {
             <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}` }}>
               Free
             </th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: PURPLE, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, background: `${PURPLE}08` }}>
+            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: GREEN, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, background: `${GREEN}08` }}>
               ⚡ Pro
             </th>
           </tr>
@@ -308,7 +321,7 @@ function ComparisonTable() {
               <td style={{ padding: '11px 16px', fontSize: 11, color: MUTED, borderBottom: `1px solid ${BORDER}`, textAlign: 'center', letterSpacing: '0.02em' }}>
                 {row.free}
               </td>
-              <td style={{ padding: '11px 16px', fontSize: 11, color: GREEN, borderBottom: `1px solid ${BORDER}`, textAlign: 'center', fontWeight: 700, letterSpacing: '0.02em', background: `${PURPLE}08` }}>
+              <td style={{ padding: '11px 16px', fontSize: 11, color: GREEN, borderBottom: `1px solid ${BORDER}`, textAlign: 'center', fontWeight: 700, letterSpacing: '0.02em', background: `${GREEN}08` }}>
                 {row.pro}
               </td>
             </tr>
@@ -377,7 +390,7 @@ function PricingContent() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: BG,
+      minHeight: '100vh',
       fontFamily: 'var(--font-geist-mono), monospace',
       paddingLeft: 80,
     }}>
@@ -388,7 +401,7 @@ function PricingContent() {
           <div style={{
             background: '#f59e0b12', border: '1px solid #f59e0b44', borderRadius: 10,
             padding: '12px 18px', marginBottom: 28,
-            fontSize: 11, color: AMBER, letterSpacing: '0.03em',
+            fontSize: 11, color: '#f59e0b', letterSpacing: '0.03em',
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
             <span>◎</span>
@@ -418,8 +431,6 @@ function PricingContent() {
             fontSize: 38, fontWeight: 900, color: TEXT,
             letterSpacing: '0.04em', textTransform: 'uppercase',
             margin: '0 0 16px',
-            background: `linear-gradient(135deg, ${TEXT} 40%, ${PURPLE} 100%)`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>
             Sharp Data.<br />Simple Pricing.
           </h1>
@@ -439,8 +450,8 @@ function PricingContent() {
                   fontFamily: 'inherit', fontSize: 10, fontWeight: 700,
                   letterSpacing: '0.1em', textTransform: 'uppercase',
                   transition: 'all 0.15s',
-                  background: billing === b ? (b === 'annual' ? PURPLE : '#1a1a24') : 'transparent',
-                  color: billing === b ? (b === 'annual' ? '#fff' : TEXT) : MUTED,
+                  background: billing === b ? (b === 'annual' ? GREEN : '#1a1a24') : 'transparent',
+                  color: billing === b ? (b === 'annual' ? '#0A0A0B' : TEXT) : MUTED,
                 }}
               >
                 {b === 'monthly' ? 'Monthly' : (
@@ -448,7 +459,7 @@ function PricingContent() {
                     Annual
                     <span style={{
                       fontSize: 7, fontWeight: 900, letterSpacing: '0.1em',
-                      background: AMBER, color: '#000', borderRadius: 3, padding: '1px 5px',
+                      background: '#0A0A0B', color: GREEN, borderRadius: 3, padding: '1px 5px',
                     }}>
                       SAVE 25%
                     </span>
@@ -487,14 +498,14 @@ function PricingContent() {
         {/* ── Pro CTA banner ────────────────────────────────────────────── */}
         {memberTier !== 'pro' && (
           <div style={{
-            background: `linear-gradient(135deg, ${PURPLE}18, ${PURPLE}08)`,
-            border: `1px solid ${PURPLE}44`, borderRadius: 16,
+            background: `linear-gradient(135deg, ${GREEN}18, ${GREEN}08)`,
+            border: `1px solid ${GREEN}44`, borderRadius: 16,
             padding: '40px 40px', textAlign: 'center', marginBottom: 72,
             position: 'relative', overflow: 'hidden',
           }}>
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 300, height: 300, background: PURPLE, borderRadius: '50%', opacity: 0.04, filter: 'blur(60px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 300, height: 300, background: GREEN, borderRadius: '50%', opacity: 0.04, filter: 'blur(60px)', pointerEvents: 'none' }} />
 
-            <div style={{ fontSize: 9, color: PURPLE, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12 }}>
+            <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12 }}>
               ⚡ Limited-Time Offer
             </div>
             <h2 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '0.04em', textTransform: 'uppercase', margin: '0 0 12px' }}>
@@ -510,11 +521,11 @@ function PricingContent() {
                 disabled={checkingOut}
                 style={{
                   padding: '13px 32px', borderRadius: 8, border: 'none',
-                  background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`,
-                  color: '#fff', fontSize: 11, fontWeight: 900,
+                  background: GREEN,
+                  color: '#0A0A0B', fontSize: 11, fontWeight: 900,
                   letterSpacing: '0.12em', textTransform: 'uppercase',
                   cursor: checkingOut ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                  boxShadow: `0 0 28px ${PURPLE}55`, opacity: checkingOut ? 0.7 : 1,
+                  opacity: checkingOut ? 0.7 : 1,
                 }}
               >
                 {checkingOut ? 'Redirecting…' : 'Start 3-Day Trial →'}

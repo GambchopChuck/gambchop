@@ -11,6 +11,8 @@ import { fetchLeagueOutcomesByMonth, fetchLeagueSeasonOutcomes, computeStreak } 
 import { useAuth } from '@/lib/auth-context'
 import { type Favorite, type BetType, fetchFavorites, addFavorite, removeFavorite } from '@/lib/favorites'
 import ChartLegend from '@/components/ChartLegend'
+import { useFilters } from '@/lib/filter-context'
+import FiltersDropdown from '@/components/FiltersDropdown'
 
 // ─── Sort ─────────────────────────────────────────────────────────────────────
 
@@ -103,8 +105,10 @@ export default function LeaguePage() {
     })
   }, [leagueId])
 
-  // ── Sort ────────────────────────────────────────────────────────────────────
+  // ── Sort & Filters ──────────────────────────────────────────────────────────
   const [sortMode, setSortMode] = useState<SortMode>('az')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const { activeCount } = useFilters()
 
   useEffect(() => {
     const saved = localStorage.getItem(LEAGUE_SORT_LS_KEY) as SortMode | null
@@ -243,7 +247,7 @@ export default function LeaguePage() {
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 8px' }}>
 
-        {/* Sort controls */}
+        {/* Sort + Filters controls */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sort:</span>
           <select
@@ -260,7 +264,37 @@ export default function LeaguePage() {
               <option key={k} value={k}>{SORT_LABELS[k]}</option>
             ))}
           </select>
+
+          {/* Filters button */}
+          <button
+            onClick={() => setFiltersOpen(v => !v)}
+            style={{
+              background: filtersOpen ? '#22c55e18' : 'none',
+              border: `1px solid ${filtersOpen ? '#22c55e55' : '#1a1a24'}`,
+              borderRadius: 5,
+              color: filtersOpen ? '#22c55e' : '#ffffff',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-nunito), sans-serif',
+              fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
+              padding: '4px 10px', transition: 'all 0.15s',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span>◧</span>
+            <span>Filters</span>
+            {activeCount > 0 && (
+              <span style={{
+                background: '#22c55e', borderRadius: '50%',
+                width: 14, height: 14, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: 8, color: '#000', fontWeight: 900,
+              }}>
+                {activeCount}
+              </span>
+            )}
+          </button>
         </div>
+
+        {filtersOpen && <FiltersDropdown onClose={() => setFiltersOpen(false)} />}
 
         {dataLoading || authLoading ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>

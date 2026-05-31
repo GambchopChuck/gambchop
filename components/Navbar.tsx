@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 
 const NAV_LINKS = [
-  { label: 'Leagues',     href: '/'            },
+  { label: 'Leagues',     href: '/leagues'     },
   { label: 'Teams',       href: '/teams'       },
   { label: 'Community',   href: '/community'   },
   { label: 'Pricing',     href: '/pricing'     },

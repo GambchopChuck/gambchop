@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { addTopupCredits } from '@/lib/chopper/sessions'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-04-22.dahlia',
@@ -164,7 +165,39 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
     pro_expires_at:  periodEnd ? unixToIso(periodEnd) : null,
   })
 }
+async function handleChopperTopupPayment(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+  const metadata = paymentIntent.metadata ?? {}
 
+  // Only process payments tagged as Chopper top-ups
+  if (metadata.purchase_type !== 'chopper_topup') {
+    console.log('[webhook] payment_intent.succeeded not a chopper_topup — skipping')
+    return
+  }
+
+  const userId = metadata.user_id
+  const packId = metadata.pack_id
+  const packSessionsRaw = metadata.pack_sessions
+  const packSessions = packSessionsRaw ? parseInt(packSessionsRaw, 10) : NaN
+
+  if (!userId || !packId || !packSessions || isNaN(packSessions)) {
+    console.error('[webhook] chopper_topup missing or invalid metadata — payment_intent:', paymentIntent.id, 'metadata:', metadata)
+    return
+  }
+
+  // Stripe amounts are in cents; convert to dollars for our records
+  const amountPaidUsd = (paymentIntent.amount ?? 0) / 100
+
+  console.log('[webhook] chopper_topup — user:', userId, 'pack:', packId, 'sessions:', packSessions, 'amount:', amountPaidUsd)
+
+  await addTopupCredits({
+    userId,
+    packSize: packSessions,
+    amountPaidUsd,
+    stripePaymentIntentId: paymentIntent.id,
+  })
+
+  console.log('[webhook] chopper_topup credited — user:', userId, 'sessions:', packSessions)
+}
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -223,7 +256,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         // Log only — Stripe retries for several days; revocation handled by subscription.updated
         console.log('[webhook] invoice.payment_failed — Stripe will retry; monitoring only')
         break
-
+      case 'payment_intent.succeeded':
       default:
         console.log('[webhook] unhandled event type (200 returned):', event.type)
     }
