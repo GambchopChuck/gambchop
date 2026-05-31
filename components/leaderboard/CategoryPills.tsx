@@ -9,8 +9,7 @@ const T = {
   sec:      '#A1A1AA',
   pri:      '#F5F5F4',
   hairline: '#1F1F23',
-  strong:   '#2A2A30',
-  accent:   '#C5F84A',
+  green:    '#22C55E',
 }
 const SANS = 'var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif'
 
@@ -32,27 +31,34 @@ export default function CategoryPills() {
               style={{
                 fontFamily: SANS,
                 fontSize: 13,
-                fontWeight: 500,
-                color: isActive ? T.accent : T.sec,
-                background: 'transparent',
-                border: `1px solid ${isActive ? T.accent : T.hairline}`,
-                borderRadius: 6,
-                padding: '8px 14px',
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? '#0A0A0B' : T.sec,
+                background: isActive ? T.green : 'transparent',
+                border: isActive ? `1.5px solid ${T.green}` : `1px solid ${T.hairline}`,
+                borderRadius: isActive ? 8 : 6,
+                padding: isActive ? '10px 18px' : '8px 14px',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                transition: 'color 200ms ease-out, border-color 200ms ease-out',
+                transition: 'all 200ms ease-out',
                 lineHeight: 1,
+                boxShadow: isActive
+                  ? '0 0 24px rgba(34,197,94,0.45), inset 0 0 12px rgba(34,197,94,0.15)'
+                  : 'none',
               }}
               onMouseEnter={e => {
                 if (!isActive) {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = T.pri
-                  ;(e.currentTarget as HTMLButtonElement).style.borderColor = T.strong
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.color = T.pri
+                  el.style.borderColor = 'rgba(34,197,94,0.4)'
+                  el.style.background = 'rgba(34,197,94,0.04)'
                 }
               }}
               onMouseLeave={e => {
                 if (!isActive) {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = T.sec
-                  ;(e.currentTarget as HTMLButtonElement).style.borderColor = T.hairline
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.color = T.sec
+                  el.style.borderColor = T.hairline
+                  el.style.background = 'transparent'
                 }
               }}
             >

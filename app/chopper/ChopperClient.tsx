@@ -8,15 +8,14 @@ import { supabase } from '@/lib/supabase'
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 
-const BG     = 'linear-gradient(135deg, #22c55e 0%, #8b5cf6 100%)'
-const BORDER = '#000000'   // black borders for definition
-const TEXT   = '#000000'   // black for primary text — high contrast on lime
-const MUTED  = '#1a1a1a'   // dark grey for secondary text — still readable on lime
-const SUB    = '#000000'   // black for body text
-const GREEN  = '#000000'   // accent (now black for buttons on lime bg)
-const BLUE   = '#0033cc'   // deep blue for occasional accent
-const AMBER  = '#cc7700'   // dark amber for warnings
-const RED    = '#cc0000'   // dark red for errors
+const BORDER = '#000000'
+const TEXT   = '#000000'
+const MUTED  = '#1a1a1a'
+const SUB    = '#000000'
+const GREEN  = '#000000'
+const BLUE   = '#0033cc'
+const AMBER  = '#cc7700'
+const RED    = '#cc0000'
 
 const FONT = 'var(--font-oswald), "Oswald", sans-serif'
 
@@ -53,6 +52,33 @@ export default function ChopperClient() {
   const topupSuccess = searchParams.get('topup_success') === 'true'
   const topupCanceled = searchParams.get('topup_canceled') === 'true'
 
+  // Must be declared before any early returns
+  const [chatThinking, setChatThinking] = useState(false)
+
+  // Inject portal keyframes once on mount
+  useEffect(() => {
+    const styleId = 'chopper-portal-keyframes'
+    if (document.getElementById(styleId)) return
+
+    const style = document.createElement('style')
+    style.id = styleId
+    style.innerHTML = `
+      @keyframes chopperPortalDrift {
+        0%   { background-position: 0% 50%, 100% 50%; }
+        50%  { background-position: 100% 50%, 0% 50%; }
+        100% { background-position: 0% 50%, 100% 50%; }
+      }
+      @keyframes chopperGlowPulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50%      { opacity: 0.7; transform: scale(1.04); }
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      document.getElementById(styleId)?.remove()
+    }
+  }, [])
+
   if (authLoading) {
     return <ChopperShell><CenteredMessage label="Loading…" /></ChopperShell>
   }
@@ -74,10 +100,11 @@ export default function ChopperClient() {
   }
 
   return (
-    <ChopperShell>
+    <ChopperShell thinking={chatThinking}>
       <ChatInterface
         topupSuccess={topupSuccess}
         topupCanceled={topupCanceled}
+        onThinkingChange={setChatThinking}
       />
     </ChopperShell>
   )
@@ -87,16 +114,44 @@ export default function ChopperClient() {
 // Layout shell
 // ═════════════════════════════════════════════════════════════════════════════
 
-function ChopperShell({ children }: { children: React.ReactNode }) {
+function ChopperShell({ children, thinking = false }: { children: React.ReactNode; thinking?: boolean }) {
+  const driftDuration = thinking ? '4s' : '16s'
+
   return (
     <div style={{
       minHeight: '100vh',
       fontFamily: FONT,
       paddingLeft: 80,
-      background: BG,
-      backgroundAttachment: 'fixed',
+      position: 'relative',
+      overflow: 'hidden',
+      background: `
+        linear-gradient(120deg, #22c55e 0%, #8b5cf6 50%, #22c55e 100%),
+        linear-gradient(240deg, #8b5cf6 0%, #22c55e 50%, #8b5cf6 100%)
+      `,
+      backgroundSize: '300% 300%, 300% 300%',
+      backgroundPosition: '0% 50%, 100% 50%',
+      backgroundBlendMode: 'screen',
+      animation: `chopperPortalDrift ${driftDuration} ease-in-out infinite`,
+      transition: 'animation-duration 1s ease-out',
     }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 32px 80px' }}>
+      {/* Soft radial glow layer that pulses while thinking */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.25) 0%, transparent 60%)',
+        pointerEvents: 'none',
+        animation: thinking ? 'chopperGlowPulse 1.2s ease-in-out infinite' : 'none',
+        opacity: thinking ? 1 : 0.5,
+        transition: 'opacity 0.6s ease-out',
+      }} />
+
+      <div style={{
+        maxWidth: 900,
+        margin: '0 auto',
+        padding: '48px 32px 80px',
+        position: 'relative',
+        zIndex: 1,
+      }}>
         {children}
       </div>
     </div>
@@ -212,9 +267,11 @@ function PaywallBullet({ children, last }: { children: React.ReactNode; last?: b
 function ChatInterface({
   topupSuccess,
   topupCanceled,
+  onThinkingChange,
 }: {
   topupSuccess: boolean
   topupCanceled: boolean
+  onThinkingChange: (thinking: boolean) => void
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -285,6 +342,7 @@ function ChatInterface({
 
     setError(null)
     setSending(true)
+    onThinkingChange(true)
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -339,6 +397,7 @@ function ChatInterface({
       setInput(text)
     } finally {
       setSending(false)
+      onThinkingChange(false)
     }
   }
 

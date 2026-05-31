@@ -73,8 +73,8 @@ interface MedalConfig {
 const GOLD_CFG: MedalConfig = {
   rank: '01', label: 'GOLD',
   borderColor: T.gold,
-  glow: `0 0 100px rgba(250,204,21,0.4), inset 0 0 50px rgba(250,204,21,0.06)`,
-  hoverGlow: `0 0 130px rgba(250,204,21,0.55), inset 0 0 60px rgba(250,204,21,0.10)`,
+  glow: `0 0 80px rgba(250,204,21,0.4), inset 0 0 50px rgba(250,204,21,0.06)`,
+  hoverGlow: `0 0 104px rgba(250,204,21,0.55), inset 0 0 60px rgba(250,204,21,0.10)`,
   squareSize: 56, nameFontSize: 32, countFontSize: 56,
   padding: 32, height: 400, tagColor: T.gold,
 }
@@ -82,8 +82,8 @@ const GOLD_CFG: MedalConfig = {
 const SILVER_CFG: MedalConfig = {
   rank: '02', label: 'SILVER',
   borderColor: T.silver,
-  glow: `0 0 60px rgba(148,163,184,0.25), inset 0 0 30px rgba(148,163,184,0.04)`,
-  hoverGlow: `0 0 78px rgba(148,163,184,0.38), inset 0 0 40px rgba(148,163,184,0.08)`,
+  glow: `0 0 50px rgba(148,163,184,0.25), inset 0 0 24px rgba(148,163,184,0.04)`,
+  hoverGlow: `0 0 65px rgba(148,163,184,0.38), inset 0 0 32px rgba(148,163,184,0.08)`,
   squareSize: 44, nameFontSize: 24, countFontSize: 44,
   padding: 24, height: 340, tagColor: T.silver,
 }
@@ -91,8 +91,8 @@ const SILVER_CFG: MedalConfig = {
 const BRONZE_CFG: MedalConfig = {
   rank: '03', label: 'BRONZE',
   borderColor: T.bronze,
-  glow: `0 0 60px rgba(234,88,12,0.22)`,
-  hoverGlow: `0 0 78px rgba(234,88,12,0.34)`,
+  glow: `0 0 50px rgba(234,88,12,0.22)`,
+  hoverGlow: `0 0 65px rgba(234,88,12,0.34)`,
   squareSize: 44, nameFontSize: 24, countFontSize: 44,
   padding: 24, height: 340, tagColor: T.bronze,
 }
@@ -259,8 +259,9 @@ export default function Podium({ category }: PodiumProps) {
   return (
     <div>
       <style>{`
+        .podium-grid { padding: 0 16px; }
         @media (max-width: 1099px) {
-          .podium-grid { }
+          .podium-grid { padding: 0; }
           .podium-card-center { height: 360px !important; }
           .podium-card:not(.podium-card-center) { height: 320px !important; }
           .podium-card-center .podium-team-name { font-size: 28px !important; }
@@ -295,7 +296,7 @@ export default function Podium({ category }: PodiumProps) {
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1.15fr 1fr',
-          gap: 32,
+          gap: 24,
           alignItems: 'end',
         }}
       >

@@ -29,7 +29,7 @@ export default function LeaderboardPage() {
 
       <style>{`
         /* ── Container ── */
-        .lb-container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+        .lb-container { max-width: 1280px; margin: 0 auto; padding: 0 48px; overflow: visible; }
 
         /* ── Green neon card rows ── */
         @keyframes lb-neon-breathe {
