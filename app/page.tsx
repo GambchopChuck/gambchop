@@ -3,6 +3,7 @@ import LeagueGrid from '@/components/LeagueGrid'
 import CommunityPreview from '@/components/CommunityPreview'
 import ActivationBanner from '@/components/ActivationBanner'
 import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
+import ChopperBanner from '@/components/ChopperBanner'
 import { X, ShoppingBag } from 'lucide-react'
 
 
@@ -245,6 +246,8 @@ export default function HomePage() {
 
         </div>
       </section>
+
+      <ChopperBanner />
 
       <LeagueGrid />
       <FeaturedPagesWithAuth />
