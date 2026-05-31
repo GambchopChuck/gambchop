@@ -276,10 +276,18 @@ export async function getCurrentStreaks(params: {
   const minLength = params.min_length ?? 3
   const slug = normalizeLeague(params.league)
 
+  console.log('[getCurrentStreaks] params:', JSON.stringify(params))
+  console.log('[getCurrentStreaks] slug:', slug)
+
   // Use the same data pipeline as the Streak Board — single source of truth.
   // fetchLeagueOutcomes resolves the league by slug (not name) and returns
   // each team's last 10 final games, enough to detect any streak up to 10.
   const teamData = await fetchLeagueOutcomes(slug, 10)
+  console.log('[getCurrentStreaks] teamData.length:', teamData.length)
+  if (teamData.length > 0) {
+    const sample = teamData[0]
+    console.log('[getCurrentStreaks] sample team:', sample.teamName, 'games:', sample.games.length)
+  }
   if (!teamData.length) return { streaks: [] }
 
   // Map each ChartRow to the computeStreak metric + an optional game pre-filter.
@@ -307,6 +315,7 @@ export async function getCurrentStreaks(params: {
     win: 'W', loss: 'L', over: 'O', under: 'U',
   }
   const targetType = params.direction ? dirToType[params.direction] : null
+  console.log('[getCurrentStreaks] metric:', metric, 'targetType:', targetType, 'minLength:', minLength)
 
   const streaks: Array<{
     subject_name: string
@@ -318,6 +327,9 @@ export async function getCurrentStreaks(params: {
   for (const team of teamData) {
     const games = gameFilter ? team.games.filter(gameFilter) : team.games
     const result = computeStreak(games, metric)
+    if (team.teamName.toLowerCase().includes('phillies') || team.teamName.toLowerCase().includes('dodger')) {
+      console.log(`[getCurrentStreaks] ${team.teamName}: streak=${JSON.stringify(result)}, games=${games.length}`)
+    }
     if (!result) continue
     if (result.count < minLength) continue
     if (targetType && result.type !== targetType) continue
@@ -331,6 +343,7 @@ export async function getCurrentStreaks(params: {
     })
   }
 
+  console.log('[getCurrentStreaks] final streaks:', JSON.stringify(streaks))
   streaks.sort((a, b) => b.streak_length - a.streak_length)
   return { streaks }
 }
