@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 const NAV_LINKS = [
   { label: 'Leagues',     href: '/leagues'     },
   { label: 'Teams',       href: '/teams'       },
+  { label: 'Schedule',    href: '/schedule'    },
   { label: 'Community',   href: '/community'   },
   { label: 'Pricing',     href: '/pricing'     },
   { label: 'Merchandise', href: '/merchandise' },
