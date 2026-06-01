@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/validate-outcomes",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/generate-streak-articles",
+      "schedule": "0 7 * * *"
     }
   ]
 }

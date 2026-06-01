@@ -1,3 +1,18 @@
+export type OutcomeCell = { result: string; date: string }
+
+export type StreakArticle = {
+  id:               string
+  team_name:        string
+  league:           string
+  bet_type:         string
+  streak_length:    number
+  streak_direction: string
+  headline:         string
+  body:             string
+  outcome_cells:    OutcomeCell[]
+  generated_at:     string | null
+}
+
 export type NewsArticle = {
   id: string
   external_id: string | null
