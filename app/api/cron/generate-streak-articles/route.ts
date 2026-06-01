@@ -512,6 +512,11 @@ function buildSvg(cells: OutcomeCell[]): string {
 // ─── Claude article generation ────────────────────────────────────────────────
 
 async function generateArticle(c: ArticleCandidate): Promise<{ headline: string; body: string }> {
+  // Format the last 10 outcomes as a readable sequence (most recent first)
+  const chartSequence = c.recentOutcomes
+    .map((o, i) => `${i + 1}. ${o.result} (${o.date})`)
+    .join('\n')
+
   const response = await anthropic.messages.create({
     model:      'claude-sonnet-4-6',
     max_tokens: 256,
@@ -523,18 +528,21 @@ Team: ${c.teamName} (${c.league})
 Bet type: ${BET_LABELS[c.betType] ?? c.betType}
 Article type: ${c.articleType}
 
-DATA — the only facts you are allowed to use:
+CHART DATA — last 10 outcomes, most recent first (this is the color-coded chart):
+${chartSequence}
+
+SUMMARY (pre-computed from the chart above):
 ${c.promptContext}
 
-STRICT RULES — any violation will cause rejection:
-1. Use ONLY the numbers and facts in DATA above. Do not calculate, derive, or infer any other statistics.
-2. You may express a percentage ONLY by dividing numbers explicitly given in DATA (e.g. if DATA says "9 wins in 10 games", writing "90%" is fine). Do not derive percentages from numbers not in DATA.
-3. Do not make comparative claims ("best in MLB", "sharpest", "most notable", etc.) unless DATA states that explicitly.
-4. Do not invent dates, game counts, win totals, or streak lengths not present in DATA.
+RULES:
+1. Base all statistics on the CHART DATA above — count the results yourself from the sequence.
+2. You may calculate any percentage directly from the chart (e.g. 9 wins in 10 games = 90%).
+3. Do not invent numbers that cannot be counted from the chart data.
+4. Do not make comparative claims ("best in MLB", etc.) unless the summary explicitly states it.
 5. No predictions. No betting advice. Gambchop voice: direct and factual, no hype.
 
 Headline: max 10 words.
-Body: 2–3 sentences using only DATA.
+Body: 2–3 sentences grounded in the chart data.
 
 Respond with valid JSON only, no markdown: {"headline":"...","body":"..."}`,
     }],
