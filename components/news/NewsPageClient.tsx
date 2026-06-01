@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { NewsArticle, StreakArticle, OutcomeCell, SportTag } from '@/lib/news'
 import { SPORT_TAGS, SPORT_COLORS, timeAgo } from '@/lib/news'
 
-const ACCENT        = '#39ff9a'
+const ACCENT         = '#39ff9a'
 const GAMBCHOP_GREEN = '#4ade80'
 
 const OUTCOME_COLORS: Record<string, string> = {
@@ -17,80 +17,65 @@ const OUTCOME_COLORS: Record<string, string> = {
 }
 
 const BET_TYPE_LABELS: Record<string, string> = {
-  moneyline:   'Moneyline',
-  spread:      'Spread',
-  over_under:  'Over/Under',
+  moneyline:  'Moneyline',
+  spread:     'Spread',
+  over_under: 'Over/Under',
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type FeedItem =
-  | { kind: 'news';   data: NewsArticle   }
-  | { kind: 'streak'; data: StreakArticle }
+type PrimaryTab = 'sports' | 'chart'
 
 interface Props {
   articles:       NewsArticle[]
   streakArticles: StreakArticle[]
 }
 
-function feedDate(item: FeedItem): number {
-  const d = item.kind === 'news' ? item.data.published_at : item.data.generated_at
-  return d ? new Date(d).getTime() : 0
-}
-
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function NewsPageClient({ articles, streakArticles }: Props) {
-  const [activeTab, setActiveTab] = useState<SportTag>('ALL')
+  const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('sports')
+  const [leagueTab,  setLeagueTab]  = useState<SportTag>('ALL')
 
   const filteredNews = useMemo(
-    () => activeTab === 'ALL' ? articles : articles.filter(a => a.sport === activeTab),
-    [articles, activeTab],
+    () => leagueTab === 'ALL' ? articles : articles.filter(a => a.sport === leagueTab),
+    [articles, leagueTab],
   )
 
-  const filteredStreak = useMemo(
-    () => activeTab === 'ALL' ? streakArticles : streakArticles.filter(a => a.league === activeTab),
-    [streakArticles, activeTab],
-  )
-
-  // Hero is always the first news article; streak articles go in the feed only
-  const hero    = filteredNews[0] ?? null
-  const newsFeed: FeedItem[] = filteredNews.slice(1).map(d => ({ kind: 'news',   data: d }))
-  const streakFeed: FeedItem[] = filteredStreak.map(d => ({ kind: 'streak', data: d }))
-  const feed    = [...newsFeed, ...streakFeed].sort((a, b) => feedDate(b) - feedDate(a))
+  const hero     = filteredNews[0] ?? null
+  const newsFeed = filteredNews.slice(1)
   const trending = articles.slice(0, 5)
-
-  const isEmpty = !hero && feed.length === 0
 
   return (
     <div style={{ paddingLeft: 64, minHeight: '100vh', background: '#05060a' }}>
 
-      {/* ── League filter bar ──────────────────────────────────────────────── */}
+      {/* ── Sticky header: primary tabs + optional league filter ───────────── */}
       <div style={{
         position: 'sticky', top: 64, zIndex: 30,
         background: 'rgba(8,8,13,0.97)',
         borderBottom: '1px solid #1a1a24',
         backdropFilter: 'blur(12px)',
       }}>
+        {/* Primary tabs */}
         <div style={{
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
-          display: 'flex', alignItems: 'center', gap: 4, height: 48,
+          display: 'flex', alignItems: 'center', gap: 2, height: 48,
+          borderBottom: primaryTab === 'sports' ? '1px solid #1a1a24' : 'none',
         }}>
-          {SPORT_TAGS.map(tag => {
-            const active = tag === activeTab
+          {(['sports', 'chart'] as PrimaryTab[]).map(tab => {
+            const active = tab === primaryTab
+            const label  = tab === 'sports' ? 'Sports News' : 'Chart News'
             return (
               <button
-                key={tag}
-                onClick={() => setActiveTab(tag)}
+                key={tab}
+                onClick={() => setPrimaryTab(tab)}
                 style={{
-                  background:    active ? ACCENT : 'transparent',
-                  color:         active ? '#000'  : '#71717a',
-                  border:        active ? 'none'  : '1px solid transparent',
+                  background:    active ? ACCENT       : 'transparent',
+                  color:         active ? '#000'        : '#71717a',
+                  border:        active ? 'none'        : '1px solid transparent',
                   borderRadius:  6,
-                  padding:       '5px 14px',
-                  fontSize:      11,
+                  padding:       '5px 16px',
+                  fontSize:      12,
                   fontWeight:    700,
-                  letterSpacing: '0.1em',
+                  letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor:        'pointer',
                   fontFamily:    'var(--font-geist-mono), monospace',
@@ -100,11 +85,47 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                 onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#d4d4d8' }}
                 onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#71717a' }}
               >
-                {tag}
+                {label}
               </button>
             )
           })}
         </div>
+
+        {/* League filter — only under Sports News */}
+        {primaryTab === 'sports' && (
+          <div style={{
+            maxWidth: 1400, margin: '0 auto', padding: '0 24px',
+            display: 'flex', alignItems: 'center', gap: 4, height: 40,
+          }}>
+            {SPORT_TAGS.map(tag => {
+              const active = tag === leagueTab
+              return (
+                <button
+                  key={tag}
+                  onClick={() => setLeagueTab(tag)}
+                  style={{
+                    background:    active ? `${ACCENT}18` : 'transparent',
+                    color:         active ? ACCENT         : '#52525b',
+                    border:        active ? `1px solid ${ACCENT}44` : '1px solid transparent',
+                    borderRadius:  5,
+                    padding:       '3px 12px',
+                    fontSize:      10,
+                    fontWeight:    700,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    cursor:        'pointer',
+                    fontFamily:    'var(--font-geist-mono), monospace',
+                    transition:    'all 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#a1a1aa' }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#52525b' }}
+                >
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Page header ────────────────────────────────────────────────────── */}
@@ -114,57 +135,109 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
           textTransform: 'uppercase', margin: '0 0 6px',
           fontFamily: 'var(--font-geist-mono), monospace',
         }}>
-          Daily feed
+          {primaryTab === 'sports' ? 'Daily feed' : 'Gambchop data'}
         </p>
         <h1 style={{
           fontSize: 28, fontWeight: 900, color: '#f4f4f5',
           letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0,
         }}>
-          News &amp; Analysis
+          {primaryTab === 'sports' ? 'News & Analysis' : 'Streak Spotlights'}
         </h1>
       </div>
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px 64px' }}>
-        {isEmpty ? (
-          <EmptyState sport={activeTab} />
+        {primaryTab === 'sports' ? (
+          <SportsNewsFeed
+            hero={hero}
+            feed={newsFeed}
+            trending={trending}
+            allArticles={articles}
+            leagueTab={leagueTab}
+          />
         ) : (
-          <>
-            {hero && <HeroCard article={hero} />}
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0,1fr) 300px',
-              gap: 32,
-              marginTop: 32,
-            }}>
-              <div>
-                {feed.length === 0 ? (
-                  <p style={{ fontSize: 13, color: '#52525b', padding: '12px 0' }}>
-                    Only one article found for this league right now.
-                  </p>
-                ) : (
-                  feed.map(item =>
-                    item.kind === 'streak'
-                      ? <StreakArticleRow key={item.data.id} article={item.data} />
-                      : <ArticleRow      key={item.data.id} article={item.data} />
-                  )
-                )}
-              </div>
-
-              <aside style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <StoryCountWidget articles={articles} streakArticles={streakArticles} />
-                <TrendingWidget trending={trending} />
-              </aside>
-            </div>
-          </>
+          <ChartNewsFeed
+            streakArticles={streakArticles}
+          />
         )}
       </div>
     </div>
   )
 }
 
-// ─── Hero card (news articles only) ──────────────────────────────────────────
+// ─── Sports News feed ─────────────────────────────────────────────────────────
+
+function SportsNewsFeed({
+  hero,
+  feed,
+  trending,
+  allArticles,
+  leagueTab,
+}: {
+  hero:        NewsArticle | null
+  feed:        NewsArticle[]
+  trending:    NewsArticle[]
+  allArticles: NewsArticle[]
+  leagueTab:   SportTag
+}) {
+  if (!hero && feed.length === 0) {
+    return <EmptyState label={leagueTab === 'ALL' ? 'Sports News' : leagueTab} />
+  }
+
+  return (
+    <>
+      {hero && <HeroCard article={hero} />}
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0,1fr) 300px',
+        gap: 32, marginTop: 32,
+      }}>
+        <div>
+          {feed.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#52525b', padding: '12px 0' }}>
+              Only one article found for this league right now.
+            </p>
+          ) : (
+            feed.map(a => <ArticleRow key={a.id} article={a} />)
+          )}
+        </div>
+
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <StoryCountWidget count={allArticles.length} label="news articles in feed" />
+          <TrendingWidget trending={trending} />
+        </aside>
+      </div>
+    </>
+  )
+}
+
+// ─── Chart News feed ──────────────────────────────────────────────────────────
+
+function ChartNewsFeed({ streakArticles }: { streakArticles: StreakArticle[] }) {
+  if (streakArticles.length === 0) {
+    return <EmptyState label="Chart News" />
+  }
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0,1fr) 300px',
+      gap: 32,
+    }}>
+      <div>
+        {streakArticles.map(a => <StreakArticleRow key={a.id} article={a} />)}
+      </div>
+
+      <aside style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <StoryCountWidget count={streakArticles.length} label="streak spotlights today" />
+        <ChartLegend />
+      </aside>
+    </div>
+  )
+}
+
+// ─── Hero card ────────────────────────────────────────────────────────────────
 
 function HeroCard({ article }: { article: NewsArticle }) {
   const sc = article.sport ? SPORT_COLORS[article.sport] : null
@@ -334,28 +407,24 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
     <div
       style={{
         display: 'flex', gap: 16, alignItems: 'flex-start',
-        padding: '16px 4px', borderBottom: '1px solid #1a1a24',
+        padding: '20px 4px', borderBottom: '1px solid #1a1a24',
         borderRadius: 4, transition: 'background 0.12s',
       }}
       onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#0a0f0a'}
       onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}
     >
-      {/* Badge column */}
-      <div style={{ paddingTop: 2, flexShrink: 0, width: 52 }}>
+      {/* Badge */}
+      <div style={{ paddingTop: 2, flexShrink: 0, width: 60 }}>
         <span style={{
           display: 'inline-block',
           background: '#0a1a0f',
           color: GAMBCHOP_GREEN,
           border: `1px solid ${GAMBCHOP_GREEN}33`,
-          fontSize: 7,
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          padding: '2px 5px',
-          borderRadius: 3,
+          fontSize: 7, fontWeight: 700,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+          padding: '3px 6px', borderRadius: 3,
           fontFamily: 'var(--font-geist-mono), monospace',
-          whiteSpace: 'nowrap',
-          lineHeight: 1.4,
+          whiteSpace: 'nowrap', lineHeight: 1.5,
         }}>
           GAMBCHOP<br />DATA
         </span>
@@ -364,33 +433,36 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontSize: 15, fontWeight: 600, color: '#e4e4e7', margin: '0 0 4px',
-          lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+          fontSize: 15, fontWeight: 600, color: '#e4e4e7', margin: '0 0 6px',
+          lineHeight: 1.35,
         }}>
           {article.headline}
         </p>
 
         <p style={{
-          fontSize: 12, color: '#71717a', margin: '0 0 8px', lineHeight: 1.5,
-          display: '-webkit-box', WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+          fontSize: 13, color: '#71717a', margin: '0 0 10px', lineHeight: 1.55,
         }}>
           {article.body}
         </p>
 
-        {/* Mini outcome strip */}
         <OutcomeStrip cells={article.outcome_cells} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#52525b', marginTop: 8 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', flexWrap: 'wrap',
+          gap: 6, fontSize: 11, color: '#52525b', marginTop: 8,
+        }}>
           <span style={{ color: GAMBCHOP_GREEN, fontWeight: 600 }}>{article.team_name}</span>
           <span>·</span>
           <span>{article.league}</span>
           <span>·</span>
           <span>{BET_TYPE_LABELS[article.bet_type] ?? article.bet_type}</span>
           <span>·</span>
-          <span>{article.streak_length}-game {article.streak_direction} streak</span>
-          {article.generated_at && <><span>·</span><span>{timeAgo(article.generated_at)}</span></>}
+          <span style={{ color: '#a1a1aa' }}>
+            {article.streak_length}-game {article.streak_direction} streak
+          </span>
+          {article.generated_at && (
+            <><span>·</span><span>{timeAgo(article.generated_at)}</span></>
+          )}
         </div>
       </div>
     </div>
@@ -418,20 +490,7 @@ function OutcomeStrip({ cells }: { cells: OutcomeCell[] }) {
 
 // ─── Sidebar: story count ─────────────────────────────────────────────────────
 
-function StoryCountWidget({ articles, streakArticles }: { articles: NewsArticle[]; streakArticles: StreakArticle[] }) {
-  const isToday = (d: string | null) => {
-    if (!d) return false
-    const dt = new Date(d), n = new Date()
-    return dt.getUTCFullYear() === n.getUTCFullYear()
-      && dt.getUTCMonth()     === n.getUTCMonth()
-      && dt.getUTCDate()      === n.getUTCDate()
-  }
-
-  const todayNews   = articles.filter(a => isToday(a.published_at)).length
-  const todayStreak = streakArticles.filter(a => isToday(a.generated_at)).length
-  const todayCount  = todayNews + todayStreak
-  const count       = todayCount > 0 ? todayCount : articles.length + streakArticles.length
-
+function StoryCountWidget({ count, label }: { count: number; label: string }) {
   return (
     <div style={{
       background: '#0a0a0f', border: '1px solid #1a1a24', borderRadius: 10, padding: '18px 20px',
@@ -440,7 +499,7 @@ function StoryCountWidget({ articles, streakArticles }: { articles: NewsArticle[
         fontSize: 10, color: '#52525b', letterSpacing: '0.22em', textTransform: 'uppercase',
         margin: '0 0 10px', fontFamily: 'var(--font-geist-mono), monospace',
       }}>
-        {todayCount > 0 ? "Today's Stories" : 'Stories in Feed'}
+        In feed
       </p>
       <p style={{
         fontSize: 38, fontWeight: 900, color: ACCENT, margin: 0,
@@ -448,14 +507,45 @@ function StoryCountWidget({ articles, streakArticles }: { articles: NewsArticle[
       }}>
         {count}
       </p>
-      <p style={{ fontSize: 11, color: '#52525b', margin: '6px 0 0' }}>
-        articles across all leagues
-      </p>
+      <p style={{ fontSize: 11, color: '#52525b', margin: '6px 0 0' }}>{label}</p>
     </div>
   )
 }
 
-// ─── Sidebar: trending ────────────────────────────────────────────────────────
+// ─── Sidebar: chart legend (Chart News tab) ───────────────────────────────────
+
+function ChartLegend() {
+  const entries = [
+    { color: OUTCOME_COLORS.win,   label: 'Win / Cover'   },
+    { color: OUTCOME_COLORS.loss,  label: 'Loss / No-cover' },
+    { color: OUTCOME_COLORS.over,  label: 'Over'          },
+    { color: OUTCOME_COLORS.under, label: 'Under'         },
+    { color: OUTCOME_COLORS.push,  label: 'Push'          },
+  ]
+
+  return (
+    <div style={{
+      background: '#0a0a0f', border: '1px solid #1a1a24', borderRadius: 10, padding: '18px 20px',
+    }}>
+      <p style={{
+        fontSize: 10, color: '#52525b', letterSpacing: '0.22em', textTransform: 'uppercase',
+        margin: '0 0 14px', fontFamily: 'var(--font-geist-mono), monospace',
+      }}>
+        Chart key
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {entries.map(({ color, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 12, height: 12, borderRadius: 2, background: color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: '#71717a' }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Sidebar: trending (Sports News tab) ─────────────────────────────────────
 
 function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
   if (trending.length === 0) return null
@@ -524,7 +614,7 @@ function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState({ sport }: { sport: SportTag }) {
+function EmptyState({ label }: { label: string }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -534,10 +624,10 @@ function EmptyState({ sport }: { sport: SportTag }) {
         fontSize: 32, fontWeight: 900, color: '#1a1a24',
         letterSpacing: '0.1em', marginBottom: 16,
       }}>
-        {sport}
+        {label}
       </div>
       <p style={{ fontSize: 14, color: '#52525b', margin: 0 }}>
-        No articles yet. Check back after the next daily refresh at 6am UTC.
+        No articles yet. Check back after the next daily refresh.
       </p>
     </div>
   )
