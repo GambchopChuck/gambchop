@@ -91,10 +91,7 @@ export default async function NewsPreview() {
       <div className="news-preview-grid">
 
         {/* ── Sports News ──────────────────────────────────────────────────── */}
-        <div style={{
-          background: '#0a0a0f', border: '1px solid #1a1a24',
-          borderRadius: 10, padding: '20px 20px 4px',
-        }}>
+        <div className="fp-card" style={{ padding: '20px 20px 4px' }}>
           <p style={{
             fontSize: 9, color: '#52525b', letterSpacing: '0.22em',
             textTransform: 'uppercase', margin: '0 0 14px',
@@ -179,10 +176,7 @@ export default async function NewsPreview() {
         </div>
 
         {/* ── Chart News ───────────────────────────────────────────────────── */}
-        <div style={{
-          background: '#0a0a0f', border: '1px solid #1a1a24',
-          borderRadius: 10, padding: '20px 20px 4px',
-        }}>
+        <div className="fp-card" style={{ padding: '20px 20px 4px' }}>
           <p style={{
             fontSize: 9, color: '#52525b', letterSpacing: '0.22em',
             textTransform: 'uppercase', margin: '0 0 14px',
