@@ -1,6 +1,4 @@
-// Revalidate every hour so the page picks up newly fetched articles
-// without a full deploy. The cron runs at 6am UTC daily.
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import NewsPageClient from '@/components/news/NewsPageClient'
