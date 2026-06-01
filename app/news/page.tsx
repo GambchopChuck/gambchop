@@ -22,7 +22,7 @@ export default async function NewsPage() {
         .limit(120),
       supabaseAdmin
         .from('streak_articles')
-        .select('id, team_name, league, bet_type, streak_length, streak_direction, headline, body, outcome_cells, generated_at')
+        .select('id, team_name, league, bet_type, streak_length, streak_direction, headline, body, outcome_cells, generated_at, article_type, chart_svg')
         .order('generated_at', { ascending: false })
         .limit(50),
     ])

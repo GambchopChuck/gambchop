@@ -5,22 +5,22 @@ import Link from 'next/link'
 import type { NewsArticle, StreakArticle, OutcomeCell, SportTag } from '@/lib/news'
 import { SPORT_TAGS, SPORT_COLORS, timeAgo } from '@/lib/news'
 
-const ACCENT         = '#39ff9a'
-const GAMBCHOP_GREEN = '#4ade80'
-
-const OUTCOME_COLORS: Record<string, string> = {
-  win:   '#4ade80',
-  loss:  '#ef4444',
-  over:  '#a855f7',
-  under: '#7dd3fc',
-  push:  '#fbbf24',
-}
+const ACCENT = '#39ff9a'
 
 const BET_TYPE_LABELS: Record<string, string> = {
   moneyline:  'Moneyline',
   spread:     'Spread',
   over_under: 'Over/Under',
 }
+
+// Article type badge styles — streak=green, record=blue, reversal=amber, leader=purple
+const ARTICLE_TYPE_BADGE: Record<string, { bg: string; color: string; border: string; label: string }> = {
+  streak:   { bg: '#0a1a0f', color: '#4ade80', border: '#4ade8033', label: 'STREAK'   },
+  record:   { bg: '#0a0f1a', color: '#60a5fa', border: '#60a5fa33', label: 'RECORD'   },
+  reversal: { bg: '#1a1000', color: '#fbbf24', border: '#fbbf2433', label: 'REVERSAL' },
+  leader:   { bg: '#150a1a', color: '#a855f7', border: '#a855f733', label: 'LEADER'   },
+}
+const DEFAULT_BADGE = ARTICLE_TYPE_BADGE.streak
 
 type PrimaryTab = 'sports' | 'chart'
 
@@ -403,6 +403,14 @@ function ArticleRow({ article }: { article: NewsArticle }) {
 // ─── Streak article row ───────────────────────────────────────────────────────
 
 function StreakArticleRow({ article }: { article: StreakArticle }) {
+  const badge = ARTICLE_TYPE_BADGE[article.article_type ?? 'streak'] ?? DEFAULT_BADGE
+
+  const footerSuffix =
+    article.article_type === 'reversal' ? `${article.streak_length}-game ${article.streak_direction} streak ended`
+    : article.article_type === 'record'  ? 'season record'
+    : article.article_type === 'leader'  ? 'this month'
+    : `${article.streak_length}-game ${article.streak_direction} streak`
+
   return (
     <div
       style={{
@@ -413,73 +421,82 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
       onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = '#0a0f0a'}
       onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}
     >
-      {/* Badge */}
-      <div style={{ paddingTop: 2, flexShrink: 0, width: 60 }}>
+      {/* Type badge */}
+      <div style={{ paddingTop: 2, flexShrink: 0, width: 64 }}>
         <span style={{
           display: 'inline-block',
-          background: '#0a1a0f',
-          color: GAMBCHOP_GREEN,
-          border: `1px solid ${GAMBCHOP_GREEN}33`,
-          fontSize: 7, fontWeight: 700,
-          letterSpacing: '0.12em', textTransform: 'uppercase',
+          background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`,
+          fontSize: 7, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
           padding: '3px 6px', borderRadius: 3,
-          fontFamily: 'var(--font-geist-mono), monospace',
-          whiteSpace: 'nowrap', lineHeight: 1.5,
+          fontFamily: 'var(--font-geist-mono), monospace', whiteSpace: 'nowrap',
         }}>
-          GAMBCHOP<br />DATA
+          {badge.label}
         </span>
       </div>
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontSize: 15, fontWeight: 600, color: '#e4e4e7', margin: '0 0 6px',
-          lineHeight: 1.35,
-        }}>
+        <p style={{ fontSize: 15, fontWeight: 600, color: '#e4e4e7', margin: '0 0 6px', lineHeight: 1.35 }}>
           {article.headline}
         </p>
 
-        <p style={{
-          fontSize: 13, color: '#71717a', margin: '0 0 10px', lineHeight: 1.55,
-        }}>
+        <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 10px', lineHeight: 1.55 }}>
           {article.body}
         </p>
 
-        <OutcomeStrip cells={article.outcome_cells} />
+        {/* Inline SVG chart strip — rendered directly from server-generated SVG */}
+        <OutcomeStripSvg svg={article.chart_svg} fallbackCells={article.outcome_cells} />
 
         <div style={{
           display: 'flex', alignItems: 'center', flexWrap: 'wrap',
           gap: 6, fontSize: 11, color: '#52525b', marginTop: 8,
         }}>
-          <span style={{ color: GAMBCHOP_GREEN, fontWeight: 600 }}>{article.team_name}</span>
+          <span style={{ color: badge.color, fontWeight: 600 }}>{article.team_name}</span>
           <span>·</span>
           <span>{article.league}</span>
           <span>·</span>
           <span>{BET_TYPE_LABELS[article.bet_type] ?? article.bet_type}</span>
           <span>·</span>
-          <span style={{ color: '#a1a1aa' }}>
-            {article.streak_length}-game {article.streak_direction} streak
-          </span>
-          {article.generated_at && (
-            <><span>·</span><span>{timeAgo(article.generated_at)}</span></>
-          )}
+          <span style={{ color: '#a1a1aa' }}>{footerSuffix}</span>
+          {article.generated_at && <><span>·</span><span>{timeAgo(article.generated_at)}</span></>}
         </div>
       </div>
     </div>
   )
 }
 
-// ─── Mini outcome strip ───────────────────────────────────────────────────────
+// ─── SVG chart strip ──────────────────────────────────────────────────────────
+// Renders the server-generated SVG string inline. Falls back to CSS squares
+// for legacy articles that predate chart_svg (before this deploy).
 
-function OutcomeStrip({ cells }: { cells: OutcomeCell[] }) {
+const OUTCOME_COLORS: Record<string, string> = {
+  win: '#4ade80', loss: '#ef4444', over: '#a855f7', under: '#7dd3fc', push: '#fbbf24',
+}
+
+function OutcomeStripSvg({
+  svg,
+  fallbackCells,
+}: {
+  svg:           string | null
+  fallbackCells: OutcomeCell[]
+}) {
+  if (svg) {
+    return (
+      <span
+        style={{ display: 'inline-flex', alignItems: 'center' }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    )
+  }
+  // Fallback for rows without chart_svg
   return (
     <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-      {cells.map((cell, i) => (
+      {fallbackCells.map((cell, i) => (
         <div
           key={i}
           title={`${cell.result} · ${cell.date}`}
           style={{
-            width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+            width: 12, height: 12, borderRadius: 2, flexShrink: 0,
             background: OUTCOME_COLORS[cell.result] ?? '#3f3f46',
           }}
         />

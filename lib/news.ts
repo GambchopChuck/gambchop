@@ -11,6 +11,8 @@ export type StreakArticle = {
   body:             string
   outcome_cells:    OutcomeCell[]
   generated_at:     string | null
+  article_type:     string | null
+  chart_svg:        string | null
 }
 
 export type NewsArticle = {
