@@ -159,7 +159,17 @@ export async function GET(req: NextRequest) {
 
   const duration = parseFloat(((Date.now() - startedAt) / 1000).toFixed(1))
   console.log(`[streak-articles] done — generated:${generated} duration:${duration}s`)
-  return NextResponse.json({ success: true, generated, duration_seconds: duration })
+  return NextResponse.json({
+    success: true, generated, duration_seconds: duration,
+    _debug: {
+      streak_candidates:   streaks.length,
+      record_candidates:   records.length,
+      reversal_candidates: reversals.length,
+      leader_candidates:   leaders.length,
+      shift_candidates:    shifts.length,
+      selected:            selected.length,
+    },
+  })
 }
 
 // ─── Data map ─────────────────────────────────────────────────────────────────
@@ -192,6 +202,16 @@ function buildDataMap(rows: any[]): DataMap {
       const m      = dm[bt]
       if (!m.has(teamId)) m.set(teamId, { teamId, teamName, league, entries: [] })
       m.get(teamId)!.entries.push({ result, date })
+    }
+  }
+
+  // Explicitly sort every team's entries date DESC.
+  // The query requests this order but embedded-resource ordering via PostgREST
+  // is not guaranteed within groups, so we enforce it here. findStreaks depends
+  // on entries[0] being the most recent game to detect the active streak direction.
+  for (const teamMap of Object.values(dm)) {
+    for (const [, d] of teamMap) {
+      d.entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
     }
   }
 
