@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import type { NewsArticle, StreakArticle, OutcomeCell, SportTag } from '@/lib/news'
 import { SPORT_TAGS, SPORT_COLORS, timeAgo } from '@/lib/news'
+import { TEAM_ROUTES, linkifyTeamNames } from '@/lib/teamRoutes'
 
 const ACCENT = '#39ff9a'
 
@@ -436,13 +437,17 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 15, fontWeight: 600, color: '#e4e4e7', margin: '0 0 6px', lineHeight: 1.35 }}>
-          {article.headline}
-        </p>
+        {/* eslint-disable-next-line react/no-danger */}
+        <p
+          style={{ fontSize: 15, fontWeight: 600, color: '#e4e4e7', margin: '0 0 6px', lineHeight: 1.35 }}
+          dangerouslySetInnerHTML={{ __html: linkifyTeamNames(article.headline) }}
+        />
 
-        <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 10px', lineHeight: 1.55 }}>
-          {article.body}
-        </p>
+        {/* eslint-disable-next-line react/no-danger */}
+        <p
+          style={{ fontSize: 13, color: '#71717a', margin: '0 0 10px', lineHeight: 1.55 }}
+          dangerouslySetInnerHTML={{ __html: linkifyTeamNames(article.body) }}
+        />
 
         {/* Inline SVG chart strip — rendered directly from server-generated SVG */}
         <OutcomeStripSvg svg={article.chart_svg} fallbackCells={article.outcome_cells} />
@@ -451,7 +456,18 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
           display: 'flex', alignItems: 'center', flexWrap: 'wrap',
           gap: 6, fontSize: 11, color: '#52525b', marginTop: 8,
         }}>
-          <span style={{ color: badge.color, fontWeight: 600 }}>{article.team_name}</span>
+          {TEAM_ROUTES[article.team_name] ? (
+            <Link
+              href={TEAM_ROUTES[article.team_name]}
+              style={{ color: badge.color, fontWeight: 600, textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              {article.team_name}
+            </Link>
+          ) : (
+            <span style={{ color: badge.color, fontWeight: 600 }}>{article.team_name}</span>
+          )}
           <span>·</span>
           <span>{article.league}</span>
           <span>·</span>

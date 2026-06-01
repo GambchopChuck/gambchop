@@ -89,6 +89,10 @@ body {
   .league-grid { grid-template-columns: 1fr; }
 }
 
+/* ── Chart News team name links ──────────────────────────────────────────── */
+.team-link { color: #39ff9a; text-decoration: none; }
+.team-link:hover { text-decoration: underline; }
+
 /* ── Chart legend ─────────────────────────────────────────────────────────── */
 /* Hide the sticky vertical legend on screens that don't have room for it.    */
 /* The horizontal inline legend bar above the chart covers the same info.     */
