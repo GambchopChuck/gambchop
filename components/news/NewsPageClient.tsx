@@ -45,7 +45,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
   const trending = articles.slice(0, 5)
 
   return (
-    <div style={{ paddingLeft: 64, minHeight: '100vh', background: '#05060a' }}>
+    <div style={{ paddingLeft: 64, minHeight: '100vh' }}>
 
       {/* ── Sticky header: primary tabs + optional league filter ───────────── */}
       <div style={{
