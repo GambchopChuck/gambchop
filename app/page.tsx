@@ -4,6 +4,7 @@ import CommunityPreview from '@/components/CommunityPreview'
 import ActivationBanner from '@/components/ActivationBanner'
 import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
 import ChopperBanner from '@/components/ChopperBanner'
+import NewsPreview from '@/components/NewsPreview'
 import { X, ShoppingBag } from 'lucide-react'
 
 
@@ -251,6 +252,7 @@ export default function HomePage() {
 
       <LeagueGrid />
       <FeaturedPagesWithAuth />
+      <NewsPreview />
       <CommunityPreview />
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '20px 24px', textAlign: 'center' }}>

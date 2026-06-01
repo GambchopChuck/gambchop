@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { NewsArticle, StreakArticle, OutcomeCell, SportTag } from '@/lib/news'
 import { SPORT_TAGS, SPORT_COLORS, timeAgo } from '@/lib/news'
@@ -33,8 +34,15 @@ interface Props {
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function NewsPageClient({ articles, streakArticles }: Props) {
+  const searchParams = useSearchParams()
   const [primaryTab, setPrimaryTab] = useState<PrimaryTab>('sports')
   const [leagueTab,  setLeagueTab]  = useState<SportTag>('ALL')
+
+  // Honour ?tab=sports or ?tab=chart from deep links (e.g. homepage "See More" buttons)
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'chart' || tab === 'sports') setPrimaryTab(tab)
+  }, [searchParams])
 
   const filteredNews = useMemo(
     () => leagueTab === 'ALL' ? articles : articles.filter(a => a.sport === leagueTab),
