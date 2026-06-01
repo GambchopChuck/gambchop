@@ -2,7 +2,7 @@ export const runtime     = 'nodejs'
 export const dynamic     = 'force-dynamic'
 export const maxDuration = 60
 
-// Fetches sports news from NewsAPI /v2/top-headlines?category=sports for 6 leagues,
+// Fetches sports news from NewsAPI /v2/everything for 6 leagues (up to 10 articles each),
 // validates each article against sport-specific keywords, and upserts into news_articles.
 // Runs daily at 6am UTC via Vercel cron.
 // Protected by CRON_SECRET (Vercel-managed) or INGESTION_ADMIN_TOKEN (local dev).
@@ -11,12 +11,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const SPORT_QUERIES: { sport: string; q: string }[] = [
-  { sport: 'MLB',  q: 'MLB baseball' },
-  { sport: 'NBA',  q: 'NBA basketball' },
   { sport: 'NFL',  q: 'NFL football' },
+  { sport: 'NBA',  q: 'NBA basketball' },
+  { sport: 'MLB',  q: 'MLB baseball' },
   { sport: 'NHL',  q: 'NHL hockey' },
   { sport: 'WNBA', q: 'WNBA' },
-  { sport: 'ATP',  q: 'ATP tennis' },
+  { sport: 'ATP',  q: 'tennis ATP' },
 ]
 
 // Article must match at least one keyword to be saved; non-matching articles are dropped.
@@ -106,11 +106,11 @@ export async function GET(req: NextRequest) {
 
 async function fetchAndStore(apiKey: string, sport: string, q: string): Promise<SportResult> {
   try {
-    const url = new URL('https://newsapi.org/v2/top-headlines')
-    url.searchParams.set('category', 'sports')
-    url.searchParams.set('language', 'en')
+    const url = new URL('https://newsapi.org/v2/everything')
     url.searchParams.set('q', q)
-    url.searchParams.set('pageSize', '20')
+    url.searchParams.set('language', 'en')
+    url.searchParams.set('sortBy', 'publishedAt')
+    url.searchParams.set('pageSize', '10')
     url.searchParams.set('apiKey', apiKey)
 
     const res = await fetch(url.toString(), { cache: 'no-store' })
