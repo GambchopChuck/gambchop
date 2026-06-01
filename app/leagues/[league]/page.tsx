@@ -79,7 +79,9 @@ export default function LeaguePage() {
         fetchLeagueOutcomesByMonth('mlb', viewYear, viewMonth),
         fetchLeagueSeasonOutcomes('mlb'),
       ]).then(([month, season]) => {
-        setMonthData(month.length  ? month  : generateCalendarMonthData(meta.entities, viewYear, viewMonth, leagueId))
+        // Never fall back to mock data for real-data leagues — an empty month
+        // should show an empty grid, not fabricated outcomes that look real.
+        setMonthData(month)
         setSeasonData(season.length ? season : generateSeasonData(meta.entities, leagueId))
         setDataLoading(false)
       })
