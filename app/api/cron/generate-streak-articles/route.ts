@@ -242,7 +242,7 @@ function findStreaks(dm: DataMap, min: number): ArticleCandidate[] {
         betType, articleType: 'streak',
         streakLength: len, streakDirection: dir,
         recentOutcomes: cells(d.entries, 10),
-        promptContext: `${d.teamName} has ${len} consecutive ${dir}s on ${BET_LABELS[betType] ?? betType} — the streak is still active.`,
+        promptContext: `Active streak: ${len} consecutive ${dir} results on ${BET_LABELS[betType] ?? betType}. Streak is ongoing.`,
       })
     }
   }
@@ -288,7 +288,7 @@ function findRecords(dm: DataMap): ArticleCandidate[] {
           betType, articleType: 'record',
           streakLength: best.wins, streakDirection: 'high',
           recentOutcomes: cells(best.d.entries, 10),
-          promptContext: `${best.d.teamName} is ${best.wins}-for-${best.total} (${pct}%) on ${BET_LABELS[betType] ?? betType} this season — among the best marks in ${league}.`,
+          promptContext: `Season record on ${BET_LABELS[betType] ?? betType}: ${best.wins} wins, ${best.total - best.wins} losses out of ${best.total} games (${pct}%).`,
         })
       }
 
@@ -299,7 +299,7 @@ function findRecords(dm: DataMap): ArticleCandidate[] {
           betType, articleType: 'record',
           streakLength: worst.wins, streakDirection: 'low',
           recentOutcomes: cells(worst.d.entries, 10),
-          promptContext: `${worst.d.teamName} is ${worst.wins}-for-${worst.total} (${pct}%) on ${BET_LABELS[betType] ?? betType} this season — one of the worst marks in ${league}.`,
+          promptContext: `Season record on ${BET_LABELS[betType] ?? betType}: ${worst.wins} wins, ${worst.total - worst.wins} losses out of ${worst.total} games (${pct}%).`,
         })
       }
     }
@@ -340,7 +340,7 @@ function findReversals(dm: DataMap, withinDays: number): ArticleCandidate[] {
         betType, articleType: 'reversal',
         streakLength: endedLength, streakDirection: prevResult,
         recentOutcomes: cells(d.entries, 10),
-        promptContext: `${d.teamName}'s ${endedLength}-game ${prevResult} streak on ${BET_LABELS[betType] ?? betType} ended recently — the most recent game on ${mostRecentDate} went ${currentResult}.`,
+        promptContext: `Ended streak: ${endedLength} consecutive ${prevResult} results on ${BET_LABELS[betType] ?? betType}. Streak ended on ${mostRecentDate}. Most recent result: ${currentResult}.`,
       })
     }
   }
@@ -380,7 +380,7 @@ function findLeaders(dm: DataMap): ArticleCandidate[] {
           betType, articleType: 'leader',
           streakLength: wins, streakDirection: 'leader',
           recentOutcomes: cells(d.entries, 10),
-          promptContext: `Through ${monthName}, ${d.teamName} ranks #${idx + 1} in ${league} for ${BET_LABELS[betType] ?? betType} ${positiveLabel} with ${wins} in ${total} games this month.`,
+          promptContext: `${monthName} record on ${BET_LABELS[betType] ?? betType}: ${wins} ${positiveLabel} in ${total} games. Rank in ${league}: #${idx + 1}.`,
         })
       })
     }
@@ -417,7 +417,7 @@ function findPerformanceShifts(dm: DataMap): ArticleCandidate[] {
         betType, articleType: 'leader',
         streakLength: recentWins, streakDirection: direction,
         recentOutcomes: cells(d.entries, 10),
-        promptContext: `${d.teamName} has shifted ${direction} on ${BET_LABELS[betType] ?? betType}: ${recentWins}-for-5 in their last 5 games versus ${prevWins}-for-5 in the prior 5 — a sudden change in form.`,
+        promptContext: `Last 5 games on ${BET_LABELS[betType] ?? betType}: ${recentWins} positive results, ${5 - recentWins} negative. Previous 5 games: ${prevWins} positive, ${5 - prevWins} negative.`,
       })
     }
   }
@@ -511,34 +511,32 @@ function buildSvg(cells: OutcomeCell[]): string {
 
 // ─── Claude article generation ────────────────────────────────────────────────
 
-const TYPE_GUIDE: Record<ArticleType, string> = {
-  streak:
-    'Lead with the streak fact. Add a sentence on how long it has been building. Close with what the chart data reflects.',
-  record:
-    'Lead with the win rate (e.g. "The Cubs are covering spreads at 71% this season"). Add where that ranks in the league. Close with a brief observation.',
-  reversal:
-    'Lead with the streak ending (e.g. "Chicago\'s 6-game over streak came to an end Wednesday"). Describe what ended it. Close with their current form.',
-  leader:
-    'Lead with the ranking (e.g. "Through May, the Dodgers lead MLB in moneyline wins with 19"). Add context. Close with a brief observation.',
-}
-
 async function generateArticle(c: ArticleCandidate): Promise<{ headline: string; body: string }> {
   const response = await anthropic.messages.create({
     model:      'claude-sonnet-4-6',
     max_tokens: 256,
     messages: [{
       role:    'user',
-      content: `You write data-driven blurbs for Gambchop, a sports betting visualization site.
+      content: `Write a short article for Gambchop, a sports betting data visualization site.
 
-Article type: ${c.articleType.toUpperCase()}
-Data: ${c.promptContext}
-Style: ${TYPE_GUIDE[c.articleType]}
+Team: ${c.teamName} (${c.league})
+Bet type: ${BET_LABELS[c.betType] ?? c.betType}
+Article type: ${c.articleType}
 
-Rules: factual and observational only — no predictions, no betting advice, Gambchop voice (direct, data-first, no hype).
+DATA — the only facts you are allowed to use:
+${c.promptContext}
+
+STRICT RULES — any violation will cause rejection:
+1. Use ONLY the numbers and facts in DATA above. Do not calculate, derive, or infer any other statistics.
+2. Do not add percentages unless they appear in DATA.
+3. Do not make comparative claims ("best in MLB", "sharpest", "most notable", etc.) unless DATA states that explicitly.
+4. Do not invent dates, game counts, win totals, or streak lengths not present in DATA.
+5. No predictions. No betting advice. Gambchop voice: direct and factual, no hype.
+
 Headline: max 10 words.
-Body: exactly 2–3 sentences.
+Body: 2–3 sentences using only DATA.
 
-Respond with valid JSON only, no markdown fences: {"headline":"...","body":"..."}`,
+Respond with valid JSON only, no markdown: {"headline":"...","body":"..."}`,
     }],
   })
 
