@@ -536,7 +536,7 @@ ${c.promptContext}
 
 RULES:
 1. Base all statistics on the CHART DATA above — count the results yourself from the sequence.
-2. You may calculate any percentage directly from the chart (e.g. 9 wins in 10 games = 90%).
+2. You may calculate and state percentages and fractions, but ONLY by counting the raw outcome rows provided to you in this prompt. For example if you are given 20 rows and 14 show COV, you may write 14-for-20 or 70%. You may not reference any number, percentage, or fraction that cannot be directly derived by counting the exact rows passed to you. Do not estimate, round creatively, or reference any data outside of what is in this prompt.
 3. Do not invent numbers that cannot be counted from the chart data.
 4. Do not make comparative claims ("best in MLB", etc.) unless the summary explicitly states it.
 5. No predictions. No betting advice. Gambchop voice: direct and factual, no hype.
