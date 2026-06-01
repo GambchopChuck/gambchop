@@ -1,0 +1,1 @@
+export const STREAK_BOARD_MIN_LENGTH = 5

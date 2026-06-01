@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { fetchLeagueOutcomes, computeStreak } from '@/lib/chart-data'
 import { LEAGUES, LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
 import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
+import { STREAK_BOARD_MIN_LENGTH } from '@/lib/streaks/constants'
 
-const MIN_STREAK = 6
+const MIN_STREAK = STREAK_BOARD_MIN_LENGTH
 
 type StreakKind = 'moneyline' | 'spread' | 'over_under'
 type SortMode   = 'az' | 'longest' | 'shortest' | 'hottest' | 'coldest'
@@ -223,7 +224,7 @@ export default function StreakBoardPage() {
             Streak Board
           </h1>
           <p style={{ fontSize: 11, color: '#52525b', letterSpacing: '0.08em', margin: 0 }}>
-            Teams on 6+ game streaks across all leagues
+            Teams on {MIN_STREAK}+ game streaks across all leagues
           </p>
         </div>
       </div>
@@ -286,7 +287,7 @@ export default function StreakBoardPage() {
           </div>
         ) : displayRows.length === 0 ? (
           <div style={{ padding: 60, textAlign: 'center', fontSize: 11, color: '#52525b', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            No active streaks of 6+ games — check back soon.
+            No active streaks of {MIN_STREAK}+ games — check back soon.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
