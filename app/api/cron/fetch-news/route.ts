@@ -19,15 +19,20 @@ const SPORT_QUERIES: { sport: string; q: string }[] = [
   { sport: 'ATP',  q: 'ATP tennis' },
 ]
 
-// Article must match at least one keyword to be saved; non-matching articles are dropped
+// Article must match at least one keyword to be saved; non-matching articles are dropped.
+// Terms like "serve" and "Finals" were removed — too ambiguous outside their sport context.
 const SPORT_KEYWORDS: Record<string, RegExp> = {
-  MLB:  /\b(MLB|baseball|World Series|ALCS|NLCS|home run|pitcher|batting|bullpen)\b/i,
-  NBA:  /\b(NBA|basketball|playoff|Finals|dunk|three.pointer|point guard)\b/i,
-  NFL:  /\b(NFL|football|Super Bowl|touchdown|quarterback|gridiron)\b/i,
-  NHL:  /\b(NHL|hockey|puck|Stanley Cup|goalie|power play|hat trick)\b/i,
-  WNBA: /\b(WNBA|women.s basketball)\b/i,
-  ATP:  /\b(ATP|WTA|tennis|Wimbledon|Grand Slam|US Open|French Open|Australian Open|Roland Garros|serve|deuce)\b/i,
+  MLB:  /\b(MLB|baseball|World Series|ALCS|NLCS|home run|pitcher|batting|bullpen|outfielder|shortstop|strikeout)\b/i,
+  NBA:  /\b(NBA|basketball|dunk|three.pointer|point guard|slam dunk|free throw|NBA Finals|NBA Playoffs)\b/i,
+  NFL:  /\b(NFL|football|Super Bowl|touchdown|quarterback|gridiron|NFL Draft|wide receiver|running back)\b/i,
+  NHL:  /\b(NHL|hockey|puck|Stanley Cup|goalie|power play|hat trick|ice hockey|faceoff)\b/i,
+  WNBA: /\b(WNBA|women.s basketball|women.s NBA)\b/i,
+  ATP:  /\b(ATP|WTA|tennis|Wimbledon|Grand Slam|US Open|French Open|Australian Open|Roland Garros|match point|tiebreak|clay court|hard court)\b/i,
 }
+
+// Belt-and-suspenders: any article surviving the per-sport filter must still mention
+// at least one of the six sports by their primary identifier.
+const ANY_SPORT_RE = /\b(MLB|baseball|NBA|basketball|NFL|football|NHL|hockey|WNBA|ATP|WTA|tennis)\b/i
 
 type NewsApiArticle = {
   source: { id: string | null; name: string }
@@ -123,9 +128,10 @@ async function fetchAndStore(apiKey: string, sport: string, q: string): Promise<
     )
 
     // Drop any article whose headline+description doesn't mention the expected sport
+    // AND doesn't pass the cross-sport sanity check.
     const matched = articles.filter(a => {
       const text = `${a.title} ${a.description ?? ''}`
-      return SPORT_KEYWORDS[sport]?.test(text) ?? false
+      return (SPORT_KEYWORDS[sport]?.test(text) ?? false) && ANY_SPORT_RE.test(text)
     })
 
     const skipped = articles.length - matched.length
