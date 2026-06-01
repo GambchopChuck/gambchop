@@ -528,7 +528,7 @@ ${c.promptContext}
 
 STRICT RULES — any violation will cause rejection:
 1. Use ONLY the numbers and facts in DATA above. Do not calculate, derive, or infer any other statistics.
-2. Do not add percentages unless they appear in DATA.
+2. You may express a percentage ONLY by dividing numbers explicitly given in DATA (e.g. if DATA says "9 wins in 10 games", writing "90%" is fine). Do not derive percentages from numbers not in DATA.
 3. Do not make comparative claims ("best in MLB", "sharpest", "most notable", etc.) unless DATA states that explicitly.
 4. Do not invent dates, game counts, win totals, or streak lengths not present in DATA.
 5. No predictions. No betting advice. Gambchop voice: direct and factual, no hype.
