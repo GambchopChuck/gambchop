@@ -407,6 +407,17 @@ function findPerformanceShifts(dm: DataMap): ArticleCandidate[] {
 
 // ─── Article selection with priority + deduplication ─────────────────────────
 
+// The DB stores full league names ("Major League Baseball") but LEAGUE_TARGETS
+// uses short codes ("MLB"). Normalize before grouping so distribution works.
+function normalizeLeague(name: string): string {
+  if (/baseball/i.test(name))                      return 'MLB'
+  if (/women.*basketball|wnba/i.test(name))        return 'WNBA'
+  if (/basketball/i.test(name))                    return 'NBA'
+  if (/football/i.test(name))                      return 'NFL'
+  if (/hockey/i.test(name))                        return 'NHL'
+  return name
+}
+
 function selectArticles(
   streaks:   ArticleCandidate[],
   records:   ArticleCandidate[],
@@ -417,19 +428,20 @@ function selectArticles(
   const selected: ArticleCandidate[] = []
   const usedKeys  = new Set<string>()
 
-  function tryAdd(c: ArticleCandidate): boolean {
-    const key = `${c.teamName}|${c.betType}`
-    if (usedKeys.has(key)) return false
-    selected.push(c)
-    usedKeys.add(key)
-    return true
+  // ── Step 1: Pre-register every streak's key before any fallback runs.
+  // This is the priority guarantee: a record/reversal/leader can never
+  // claim a team+bet_type slot that belongs to a streak article, even if
+  // the streak didn't fit within the per-league distribution cap.
+  for (const c of streaks) {
+    usedKeys.add(`${c.teamName}|${c.betType}`)
   }
 
-  // Priority 1: Streaks — respect league distribution, then overflow
+  // ── Step 2: Add streak articles — league distribution, then overflow.
   const byLeague: Record<string, ArticleCandidate[]> = {}
   for (const c of streaks) {
-    if (!byLeague[c.league]) byLeague[c.league] = []
-    byLeague[c.league].push(c)
+    const lg = normalizeLeague(c.league)
+    if (!byLeague[lg]) byLeague[lg] = []
+    byLeague[lg].push(c)
   }
 
   const overflow: ArticleCandidate[] = []
@@ -437,19 +449,26 @@ function selectArticles(
     let added = 0
     for (const c of byLeague[league] ?? []) {
       if (added >= target) { overflow.push(c); continue }
-      if (tryAdd(c)) added++
+      selected.push(c)   // key already registered in usedKeys
+      added++
     }
   }
   for (const c of overflow) {
     if (selected.length >= TARGET_COUNT) break
-    tryAdd(c)
+    selected.push(c)     // key already registered in usedKeys
   }
 
-  // Priorities 2–5: fill to TARGET_COUNT
+  // ── Step 3: Fill remaining slots with fallback categories.
+  // usedKeys already contains all streak keys, so no fallback can
+  // accidentally overwrite or shadow a streak article.
   for (const list of [records, reversals, leaders, shifts]) {
     for (const c of list) {
       if (selected.length >= TARGET_COUNT) break
-      tryAdd(c)
+      const key = `${c.teamName}|${c.betType}`
+      if (!usedKeys.has(key)) {
+        selected.push(c)
+        usedKeys.add(key)
+      }
     }
     if (selected.length >= TARGET_COUNT) break
   }
