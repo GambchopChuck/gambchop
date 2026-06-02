@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context'
 const ACCENT = '#39ff9a'
 
 export default function ProTrialBanner() {
-  const { isPro, loading } = useAuth()
+  const { isPro } = useAuth()
 
   useEffect(() => {
     const id = 'pro-trial-banner-styles'
@@ -83,7 +83,7 @@ export default function ProTrialBanner() {
     document.head.appendChild(el)
   }, [])
 
-  if (loading || isPro) return null
+  if (isPro) return null
 
   return (
     <Link href="/pricing" style={{ textDecoration: 'none', display: 'block' }}>
