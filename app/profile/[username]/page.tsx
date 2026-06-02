@@ -62,10 +62,10 @@ interface PublicProfile {
 type SocialPlatform = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
 const SOCIAL_META: Record<SocialPlatform, { url: (h: string) => string; color: string; label: string }> = {
-  twitter:   { url: h => `https://x.com/${h}`,          color: '#94a3b8', label: 'X'  },
-  instagram: { url: h => `https://instagram.com/${h}`,  color: '#e1306c', label: 'IG' },
-  tiktok:    { url: h => `https://tiktok.com/@${h}`,    color: '#ff0050', label: 'TT' },
-  youtube:   { url: h => `https://youtube.com/@${h}`,   color: '#ff0000', label: 'YT' },
+  twitter:   { url: h => `https://x.com/${h.replace(/^@/, '')}`,          color: '#94a3b8', label: 'X'  },
+  instagram: { url: h => `https://instagram.com/${h.replace(/^@/, '')}`,  color: '#e1306c', label: 'IG' },
+  tiktok:    { url: h => `https://tiktok.com/@${h.replace(/^@/, '')}`,    color: '#ff0050', label: 'TT' },
+  youtube:   { url: h => `https://youtube.com/@${h.replace(/^@/, '')}`,   color: '#ff0000', label: 'YT' },
 }
 
 function SocialBadge({ platform, handle, size = 16 }: { platform: string; handle: string; size?: number }) {
@@ -193,14 +193,13 @@ export default function PublicProfilePage() {
 
         setProfile(data as PublicProfile)
 
-        if (data.show_favorites_public !== false) {
-          const { data: favs } = await supabase
-            .from('favorites')
-            .select('*')
-            .eq('user_id', data.id)
-            .order('display_order', { ascending: true })
-          setFavorites((favs ?? []) as Favorite[])
-        }
+        // Always fetch favorites — display logic controls visibility
+        const { data: favs } = await supabase
+          .from('favorites')
+          .select('*')
+          .eq('user_id', data.id)
+          .order('display_order', { ascending: true })
+        setFavorites((favs ?? []) as Favorite[])
 
         setLoading(false)
       })
@@ -246,7 +245,7 @@ export default function PublicProfilePage() {
   const bettorConfig = profile.bettor_type ? BETTOR_TYPES.find(b => b.id === profile.bettor_type) : null
 
   return (
-    <div style={{ background: BG, minHeight: '100vh', paddingBottom: 80, fontFamily: MONO }}>
+    <div style={{ background: BG, minHeight: '100vh', paddingBottom: 80, paddingLeft: 80, fontFamily: MONO }}>
 
       {/* ── Profile header ──────────────────────────────────────────────── */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '36px 24px 32px' }}>

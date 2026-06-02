@@ -27,6 +27,7 @@ interface CommentProfile {
   instagram_handle: string | null
   tiktok_handle:    string | null
   youtube_handle:   string | null
+  status_text:      string | null
 }
 
 type ProfileMap = Record<string, CommentProfile>
@@ -35,7 +36,7 @@ async function fetchCommentProfiles(usernames: string[]): Promise<ProfileMap> {
   if (!usernames.length) return {}
   const { data } = await supabase
     .from('profiles')
-    .select('username, display_social_1, display_social_2, twitter_handle, instagram_handle, tiktok_handle, youtube_handle')
+    .select('username, display_social_1, display_social_2, twitter_handle, instagram_handle, tiktok_handle, youtube_handle, status_text')
     .in('username', usernames)
   if (!data) return {}
   return Object.fromEntries(data.map(p => [p.username, p as CommentProfile]))
@@ -224,6 +225,19 @@ function CommentCard({ comment, currentUser, isThreadAuthor, profile, onPin, onD
           >
             @{comment.username}
           </Link>
+          {/* Status tooltip bubble */}
+          {profile?.status_text && (
+            <span
+              title={profile.status_text}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 14, height: 14, cursor: 'help', flexShrink: 0,
+                fontSize: 10, lineHeight: 1,
+              }}
+            >
+              💬
+            </span>
+          )}
           {/* Social icons from commenter's profile */}
           {profile && [profile.display_social_1, profile.display_social_2].filter(Boolean).map(platform => {
             const handleKey = `${platform}_handle` as keyof CommentProfile
