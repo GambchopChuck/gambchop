@@ -277,6 +277,39 @@ export default async function HomePage() {
 
       <FeaturedPagesWithAuth />
       <NewsPreview />
+
+      {/* ── Community intro ───────────────────────────────────────────── */}
+      <div style={{
+        borderTop:  '1px solid #1a1a24',
+        background: '#08080d',
+        padding:    '48px 24px 24px',
+        fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+      }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+          <h2 style={{
+            fontSize:      'clamp(28px, 4vw, 40px)',
+            fontWeight:    700,
+            color:         '#f4f4f5',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            margin:        '0 0 12px',
+            lineHeight:    1.1,
+          }}>
+            Community Board
+          </h2>
+          <p style={{
+            fontSize:   18,
+            fontWeight: 400,
+            color:      '#f4f4f5',
+            lineHeight: 1.7,
+            margin:     0,
+            maxWidth:   780,
+          }}>
+            Share observations, discuss streaks, follow league-specific threads, and compare notes with other Gambchop members. The Community Board keeps the conversation focused on what bettors are seeing across the data, not empty &ldquo;lock&rdquo; talk.
+          </p>
+        </div>
+      </div>
+
       <CommunityPreview />
       <OurMission />
 
