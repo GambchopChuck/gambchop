@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import GambchopChart from '@/components/GambchopChart'
@@ -12,15 +12,51 @@ import { supabase } from '@/lib/supabase'
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
-const CARD   = '#0f0f14'
-const BORDER = '#1a1a24'
-const TEXT   = '#f4f4f5'
-const MUTED  = '#52525b'
-const SUB    = '#a1a1aa'
-const GREEN  = '#22c55e'
-const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
+const CARD        = '#0f0f14'
+const BORDER      = '#1a1a24'
+const TEXT        = '#f4f4f5'
+const MUTED       = '#52525b'
+const SUB         = '#a1a1aa'
+const GREEN       = '#22c55e'
+const ACCENT_PILL = '#39ff9a'   // Matches NewsPageClient tab accent
+const OSWALD      = 'var(--font-oswald), "Oswald", sans-serif'
+const MONO        = 'var(--font-geist-mono), monospace'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Time range ───────────────────────────────────────────────────────────────
+
+type TimeRange = 'last-7' | 'last-14' | 'last-30' | 'this-month' | 'this-season'
+
+const RANGE_OPTIONS: { value: TimeRange; label: string; promptLabel: string }[] = [
+  { value: 'last-7',      label: 'Last 7 Days',  promptLabel: 'over the last 7 days'  },
+  { value: 'last-14',     label: 'Last 14 Days', promptLabel: 'over the last 14 days' },
+  { value: 'last-30',     label: 'Last 30 Days', promptLabel: 'over the last 30 days' },
+  { value: 'this-month',  label: 'This Month',   promptLabel: 'this month'             },
+  { value: 'this-season', label: 'This Season',  promptLabel: 'this season'            },
+]
+
+function filterGamesByRange(games: GameEntry[], range: TimeRange): GameEntry[] {
+  if (range === 'this-season') return games
+
+  const today    = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+
+  let fromDate: Date
+  if (range === 'last-7') {
+    fromDate = new Date(today); fromDate.setDate(fromDate.getDate() - 7)
+  } else if (range === 'last-14') {
+    fromDate = new Date(today); fromDate.setDate(fromDate.getDate() - 14)
+  } else if (range === 'last-30') {
+    fromDate = new Date(today); fromDate.setDate(fromDate.getDate() - 30)
+  } else {
+    // this-month
+    fromDate = new Date(today.getFullYear(), today.getMonth(), 1)
+  }
+
+  const fromStr = fromDate.toISOString().split('T')[0]
+  return games.filter(g => g.rawDate >= fromStr && g.rawDate <= todayStr)
+}
+
+// ─── Team resolution ──────────────────────────────────────────────────────────
 
 interface ResolvedTeam { name: string; slug: string; leagueId: string; emoji: string }
 
@@ -32,17 +68,19 @@ function resolveTeam(slug: string): ResolvedTeam | null {
   return null
 }
 
-function abbr(name: string): string {
+function makeAbbr(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)
 }
+
+// ─── Stat computation ─────────────────────────────────────────────────────────
 
 interface StatCardData { label: string; value: string; color: string }
 
 function computeStatCards(games: GameEntry[]): StatCardData[] {
-  const mlW   = games.filter(g => g.moneylineResult === 'win').length
-  const mlL   = games.filter(g => g.moneylineResult === 'loss').length
-  const spW   = games.filter(g => g.spreadResult    === 'win').length
-  const spL   = games.filter(g => g.spreadResult    === 'loss').length
+  const mlW    = games.filter(g => g.moneylineResult === 'win').length
+  const mlL    = games.filter(g => g.moneylineResult === 'loss').length
+  const spW    = games.filter(g => g.spreadResult    === 'win').length
+  const spL    = games.filter(g => g.spreadResult    === 'loss').length
   const overs  = games.filter(g => g.ouResult === 'over').length
   const unders = games.filter(g => g.ouResult === 'under').length
 
@@ -50,8 +88,8 @@ function computeStatCards(games: GameEntry[]): StatCardData[] {
   const spStreak = computeStreak(games, 'spread')
   const ouStreak = computeStreak(games, 'over_under')
 
-  type Candidate = { label: string; count: number; color: string }
-  const candidates: Candidate[] = []
+  type C = { label: string; count: number; color: string }
+  const candidates: C[] = []
   if (mlStreak) candidates.push({ label: `${mlStreak.type}${mlStreak.count}`, count: mlStreak.count, color: mlStreak.type === 'W' ? GREEN : '#ef4444' })
   if (spStreak) candidates.push({ label: spStreak.type === 'W' ? `COV${spStreak.count}` : `MIS${spStreak.count}`, count: spStreak.count, color: spStreak.type === 'W' ? GREEN : '#ef4444' })
   if (ouStreak) candidates.push({ label: `${ouStreak.type}${ouStreak.count}`, count: ouStreak.count, color: ouStreak.type === 'O' ? '#8b5cf6' : '#b45309' })
@@ -84,6 +122,47 @@ function StatCard({ label, value, color }: StatCardData) {
   )
 }
 
+// ─── Time Frame Toggle ────────────────────────────────────────────────────────
+// Pill style matches NewsPageClient.tsx primary tab pattern (ACCENT = #39ff9a)
+
+function TimeFrameToggle({ value, onChange }: { value: TimeRange; onChange: (r: TimeRange) => void }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'center', alignItems: 'center',
+      gap: 4, padding: '16px 0 20px', flexWrap: 'wrap',
+    }}>
+      {RANGE_OPTIONS.map(opt => {
+        const active = value === opt.value
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            style={{
+              background:    active ? ACCENT_PILL : 'transparent',
+              color:         active ? '#000'       : '#71717a',
+              border:        active ? 'none'        : '1px solid transparent',
+              borderRadius:  6,
+              padding:       '5px 16px',
+              fontSize:      12,
+              fontWeight:    700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              cursor:        'pointer',
+              fontFamily:    MONO,
+              transition:    'all 0.15s',
+              boxShadow:     active ? `0 0 12px ${ACCENT_PILL}55` : 'none',
+            }}
+            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#d4d4d8' }}
+            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#71717a' }}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Team Dropdown ────────────────────────────────────────────────────────────
 
 function TeamDropdown({ slot, value, onChange }: { slot: 1 | 2; value: string; onChange: (slug: string) => void }) {
@@ -104,14 +183,13 @@ function TeamDropdown({ slot, value, onChange }: { slot: 1 | 2; value: string; o
   }, [open])
 
   const lower    = search.toLowerCase()
-  const filtered = LEAGUES.flatMap(league =>
-    league.entities
-      .filter(e => !lower || e.toLowerCase().includes(lower) || league.name.toLowerCase().includes(lower))
-      .map(e => ({ name: e, slug: slugify(e), leagueId: league.id, leagueName: league.name, emoji: league.emoji }))
+  const filtered = LEAGUES.flatMap(l =>
+    l.entities
+      .filter(e => !lower || e.toLowerCase().includes(lower) || l.name.toLowerCase().includes(lower))
+      .map(e => ({ name: e, slug: slugify(e), leagueId: l.id, emoji: l.emoji }))
   )
-  const grouped = LEAGUES.map(league => ({
-    league, teams: filtered.filter(t => t.leagueId === league.id),
-  })).filter(g => g.teams.length > 0)
+  const grouped = LEAGUES.map(l => ({ league: l, teams: filtered.filter(t => t.leagueId === l.id) }))
+    .filter(g => g.teams.length > 0)
 
   return (
     <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
@@ -160,11 +238,7 @@ function TeamDropdown({ slot, value, onChange }: { slot: 1 | 2; value: string; o
             )}
             {grouped.map(({ league, teams }) => (
               <div key={league.id}>
-                <div style={{
-                  padding: '8px 14px 4px', fontSize: 9, color: '#3f3f46',
-                  letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700,
-                  position: 'sticky', top: 0, background: '#0d0d14',
-                }}>
+                <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, position: 'sticky', top: 0, background: '#0d0d14' }}>
                   {league.emoji} {league.name}
                 </div>
                 {teams.map(team => (
@@ -200,27 +274,17 @@ function ComparePaywall() {
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '40px 48px', maxWidth: 480, textAlign: 'center' }}>
         <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
-        <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700, fontFamily: OSWALD }}>
-          Pro Feature
-        </div>
-        <h2 style={{ fontSize: 26, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', fontFamily: OSWALD }}>
-          Chart Compare
-        </h2>
+        <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700, fontFamily: OSWALD }}>Pro Feature</div>
+        <h2 style={{ fontSize: 26, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', fontFamily: OSWALD }}>Chart Compare</h2>
         <p style={{ fontSize: 12, color: SUB, lineHeight: 1.7, margin: '0 0 28px' }}>
           Compare any two teams side by side — full outcome charts, season records, and an AI comparison briefing. Available on the Pro plan.
         </p>
-        <Link
-          href="/pricing"
-          style={{
-            display: 'inline-block',
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            borderRadius: 8, padding: '12px 28px',
-            color: '#000', fontSize: 12, fontWeight: 900,
-            letterSpacing: '0.12em', textTransform: 'uppercase',
-            textDecoration: 'none', fontFamily: OSWALD,
-            boxShadow: '0 0 20px #22c55e44',
-          }}
-        >
+        <Link href="/pricing" style={{
+          display: 'inline-block', background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+          borderRadius: 8, padding: '12px 28px', color: '#000', fontSize: 12, fontWeight: 900,
+          letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none',
+          fontFamily: OSWALD, boxShadow: '0 0 20px #22c55e44',
+        }}>
           Upgrade to Pro →
         </Link>
       </div>
@@ -228,25 +292,16 @@ function ComparePaywall() {
   )
 }
 
-// ─── Team Column ──────────────────────────────────────────────────────────────
+// ─── Team Stats panel (header + stat cards) ───────────────────────────────────
 
-interface TeamColumnProps {
-  team:      ResolvedTeam
-  games:     GameEntry[]
-  chartData: TeamChartData[]
-  seasonData: TeamChartData[]
-  year:      number
-  month:     number
-  onPrev:    () => void
-  onNext:    () => void
-  canPrev:   boolean
-  canNext:   boolean
-  loading:   boolean
+interface TeamStatsProps {
+  team:    ResolvedTeam
+  games:   GameEntry[]    // already filtered by selected range
+  loading: boolean
 }
 
-function TeamColumn({ team, games, chartData, seasonData, year, month, onPrev, onNext, canPrev, canNext, loading }: TeamColumnProps) {
-  const stats = games.length > 0 ? computeStatCards(games) : null
-  const teamPageHref = `/leagues/${team.leagueId}/${team.slug}`
+function TeamStats({ team, games, loading }: TeamStatsProps) {
+  const stats = !loading && games.length > 0 ? computeStatCards(games) : null
 
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
@@ -258,34 +313,55 @@ function TeamColumn({ team, games, chartData, seasonData, year, month, onPrev, o
         <span style={{ fontSize: 26 }}>{team.emoji}</span>
         <div>
           <Link
-            href={teamPageHref}
+            href={`/leagues/${team.leagueId}/${team.slug}`}
             style={{ fontSize: 18, fontWeight: 700, color: GREEN, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none', fontFamily: OSWALD }}
           >
             {team.name}
           </Link>
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 3 }}>
-            {team.leagueId.toUpperCase()} · <Link href={teamPageHref} style={{ color: MUTED, textDecoration: 'none' }}>View Full Chart →</Link>
+            {team.leagueId.toUpperCase()} · <Link href={`/leagues/${team.leagueId}/${team.slug}`} style={{ color: MUTED, textDecoration: 'none' }}>Full Chart →</Link>
           </div>
         </div>
       </div>
 
       {/* Stat cards */}
       {loading ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-          Loading stats…
-        </div>
+        <div style={{ padding: '20px', textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Loading stats…</div>
       ) : stats ? (
-        <div className="stat-cards-row" style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+        <div className="stat-cards-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {stats.map(s => <StatCard key={s.label} {...s} />)}
         </div>
       ) : (
-        <div style={{ padding: '12px 0 14px', fontSize: 11, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          No season data available for this league yet.
+        <div style={{ padding: '12px 0', fontSize: 11, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          {games.length === 0 ? 'No game data for this range.' : 'No season data available.'}
         </div>
       )}
+    </div>
+  )
+}
 
-      {/* Chart */}
-      {!loading && chartData.length > 0 && chartData[0].games.length > 0 && (
+// ─── Team Chart panel ─────────────────────────────────────────────────────────
+
+interface TeamChartPanelProps {
+  team:       ResolvedTeam
+  chartData:  TeamChartData[]   // monthly, filtered by range
+  seasonData: TeamChartData[]   // season, filtered by range (for record badges)
+  year:       number
+  month:      number
+  onPrev:     () => void
+  onNext:     () => void
+  canPrev:    boolean
+  canNext:    boolean
+  loading:    boolean
+}
+
+function TeamChartPanel({ team, chartData, seasonData, year, month, onPrev, onNext, canPrev, canNext, loading }: TeamChartPanelProps) {
+  const hasGames = chartData.length > 0 && chartData[0].games.length > 0
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {loading ? (
+        <div style={{ padding: '32px', textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Loading chart…</div>
+      ) : hasGames ? (
         <GambchopChart
           data={chartData}
           seasonData={seasonData}
@@ -299,26 +375,24 @@ function TeamColumn({ team, games, chartData, seasonData, year, month, onPrev, o
           accent={GREEN}
           lastUpdated={null}
         />
-      )}
-      {!loading && chartData.length > 0 && chartData[0].games.length === 0 && (
-        <div style={{ padding: '24px 20px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          No game data for this month.
+      ) : (
+        <div style={{ padding: '28px 20px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          No game data for this month in the selected range.
         </div>
       )}
     </div>
   )
 }
 
-// ─── Share Toast ──────────────────────────────────────────────────────────────
+// ─── Share button ─────────────────────────────────────────────────────────────
 
 function ShareButton() {
   const [copied, setCopied] = useState(false)
   function handleShare() {
     if (typeof window === 'undefined') return
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }).catch(() => {})
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+      .catch(() => {})
   }
   return (
     <button
@@ -346,42 +420,66 @@ function CompareClient() {
   const [ready, setReady] = useState(false)
   useEffect(() => { setReady(true) }, [])
 
-  // Team slugs — source of truth for current comparison
   const [team1Slug, setTeam1Slug] = useState(searchParams.get('team1') ?? '')
   const [team2Slug, setTeam2Slug] = useState(searchParams.get('team2') ?? '')
+  const [range,     setRange]     = useState<TimeRange>((searchParams.get('range') as TimeRange) ?? 'this-season')
 
-  // Month navigation per team
   const today = new Date()
   const [year1,  setYear1]  = useState(today.getFullYear())
   const [month1, setMonth1] = useState(today.getMonth() + 1)
   const [year2,  setYear2]  = useState(today.getFullYear())
   const [month2, setMonth2] = useState(today.getMonth() + 1)
 
-  // Chart data
+  // Raw season game arrays — filtered downstream by range
+  const [team1Games,  setTeam1Games]  = useState<GameEntry[]>([])
+  const [team2Games,  setTeam2Games]  = useState<GameEntry[]>([])
+
+  // Monthly chart data (for current view month)
   const [team1Chart,  setTeam1Chart]  = useState<TeamChartData[]>([])
   const [team2Chart,  setTeam2Chart]  = useState<TeamChartData[]>([])
+
+  // Season data wrappers (for chart record badges / streaks)
   const [team1Season, setTeam1Season] = useState<TeamChartData[]>([])
   const [team2Season, setTeam2Season] = useState<TeamChartData[]>([])
-
-  // Season games for stat cards
-  const [team1Games, setTeam1Games] = useState<GameEntry[]>([])
-  const [team2Games, setTeam2Games] = useState<GameEntry[]>([])
 
   const [loading1, setLoading1] = useState(false)
   const [loading2, setLoading2] = useState(false)
 
-  // Briefing
   const [briefing,        setBriefing]        = useState<string | null>(null)
   const [briefingLoading, setBriefingLoading] = useState(false)
+  const [compared,        setCompared]        = useState(false)
 
-  // Track whether user has triggered a comparison
-  const [compared, setCompared] = useState(false)
-
-  // Prevent double-fetching on initial load — track which slug+month was last fetched per team
+  // Prevent duplicate month-nav fetches
   const lastFetch1 = useRef({ slug: '', year: 0, month: 0 })
   const lastFetch2 = useRef({ slug: '', year: 0, month: 0 })
 
-  // Season window helpers
+  // ── Derived filtered data ─────────────────────────────────────────────────
+
+  const filteredGames1 = useMemo(() => filterGamesByRange(team1Games, range), [team1Games, range])
+  const filteredGames2 = useMemo(() => filterGamesByRange(team2Games, range), [team2Games, range])
+
+  const filteredChartData1 = useMemo(() => {
+    if (!team1Chart.length) return []
+    return [{ ...team1Chart[0], games: filterGamesByRange(team1Chart[0].games, range) }]
+  }, [team1Chart, range])
+
+  const filteredChartData2 = useMemo(() => {
+    if (!team2Chart.length) return []
+    return [{ ...team2Chart[0], games: filterGamesByRange(team2Chart[0].games, range) }]
+  }, [team2Chart, range])
+
+  const filteredSeasonData1 = useMemo(() => {
+    if (!team1Season.length) return []
+    return [{ ...team1Season[0], games: filteredGames1 }]
+  }, [team1Season, filteredGames1])
+
+  const filteredSeasonData2 = useMemo(() => {
+    if (!team2Season.length) return []
+    return [{ ...team2Season[0], games: filteredGames2 }]
+  }, [team2Season, filteredGames2])
+
+  // ── Season window helpers ─────────────────────────────────────────────────
+
   function seasonNav(leagueId: string, yr: number, mo: number) {
     const w = LEAGUE_SEASONS[leagueId]
     if (!w) return { canPrev: false, canNext: false }
@@ -398,7 +496,7 @@ function CompareClient() {
     if (mo === 12) { setY(yr + 1); setM(1) } else { setM(mo + 1) }
   }
 
-  // ── Month-navigation re-fetch effects ───────────────────────────────────────
+  // ── Month-navigation re-fetch effects ───────────────────────────────────
 
   useEffect(() => {
     if (!compared || !team1Slug) return
@@ -408,7 +506,7 @@ function CompareClient() {
     lastFetch1.current = { slug: team1Slug, year: year1, month: month1 }
     setLoading1(true)
     fetchTeamOutcomesByMonth(team.leagueId, team1Slug, year1, month1).then(games => {
-      setTeam1Chart([{ teamName: team.name, abbreviation: abbr(team.name), games }])
+      setTeam1Chart([{ teamName: team.name, abbreviation: makeAbbr(team.name), games }])
       setLoading1(false)
     })
   }, [compared, team1Slug, year1, month1]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -421,34 +519,70 @@ function CompareClient() {
     lastFetch2.current = { slug: team2Slug, year: year2, month: month2 }
     setLoading2(true)
     fetchTeamOutcomesByMonth(team.leagueId, team2Slug, year2, month2).then(games => {
-      setTeam2Chart([{ teamName: team.name, abbreviation: abbr(team.name), games }])
+      setTeam2Chart([{ teamName: team.name, abbreviation: makeAbbr(team.name), games }])
       setLoading2(false)
     })
   }, [compared, team2Slug, year2, month2]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-compare from URL params ────────────────────────────────────────────
+  // ── Auto-compare from URL params ─────────────────────────────────────────
 
   useEffect(() => {
     if (ready && team1Slug && team2Slug && !compared) {
-      handleCompare(team1Slug, team2Slug)
+      handleCompare(team1Slug, team2Slug, range)
     }
   }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Core compare handler ─────────────────────────────────────────────────────
+  // ── Briefing generation ──────────────────────────────────────────────────
 
-  async function handleCompare(t1 = team1Slug, t2 = team2Slug) {
+  async function generateBriefingForRange(
+    r1: ResolvedTeam, r2: ResolvedTeam,
+    g1: GameEntry[], g2: GameEntry[],
+    promptLabel: string,
+  ) {
+    setBriefingLoading(true)
+    setBriefing(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const res = await fetch('/api/compare-briefing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          team1Name:  r1.name,
+          team2Name:  r2.name,
+          team1Games: g1.slice(-20),
+          team2Games: g2.slice(-20),
+          rangeLabel: promptLabel,
+        }),
+      })
+      const json = await res.json()
+      if (json.briefing) setBriefing(json.briefing)
+    } catch { /* silent */ }
+    setBriefingLoading(false)
+  }
+
+  // ── Core compare handler ─────────────────────────────────────────────────
+
+  async function handleCompare(t1 = team1Slug, t2 = team2Slug, activeRange = range) {
     if (!t1 || !t2) return
     const r1 = resolveTeam(t1)
     const r2 = resolveTeam(t2)
     if (!r1 || !r2) return
 
-    // Mark initial fetches so the effects don't double-fire
     lastFetch1.current = { slug: t1, year: year1, month: month1 }
     lastFetch2.current = { slug: t2, year: year2, month: month2 }
 
     setBriefing(null)
     setCompared(true)
-    router.replace(`/compare?team1=${t1}&team2=${t2}`, { scroll: false })
+
+    const params = new URLSearchParams()
+    params.set('team1', t1)
+    params.set('team2', t2)
+    params.set('range', activeRange)
+    router.replace(`/compare?${params.toString()}`, { scroll: false })
 
     setLoading1(true)
     setLoading2(true)
@@ -461,48 +595,60 @@ function CompareClient() {
     ])
 
     setTeam1Games(t1Season)
-    setTeam1Chart([{ teamName: r1.name, abbreviation: abbr(r1.name), games: t1Monthly }])
-    setTeam1Season([{ teamName: r1.name, abbreviation: abbr(r1.name), games: t1Season }])
+    setTeam1Chart([{ teamName: r1.name, abbreviation: makeAbbr(r1.name), games: t1Monthly }])
+    setTeam1Season([{ teamName: r1.name, abbreviation: makeAbbr(r1.name), games: t1Season }])
     setLoading1(false)
 
     setTeam2Games(t2Season)
-    setTeam2Chart([{ teamName: r2.name, abbreviation: abbr(r2.name), games: t2Monthly }])
-    setTeam2Season([{ teamName: r2.name, abbreviation: abbr(r2.name), games: t2Season }])
+    setTeam2Chart([{ teamName: r2.name, abbreviation: makeAbbr(r2.name), games: t2Monthly }])
+    setTeam2Season([{ teamName: r2.name, abbreviation: makeAbbr(r2.name), games: t2Season }])
     setLoading2(false)
 
-    // Generate AI briefing only if we have data and a session
     if (t1Season.length > 0 || t2Season.length > 0) {
-      setBriefingLoading(true)
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.access_token) {
-          const res = await fetch('/api/compare-briefing', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              team1Name:  r1.name,
-              team2Name:  r2.name,
-              team1Games: t1Season.slice(-20),
-              team2Games: t2Season.slice(-20),
-            }),
-          })
-          const json = await res.json()
-          if (json.briefing) setBriefing(json.briefing)
-        }
-      } catch {
-        // Silently skip if briefing fails
-      }
-      setBriefingLoading(false)
+      const promptLabel = RANGE_OPTIONS.find(o => o.value === activeRange)?.promptLabel ?? 'this season'
+      const g1 = filterGamesByRange(t1Season, activeRange)
+      const g2 = filterGamesByRange(t2Season, activeRange)
+      generateBriefingForRange(r1, r2, g1, g2, promptLabel)
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Range change handler ─────────────────────────────────────────────────
+
+  function handleRangeChange(newRange: TimeRange) {
+    setRange(newRange)
+
+    // Update URL
+    if (compared && team1Slug && team2Slug) {
+      const params = new URLSearchParams()
+      params.set('team1', team1Slug)
+      params.set('team2', team2Slug)
+      params.set('range', newRange)
+      router.replace(`/compare?${params.toString()}`, { scroll: false })
+    }
+
+    // Auto-navigate to current month for short ranges so relevant games are visible
+    if (newRange !== 'this-season') {
+      const curY = today.getFullYear()
+      const curM = today.getMonth() + 1
+      if (year1 !== curY || month1 !== curM) { setYear1(curY); setMonth1(curM) }
+      if (year2 !== curY || month2 !== curM) { setYear2(curY); setMonth2(curM) }
+    }
+
+    // Regenerate briefing with filtered data
+    if (!compared || !team1Slug || !team2Slug) return
+    const r1 = resolveTeam(team1Slug)
+    const r2 = resolveTeam(team2Slug)
+    if (!r1 || !r2) return
+
+    const g1 = filterGamesByRange(team1Games, newRange)
+    const g2 = filterGamesByRange(team2Games, newRange)
+    const promptLabel = RANGE_OPTIONS.find(o => o.value === newRange)?.promptLabel ?? 'this season'
+    generateBriefingForRange(r1, r2, g1, g2, promptLabel)
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   if (!ready) return null
-
   if (memberTier !== 'pro') return <ComparePaywall />
 
   const team1 = team1Slug ? resolveTeam(team1Slug) : null
@@ -561,24 +707,31 @@ function CompareClient() {
       {compared && team1 && team2 && (
         <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px' }}>
 
-          {/* Side-by-side columns */}
+          {/* Row 1: Team headers + stat cards */}
           <div className="compare-grid" style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-            <TeamColumn
+            <TeamStats team={team1} games={filteredGames1} loading={loading1} />
+            <TeamStats team={team2} games={filteredGames2} loading={loading2} />
+          </div>
+
+          {/* Time frame toggle — between stat cards and charts */}
+          <TimeFrameToggle value={range} onChange={handleRangeChange} />
+
+          {/* Row 2: Charts */}
+          <div className="compare-grid" style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+            <TeamChartPanel
               team={team1}
-              games={team1Games}
-              chartData={team1Chart}
-              seasonData={team1Season}
+              chartData={filteredChartData1}
+              seasonData={filteredSeasonData1}
               year={year1} month={month1}
               onPrev={() => prevMonth(year1, month1, setYear1, setMonth1)}
               onNext={() => nextMonth(year1, month1, setYear1, setMonth1)}
               canPrev={can1Prev} canNext={can1Next}
               loading={loading1}
             />
-            <TeamColumn
+            <TeamChartPanel
               team={team2}
-              games={team2Games}
-              chartData={team2Chart}
-              seasonData={team2Season}
+              chartData={filteredChartData2}
+              seasonData={filteredSeasonData2}
               year={year2} month={month2}
               onPrev={() => prevMonth(year2, month2, setYear2, setMonth2)}
               onNext={() => nextMonth(year2, month2, setYear2, setMonth2)}
@@ -589,8 +742,13 @@ function CompareClient() {
 
           {/* AI Briefing */}
           <div style={{ marginTop: 32, padding: '24px 28px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12 }}>
-            <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700, fontFamily: OSWALD }}>
-              ◈ Chart Comparison
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD }}>
+                ◈ Chart Comparison
+              </div>
+              <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: MONO }}>
+                · {RANGE_OPTIONS.find(o => o.value === range)?.label ?? 'This Season'}
+              </div>
             </div>
             {briefingLoading ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: MUTED, fontSize: 11, letterSpacing: '0.1em' }}>
@@ -601,7 +759,7 @@ function CompareClient() {
               <p style={{ fontSize: 13, color: SUB, lineHeight: 1.85, margin: 0 }}>{briefing}</p>
             ) : (
               <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>
-                {user ? 'AI briefing unavailable — no data for this matchup.' : 'Sign in to generate an AI comparison briefing.'}
+                {user ? 'No data for this range — try a longer time frame.' : 'Sign in to generate an AI comparison briefing.'}
               </p>
             )}
           </div>

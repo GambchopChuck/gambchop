@@ -90,30 +90,32 @@ export async function POST(req: NextRequest) {
   }
 
   // Parse body
-  const { team1Name, team2Name, team1Games, team2Games } = await req.json() as {
+  const { team1Name, team2Name, team1Games, team2Games, rangeLabel } = await req.json() as {
     team1Name:  string
     team2Name:  string
     team1Games: GameRow[]
     team2Games: GameRow[]
+    rangeLabel: string | undefined
   }
 
   if (!team1Name || !team2Name) {
     return Response.json({ error: 'Missing team names' }, { status: 400 })
   }
 
+  const period  = rangeLabel ?? 'this season'
   const t1Stats = buildStats(team1Name, team1Games ?? [])
   const t2Stats = buildStats(team2Name, team2Games ?? [])
 
-  const prompt = `You are the Gambchop analytical voice — precise, factual, and direct. Write a 4-6 sentence comparison briefing based on recent outcome data. Rules: no predictions, no betting advice, no statements about what will happen. Describe only what the data shows.
+  const prompt = `You are the Gambchop analytical voice — precise, factual, and direct. Write a 4-6 sentence comparison briefing based on outcome data ${period}. Rules: no predictions, no betting advice, no statements about what will happen. Describe only what the data shows.
 
-Data:
+Data (${period}):
 ${t1Stats}
 
 ${t2Stats}
 
 Structure (one sentence each):
-1. ${team1Name}'s moneyline form
-2. ${team2Name}'s moneyline form
+1. ${team1Name}'s moneyline form ${period}
+2. ${team2Name}'s moneyline form ${period}
 3. ATS (spread) form for both teams combined in one sentence
 4. Over/under tendencies for both teams in one sentence
 5. One cross-team observation (e.g., home/away contrast, favorite/underdog contrast, or a diverging trend)
