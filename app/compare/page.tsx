@@ -6,7 +6,7 @@ import Link from 'next/link'
 import GambchopChart from '@/components/GambchopChart'
 import { LEAGUES, LEAGUE_SEASONS, slugify } from '@/lib/leagues-data'
 import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
-import { fetchTeamOutcomesByMonth, fetchTeamSeasonOutcomes, computeStreak } from '@/lib/chart-data'
+import { fetchTeamSeasonOutcomes, computeStreak } from '@/lib/chart-data'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 
@@ -434,11 +434,7 @@ function CompareClient() {
   const [team1Games,  setTeam1Games]  = useState<GameEntry[]>([])
   const [team2Games,  setTeam2Games]  = useState<GameEntry[]>([])
 
-  // Monthly chart data (for current view month)
-  const [team1Chart,  setTeam1Chart]  = useState<TeamChartData[]>([])
-  const [team2Chart,  setTeam2Chart]  = useState<TeamChartData[]>([])
-
-  // Season data wrappers (for chart record badges / streaks)
+  // Season data wrappers (source for both stat cards and chart rendering)
   const [team1Season, setTeam1Season] = useState<TeamChartData[]>([])
   const [team2Season, setTeam2Season] = useState<TeamChartData[]>([])
 
@@ -449,24 +445,32 @@ function CompareClient() {
   const [briefingLoading, setBriefingLoading] = useState(false)
   const [compared,        setCompared]        = useState(false)
 
-  // Prevent duplicate month-nav fetches
-  const lastFetch1 = useRef({ slug: '', year: 0, month: 0 })
-  const lastFetch2 = useRef({ slug: '', year: 0, month: 0 })
-
   // ── Derived filtered data ─────────────────────────────────────────────────
 
   const filteredGames1 = useMemo(() => filterGamesByRange(team1Games, range), [team1Games, range])
   const filteredGames2 = useMemo(() => filterGamesByRange(team2Games, range), [team2Games, range])
 
+  // Derive chart data from season data filtered by range then narrowed to the viewed month.
+  // This ensures rolling windows (e.g. Last 30 Days) are not limited to the current calendar month.
   const filteredChartData1 = useMemo(() => {
-    if (!team1Chart.length) return []
-    return [{ ...team1Chart[0], games: filterGamesByRange(team1Chart[0].games, range) }]
-  }, [team1Chart, range])
+    if (!team1Season.length) return []
+    const rangeGames = filterGamesByRange(team1Season[0].games, range)
+    const monthGames = rangeGames.filter(g => {
+      const parts = g.rawDate.split('-')
+      return Number(parts[0]) === year1 && Number(parts[1]) === month1
+    })
+    return [{ ...team1Season[0], games: monthGames }]
+  }, [team1Season, range, year1, month1])
 
   const filteredChartData2 = useMemo(() => {
-    if (!team2Chart.length) return []
-    return [{ ...team2Chart[0], games: filterGamesByRange(team2Chart[0].games, range) }]
-  }, [team2Chart, range])
+    if (!team2Season.length) return []
+    const rangeGames = filterGamesByRange(team2Season[0].games, range)
+    const monthGames = rangeGames.filter(g => {
+      const parts = g.rawDate.split('-')
+      return Number(parts[0]) === year2 && Number(parts[1]) === month2
+    })
+    return [{ ...team2Season[0], games: monthGames }]
+  }, [team2Season, range, year2, month2])
 
   const filteredSeasonData1 = useMemo(() => {
     if (!team1Season.length) return []
@@ -495,34 +499,6 @@ function CompareClient() {
   function nextMonth(yr: number, mo: number, setY: (y: number) => void, setM: (m: number) => void) {
     if (mo === 12) { setY(yr + 1); setM(1) } else { setM(mo + 1) }
   }
-
-  // ── Month-navigation re-fetch effects ───────────────────────────────────
-
-  useEffect(() => {
-    if (!compared || !team1Slug) return
-    const team = resolveTeam(team1Slug)
-    if (!team) return
-    if (lastFetch1.current.slug === team1Slug && lastFetch1.current.year === year1 && lastFetch1.current.month === month1) return
-    lastFetch1.current = { slug: team1Slug, year: year1, month: month1 }
-    setLoading1(true)
-    fetchTeamOutcomesByMonth(team.leagueId, team1Slug, year1, month1).then(games => {
-      setTeam1Chart([{ teamName: team.name, abbreviation: makeAbbr(team.name), games }])
-      setLoading1(false)
-    })
-  }, [compared, team1Slug, year1, month1]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!compared || !team2Slug) return
-    const team = resolveTeam(team2Slug)
-    if (!team) return
-    if (lastFetch2.current.slug === team2Slug && lastFetch2.current.year === year2 && lastFetch2.current.month === month2) return
-    lastFetch2.current = { slug: team2Slug, year: year2, month: month2 }
-    setLoading2(true)
-    fetchTeamOutcomesByMonth(team.leagueId, team2Slug, year2, month2).then(games => {
-      setTeam2Chart([{ teamName: team.name, abbreviation: makeAbbr(team.name), games }])
-      setLoading2(false)
-    })
-  }, [compared, team2Slug, year2, month2]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-compare from URL params ─────────────────────────────────────────
 
@@ -564,6 +540,17 @@ function CompareClient() {
     setBriefingLoading(false)
   }
 
+  // ── Latest-month helper ──────────────────────────────────────────────────
+  // Returns the year/month of the most recent game in games that falls within range.
+
+  function latestMonthInRange(games: GameEntry[], r: TimeRange): { year: number; month: number } | null {
+    const filtered = filterGamesByRange(games, r)
+    if (!filtered.length) return null
+    const last = filtered.reduce((a, b) => a.rawDate > b.rawDate ? a : b)
+    const parts = last.rawDate.split('-')
+    return { year: Number(parts[0]), month: Number(parts[1]) }
+  }
+
   // ── Core compare handler ─────────────────────────────────────────────────
 
   async function handleCompare(t1 = team1Slug, t2 = team2Slug, activeRange = range) {
@@ -571,9 +558,6 @@ function CompareClient() {
     const r1 = resolveTeam(t1)
     const r2 = resolveTeam(t2)
     if (!r1 || !r2) return
-
-    lastFetch1.current = { slug: t1, year: year1, month: month1 }
-    lastFetch2.current = { slug: t2, year: year2, month: month2 }
 
     setBriefing(null)
     setCompared(true)
@@ -587,22 +571,28 @@ function CompareClient() {
     setLoading1(true)
     setLoading2(true)
 
-    const [t1Monthly, t1Season, t2Monthly, t2Season] = await Promise.all([
-      fetchTeamOutcomesByMonth(r1.leagueId, t1, year1, month1),
+    const [t1Season, t2Season] = await Promise.all([
       fetchTeamSeasonOutcomes(r1.leagueId, t1),
-      fetchTeamOutcomesByMonth(r2.leagueId, t2, year2, month2),
       fetchTeamSeasonOutcomes(r2.leagueId, t2),
     ])
 
     setTeam1Games(t1Season)
-    setTeam1Chart([{ teamName: r1.name, abbreviation: makeAbbr(r1.name), games: t1Monthly }])
     setTeam1Season([{ teamName: r1.name, abbreviation: makeAbbr(r1.name), games: t1Season }])
     setLoading1(false)
 
     setTeam2Games(t2Season)
-    setTeam2Chart([{ teamName: r2.name, abbreviation: makeAbbr(r2.name), games: t2Monthly }])
     setTeam2Season([{ teamName: r2.name, abbreviation: makeAbbr(r2.name), games: t2Season }])
     setLoading2(false)
+
+    // Navigate each chart to the most recent month that has games in the selected range
+    const curY = today.getFullYear()
+    const curM = today.getMonth() + 1
+    if (activeRange !== 'this-season') {
+      const lm1 = latestMonthInRange(t1Season, activeRange)
+      const lm2 = latestMonthInRange(t2Season, activeRange)
+      setYear1(lm1?.year ?? curY); setMonth1(lm1?.month ?? curM)
+      setYear2(lm2?.year ?? curY); setMonth2(lm2?.month ?? curM)
+    }
 
     if (t1Season.length > 0 || t2Season.length > 0) {
       const promptLabel = RANGE_OPTIONS.find(o => o.value === activeRange)?.promptLabel ?? 'this season'
@@ -626,12 +616,15 @@ function CompareClient() {
       router.replace(`/compare?${params.toString()}`, { scroll: false })
     }
 
-    // Auto-navigate to current month for short ranges so relevant games are visible
+    // Navigate each chart to the most recent month that has games in the selected range
+    // so rolling windows (e.g. Last 30 Days on June 1) land on the month with actual data
     if (newRange !== 'this-season') {
       const curY = today.getFullYear()
       const curM = today.getMonth() + 1
-      if (year1 !== curY || month1 !== curM) { setYear1(curY); setMonth1(curM) }
-      if (year2 !== curY || month2 !== curM) { setYear2(curY); setMonth2(curM) }
+      const lm1 = latestMonthInRange(team1Games, newRange)
+      const lm2 = latestMonthInRange(team2Games, newRange)
+      setYear1(lm1?.year ?? curY); setMonth1(lm1?.month ?? curM)
+      setYear2(lm2?.year ?? curY); setMonth2(lm2?.month ?? curM)
     }
 
     // Regenerate briefing with filtered data
