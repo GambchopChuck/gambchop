@@ -1,8 +1,5 @@
-// Odds API response cached for 1 hour — first load generates Claude blurbs,
-// subsequent loads within the hour are instant.
 export const revalidate = 3600
 
-import Anthropic               from '@anthropic-ai/sdk'
 import { supabaseAdmin }       from '@/lib/supabase-admin'
 import { extractLine }         from '@/lib/ingestion'
 import type { GameOdds }       from '@/lib/odds-api'
@@ -61,39 +58,7 @@ function buildChart(rows: any[]): TeamChart {
   }
 }
 
-async function generateBlurb(
-  anthropic: Anthropic,
-  awayTeam:  string,
-  homeTeam:  string,
-  awayRows:  any[],
-  homeRows:  any[],
-): Promise<string> {
-  try {
-    const fmt = (rows: any[]) =>
-      rows.slice(0, 10).map((r, i) =>
-        `${i + 1}. ML:${r.moneyline_result ?? '-'} SP:${r.spread_result ?? '-'} OU:${r.over_under_result ?? '-'} (${getDate(r) || '?'})`
-      ).join('\n') || 'No data available'
-
-    const resp = await anthropic.messages.create({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 128,
-      messages: [{
-        role:    'user',
-        content: `Write exactly 2 sentences comparing these teams for Gambchop, a sports betting data site.
-${awayTeam} (away) recent chart:
-${fmt(awayRows)}
-
-${homeTeam} (home) recent chart:
-${fmt(homeRows)}
-
-Rules: factual observations from the data only, no predictions, no betting advice, no "should" or "likely". Direct tone.`,
-      }],
-    })
-    return resp.content[0].type === 'text' ? resp.content[0].text.trim() : ''
-  } catch {
-    return ''
-  }
-}
+// AI blurb generation removed — no Claude API calls on this page.
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -177,42 +142,34 @@ export default async function SchedulePage() {
     rowsByTeam.set(row.team_id, list)
   }
 
-  // ── 4. Generate blurbs concurrently ────────────────────────────────────────
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  // ── 4. Build schedule games (no blurb generation) ──────────────────────────
+  const scheduleGames: ScheduleGame[] = upcoming.map((game) => {
+    const line     = extractLine(game)
+    const homeId   = teamIdByName.get(game.home_team) ?? ''
+    const awayId   = teamIdByName.get(game.away_team) ?? ''
+    const homeRows = homeId ? (rowsByTeam.get(homeId) ?? []) : []
+    const awayRows = awayId ? (rowsByTeam.get(awayId) ?? []) : []
 
-  const scheduleGames: ScheduleGame[] = await Promise.all(
-    upcoming.map(async (game) => {
-      const line    = extractLine(game)
-      const homeId  = teamIdByName.get(game.home_team) ?? ''
-      const awayId  = teamIdByName.get(game.away_team) ?? ''
-      const homeRows = homeId ? (rowsByTeam.get(homeId) ?? []) : []
-      const awayRows = awayId ? (rowsByTeam.get(awayId) ?? []) : []
-
-      const blurb = (homeId && awayId)
-        ? await generateBlurb(anthropic, game.away_team, game.home_team, awayRows, homeRows)
-        : ''
-
-      return {
-        id:           game.id,
-        homeTeam:     game.home_team,
-        awayTeam:     game.away_team,
-        commenceTime: game.commence_time,
-        lines: {
-          mlHome:      line.ml_home,
-          mlAway:      line.ml_away,
-          spreadHome:  line.spread_home,
-          spreadAway:  line.spread_away,
-          spreadJuice: line.spread_juice,
-          total:       line.total,
-          overJuice:   line.over_juice,
-          underJuice:  line.under_juice,
-        },
-        homeChart: buildChart(homeRows),
-        awayChart: buildChart(awayRows),
-        blurb,
-      }
-    })
-  )
+    return {
+      id:           game.id,
+      homeTeam:     game.home_team,
+      awayTeam:     game.away_team,
+      commenceTime: game.commence_time,
+      lines: {
+        mlHome:      line.ml_home,
+        mlAway:      line.ml_away,
+        spreadHome:  line.spread_home,
+        spreadAway:  line.spread_away,
+        spreadJuice: line.spread_juice,
+        total:       line.total,
+        overJuice:   line.over_juice,
+        underJuice:  line.under_juice,
+      },
+      homeChart: buildChart(homeRows),
+      awayChart: buildChart(awayRows),
+      blurb: '',
+    }
+  })
 
   // ── 5. Read today's top matchups from Supabase (written by cron) ────────────
   const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })

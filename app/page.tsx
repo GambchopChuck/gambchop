@@ -5,7 +5,7 @@ import ActivationBanner from '@/components/ActivationBanner'
 import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
 import ChopperBanner from '@/components/ChopperBanner'
 import NewsPreview from '@/components/NewsPreview'
-import TopMatchupCard from '@/components/TopMatchupCard'
+import TopMatchupTicker from '@/components/TopMatchupTicker'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { rowToTopMatchup } from '@/lib/topMatchups'
 import type { TopMatchupData } from '@/lib/topMatchups'
@@ -269,24 +269,11 @@ export default async function HomePage() {
 
       <ChopperBanner />
 
-      {/* ── Today's Top Matchup (MLB) ─────────────────────────────────────── */}
-      {mlbTopMatchup && (
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px 40px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <span style={{
-              fontSize: 9, color: '#39ff9a', fontWeight: 700,
-              letterSpacing: '0.22em', textTransform: 'uppercase',
-              fontFamily: 'var(--font-geist-mono), monospace',
-            }}>
-              Today's Top Matchup
-            </span>
-            <div style={{ flex: 1, height: 1, background: '#1a1a24' }} />
-          </div>
-          <TopMatchupCard matchup={mlbTopMatchup} compact />
-        </div>
-      )}
-
       <LeagueGrid />
+
+      {/* ── Top Matchup Ticker — sits directly above Also Featured ──────────── */}
+      <TopMatchupTicker matchups={mlbTopMatchup ? [mlbTopMatchup] : []} />
+
       <FeaturedPagesWithAuth />
       <NewsPreview />
       <CommunityPreview />

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { TEAM_ROUTES } from '@/lib/teamRoutes'
 import { buildSvg } from '@/lib/svgChart'
@@ -230,15 +231,7 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
         />
       </div>
 
-      {/* Blurb */}
-      {game.blurb && (
-        <p style={{
-          fontSize: 12, color: '#71717a', margin: '16px 0 0', lineHeight: 1.6,
-          borderTop: '1px solid #1a1a24', paddingTop: 12,
-        }}>
-          {game.blurb}
-        </p>
-      )}
+      {/* AI blurbs removed — use Top Matchups page for curated daily picks */}
     </div>
   )
 }
@@ -247,6 +240,12 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
 
 export default function ScheduleClient({ games, error, topMatchups = [] }: Props) {
   const { isPro } = useAuth()
+  const pathname  = usePathname()
+
+  const SUB_TABS = [
+    { key: 'schedule',     label: 'SCHEDULE',        href: '/schedule'            },
+    { key: 'top-matchups', label: 'TOP MATCHUPS ⚡',  href: '/schedule/top-matchups' },
+  ] as const
 
   // Group games by ET date
   const grouped = useMemo(() => {
@@ -264,12 +263,45 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
   return (
     <div style={{ paddingLeft: 64, minHeight: '100vh' }}>
 
-      {/* ── Sticky league filter bar ───────────────────────────────────────── */}
+      {/* ── Sticky header (sub-nav + league filter) ───────────────────────── */}
       <div style={{
         position: 'sticky', top: 64, zIndex: 30,
         background: 'rgba(8,8,13,0.97)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid #1a1a24',
       }}>
+        {/* Sub-nav row: SCHEDULE | TOP MATCHUPS */}
+        <div style={{
+          maxWidth: 1400, margin: '0 auto', padding: '0 24px',
+          display: 'flex', alignItems: 'center', gap: 4, height: 44,
+          borderBottom: '1px solid #12121a',
+        }}>
+          {SUB_TABS.map(tab => {
+            const isActive = pathname === tab.href
+            return (
+              <Link key={tab.key} href={tab.href} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  background:    isActive ? ACCENT : 'transparent',
+                  color:         isActive ? '#000' : '#3f3f46',
+                  border:        isActive ? 'none' : '1px solid transparent',
+                  borderRadius:  6,
+                  padding:       '5px 14px',
+                  fontSize:      11,
+                  fontWeight:    700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  cursor:        'pointer',
+                  fontFamily:    MONO,
+                  boxShadow:     isActive ? `0 0 12px ${ACCENT}55` : 'none',
+                  transition:    'all 0.15s',
+                }}>
+                  {tab.label}
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* League filter row */}
         <div style={{
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
           display: 'flex', alignItems: 'center', gap: 4, height: 48,
