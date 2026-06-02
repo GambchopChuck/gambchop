@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   description: 'Dark, data-driven sports betting analytics for every major league',
 }
 
-const footLink = { fontSize: 11, color: '#ffffff', textDecoration: 'none', lineHeight: 2 } as const
+const footLink = { fontSize: 11, color: '#ffffff', textDecoration: 'none', lineHeight: 2, fontFamily: 'var(--font-oswald), "Oswald", sans-serif' } as const
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -62,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ minHeight: '100vh', margin: 0 }}>
         <Providers>
           {children}
-          <footer style={{ borderTop: '1px solid #1a1a24', background: '#0a0a0f', fontFamily: 'var(--font-geist-mono), monospace', marginTop: 40 }}>
+          <footer style={{ borderTop: '1px solid #1a1a24', background: '#0a0a0f', fontFamily: 'var(--font-oswald), "Oswald", sans-serif', marginTop: 40 }}>
             <div style={{ maxWidth: 1400, margin: '0 auto', padding: '40px 24px 24px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 40, justifyContent: 'space-between' }}>
                 <div style={{ minWidth: 200 }}>
