@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+import { useChopperTransition } from '@/components/ChopperTransition'
 
 const MONO = 'var(--font-jetbrains), "JetBrains Mono", monospace'
 
@@ -28,7 +30,10 @@ function SoonBadge() {
 }
 
 export default function SubNav() {
-  const path = usePathname()
+  const path    = usePathname()
+  const router  = useRouter()
+  const { memberTier } = useAuth()
+  const { warpTo }     = useChopperTransition()
 
   const streaksActive     = path === '/todays-board'
   const leaderboardActive = path === '/leaderboard'
@@ -81,9 +86,12 @@ export default function SubNav() {
         </Link>
 
         {/* CHOPPER — AI AGENT */}
-        <Link href="/chopper" style={{ textDecoration: 'none' }}>
+        <button
+          onClick={() => memberTier === 'pro' ? warpTo('/chopper') : router.push('/chopper')}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
           <span style={linkStyle(chopperActive)}>Chopper — AI Agent</span>
-        </Link>
+        </button>
 
         {/* STATS (non-clickable) */}
         <span style={{

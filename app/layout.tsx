@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Nunito, Oswald, Bebas_Neue, Fraunces, Inter_Tight, J
 import localFont from 'next/font/local'
 import './globals.css'
 import Providers from '@/components/Providers'
+import { ChopperTransitionProvider } from '@/components/ChopperTransition'
 import Link from 'next/link'
 
 const bebasNeue = Bebas_Neue({
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${oswald.variable} ${bebasNeue.variable} ${instrumentSerif.variable} ${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}>
       <body style={{ minHeight: '100vh', margin: 0 }}>
         <Providers>
+          <ChopperTransitionProvider>
           {children}
           <footer style={{ borderTop: '1px solid #1a1a24', background: '#0a0a0f', fontFamily: 'var(--font-oswald), "Oswald", sans-serif', marginTop: 40 }}>
             <div style={{ maxWidth: 1400, margin: '0 auto', padding: '40px 24px 24px' }}>
@@ -108,6 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
           </footer>
+          </ChopperTransitionProvider>
         </Providers>
       </body>
     </html>

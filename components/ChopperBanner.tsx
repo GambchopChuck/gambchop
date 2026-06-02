@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { useChopperTransition } from '@/components/ChopperTransition'
 
 export default function ChopperBanner() {
   const router = useRouter()
   const { user, memberTier, openModal } = useAuth()
+  const { warpTo } = useChopperTransition()
   const [hovered, setHovered] = useState(false)
 
   // Inject portal keyframes (scoped to this component, idempotent across renders)
@@ -40,9 +42,9 @@ export default function ChopperBanner() {
       openModal('join')
       return
     }
-    // Pro → straight to Chopper
+    // Pro → portal warp to Chopper
     if (memberTier === 'pro') {
-      router.push('/chopper')
+      warpTo('/chopper')
       return
     }
     // Signed-in free member → pricing page with intent param
