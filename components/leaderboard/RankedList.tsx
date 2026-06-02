@@ -70,12 +70,13 @@ function EmptyState() {
 }
 
 interface RowItemProps {
-  row: LeaderboardRow
-  countUnit: string
-  isLast: boolean
+  row:        LeaderboardRow
+  countUnit:  string
+  rangeLabel: string
+  isLast:     boolean
 }
 
-function RowItem({ row, countUnit, isLast }: RowItemProps) {
+function RowItem({ row, countUnit, rangeLabel, isLast }: RowItemProps) {
   const rankStr = String(row.rank).padStart(2, '0')
   const isZero  = row.count === 0
 
@@ -134,7 +135,7 @@ function RowItem({ row, countUnit, isLast }: RowItemProps) {
             color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase',
             marginBottom: 4,
           }}>
-            MAY
+            {rangeLabel.toUpperCase()}
           </div>
           <ChartStrip outcomes={row.outcomes} />
         </div>
@@ -161,10 +162,11 @@ function RowItem({ row, countUnit, isLast }: RowItemProps) {
 }
 
 interface RankedListProps {
-  category: LeaderboardCategory
+  category:    LeaderboardCategory
+  rangeLabel?: string
 }
 
-export default function RankedList({ category }: RankedListProps) {
+export default function RankedList({ category, rangeLabel = 'This Season' }: RankedListProps) {
   // Rows 4–30: skip the first 3 ranked positions (rank 1, 2, 3)
   // Find the cutoff index: skip all rows that belong to rank 1, 2, or 3
   const topRanks = new Set([1, 2, 3])
@@ -241,6 +243,7 @@ export default function RankedList({ category }: RankedListProps) {
             key={`${row.team}-${row.rank}`}
             row={row}
             countUnit={category.countUnit}
+            rangeLabel={rangeLabel}
             isLast={i === listRows.length - 1}
           />
         ))

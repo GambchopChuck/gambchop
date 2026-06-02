@@ -7,6 +7,9 @@ import GambchopChart from '@/components/GambchopChart'
 import { LEAGUES, LEAGUE_SEASONS, slugify } from '@/lib/leagues-data'
 import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
 import { fetchTeamSeasonOutcomes, computeStreak } from '@/lib/chart-data'
+import { type TimeRange, RANGE_OPTIONS, filterGamesByRange } from '@/lib/time-range'
+import { StatCard } from '@/components/StatSummaryCards'
+import type { StatCardData } from '@/components/StatSummaryCards'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 
@@ -22,39 +25,7 @@ const ACCENT_PILL = '#39ff9a'   // Matches NewsPageClient tab accent
 const OSWALD      = 'var(--font-oswald), "Oswald", sans-serif'
 const MONO        = 'var(--font-geist-mono), monospace'
 
-// ─── Time range ───────────────────────────────────────────────────────────────
-
-type TimeRange = 'last-7' | 'last-14' | 'last-30' | 'this-month' | 'this-season'
-
-const RANGE_OPTIONS: { value: TimeRange; label: string; promptLabel: string }[] = [
-  { value: 'last-7',      label: 'Last 7 Days',  promptLabel: 'over the last 7 days'  },
-  { value: 'last-14',     label: 'Last 14 Days', promptLabel: 'over the last 14 days' },
-  { value: 'last-30',     label: 'Last 30 Days', promptLabel: 'over the last 30 days' },
-  { value: 'this-month',  label: 'This Month',   promptLabel: 'this month'             },
-  { value: 'this-season', label: 'This Season',  promptLabel: 'this season'            },
-]
-
-function filterGamesByRange(games: GameEntry[], range: TimeRange): GameEntry[] {
-  if (range === 'this-season') return games
-
-  const today    = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-
-  let fromDate: Date
-  if (range === 'last-7') {
-    fromDate = new Date(today); fromDate.setDate(fromDate.getDate() - 7)
-  } else if (range === 'last-14') {
-    fromDate = new Date(today); fromDate.setDate(fromDate.getDate() - 14)
-  } else if (range === 'last-30') {
-    fromDate = new Date(today); fromDate.setDate(fromDate.getDate() - 30)
-  } else {
-    // this-month
-    fromDate = new Date(today.getFullYear(), today.getMonth(), 1)
-  }
-
-  const fromStr = fromDate.toISOString().split('T')[0]
-  return games.filter(g => g.rawDate >= fromStr && g.rawDate <= todayStr)
-}
+// TimeRange, RANGE_OPTIONS, filterGamesByRange imported from @/lib/time-range
 
 // ─── Team resolution ──────────────────────────────────────────────────────────
 
@@ -73,8 +44,6 @@ function makeAbbr(name: string): string {
 }
 
 // ─── Stat computation ─────────────────────────────────────────────────────────
-
-interface StatCardData { label: string; value: string; color: string }
 
 function computeStatCards(games: GameEntry[]): StatCardData[] {
   const mlW    = games.filter(g => g.moneylineResult === 'win').length
@@ -104,23 +73,7 @@ function computeStatCards(games: GameEntry[]): StatCardData[] {
   ]
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, color }: StatCardData) {
-  return (
-    <div className="stat-card" style={{
-      background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10,
-      padding: '14px 18px', textAlign: 'center', flex: '1 1 0', minWidth: 0,
-    }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color, letterSpacing: '0.02em', lineHeight: 1, fontFamily: OSWALD }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 6 }}>
-        {label}
-      </div>
-    </div>
-  )
-}
+// StatCard imported from @/components/StatSummaryCards
 
 // ─── Time Frame Toggle ────────────────────────────────────────────────────────
 // Pill style matches NewsPageClient.tsx primary tab pattern (ACCENT = #39ff9a)
@@ -422,7 +375,7 @@ function CompareClient() {
 
   const [team1Slug, setTeam1Slug] = useState(searchParams.get('team1') ?? '')
   const [team2Slug, setTeam2Slug] = useState(searchParams.get('team2') ?? '')
-  const [range,     setRange]     = useState<TimeRange>((searchParams.get('range') as TimeRange) ?? 'this-season')
+  const [range,     setRange]     = useState<TimeRange>((searchParams.get('range') as TimeRange) ?? 'last-30')
 
   const today = new Date()
   const [year1,  setYear1]  = useState(today.getFullYear())

@@ -98,13 +98,14 @@ const BRONZE_CFG: MedalConfig = {
 }
 
 interface PodiumCardProps {
-  row: LeaderboardRow
-  cfg: MedalConfig
-  countUnit: string
-  isCenter?: boolean
+  row:        LeaderboardRow
+  cfg:        MedalConfig
+  countUnit:  string
+  rangeLabel: string
+  isCenter?:  boolean
 }
 
-function PodiumCard({ row, cfg, countUnit, isCenter = false }: PodiumCardProps) {
+function PodiumCard({ row, cfg, countUnit, rangeLabel, isCenter = false }: PodiumCardProps) {
   return (
     <div
       className={isCenter ? 'podium-card podium-card-center' : 'podium-card'}
@@ -193,7 +194,7 @@ function PodiumCard({ row, cfg, countUnit, isCenter = false }: PodiumCardProps) 
           color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase',
           marginBottom: 12,
         }}>
-          MAY GAME-BY-GAME
+          {rangeLabel.toUpperCase()} · GAME-BY-GAME
         </div>
         <ChartStrip
           outcomes={row.outcomes}
@@ -235,10 +236,11 @@ function EmptyBronzeCard() {
 }
 
 interface PodiumProps {
-  category: LeaderboardCategory
+  category:   LeaderboardCategory
+  rangeLabel?: string
 }
 
-export default function Podium({ category }: PodiumProps) {
+export default function Podium({ category, rangeLabel }: PodiumProps) {
   const rows = category.rows
   if (rows.length === 0) return null
 
@@ -307,7 +309,7 @@ export default function Podium({ category }: PodiumProps) {
       >
         {/* Left — #2 Silver */}
         {leftRow ? (
-          <PodiumCard row={leftRow} cfg={leftCfg} countUnit={category.countUnit} />
+          <PodiumCard row={leftRow} cfg={leftCfg} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} />
         ) : (
           <EmptyBronzeCard />
         )}
@@ -315,19 +317,19 @@ export default function Podium({ category }: PodiumProps) {
         {/* Center — #1 Gold */}
         {isTieAt1 && gold2 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <PodiumCard row={gold1} cfg={GOLD_CFG} countUnit={category.countUnit} isCenter />
+            <PodiumCard row={gold1} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} isCenter />
             <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'center' }}>
               TIE AT #1
             </div>
-            <PodiumCard row={gold2} cfg={GOLD_CFG} countUnit={category.countUnit} isCenter />
+            <PodiumCard row={gold2} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} isCenter />
           </div>
         ) : (
-          <PodiumCard row={gold1} cfg={GOLD_CFG} countUnit={category.countUnit} isCenter />
+          <PodiumCard row={gold1} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} isCenter />
         )}
 
         {/* Right — #3 Bronze or tied #2 Silver */}
         {rightRow ? (
-          <PodiumCard row={rightRow} cfg={rightCfg} countUnit={category.countUnit} />
+          <PodiumCard row={rightRow} cfg={rightCfg} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} />
         ) : (
           <EmptyBronzeCard />
         )}
