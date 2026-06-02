@@ -67,7 +67,6 @@ export default function LeagueGrid({
         {/* Section header — suppressed when showSectionHeader=false */}
         {showSectionHeader && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'var(--font-nunito), sans-serif' }}>Browse</div>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#ffffff', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0, fontFamily: 'var(--font-nunito), sans-serif' }}>
               Leagues
             </h2>
