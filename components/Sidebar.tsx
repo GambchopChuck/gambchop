@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/teams',        label: 'Teams'     },
   { href: '/community',    label: 'Community' },
   { href: '/favorites',    label: 'Favorites' },
+  { href: '/compare',      label: 'Compare'   },
   { href: '/news',         label: 'News'      },
   { href: '/pricing',      label: 'Pricing'   },
 ]

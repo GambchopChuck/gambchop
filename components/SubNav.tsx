@@ -33,6 +33,7 @@ export default function SubNav() {
   const streaksActive     = path === '/todays-board'
   const leaderboardActive = path === '/leaderboard'
   const chopperActive     = path === '/chopper'
+  const compareActive     = path === '/compare'
 
   const linkStyle = (active: boolean, accentColor = '#22c55e') => ({
     fontSize: 10,
@@ -72,6 +73,11 @@ export default function SubNav() {
         {/* LEADERBOARD */}
         <Link href="/leaderboard" style={{ textDecoration: 'none' }}>
           <span style={linkStyle(leaderboardActive)}>Leaderboard</span>
+        </Link>
+
+        {/* COMPARE */}
+        <Link href="/compare" style={{ textDecoration: 'none' }}>
+          <span style={linkStyle(compareActive)}>Compare</span>
         </Link>
 
         {/* CHOPPER — AI AGENT */}
