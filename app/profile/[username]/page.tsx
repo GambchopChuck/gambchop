@@ -10,6 +10,7 @@ import { slugify } from '@/lib/leagues-data'
 import type { Favorite } from '@/lib/favorites'
 import type { GameEntry } from '@/lib/leagues-data'
 import { BET_TYPE_LABELS, BET_TYPE_ACCENTS } from '@/lib/favorites'
+import { BETTOR_TYPES } from '@/app/profile/settings/page'
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 
@@ -25,6 +26,16 @@ const PURPLE = '#8b5cf6'
 const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 const MONO   = 'var(--font-oswald), "Oswald", sans-serif'
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return ''
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
+
 // ─── Profile row type from Supabase ───────────────────────────────────────────
 
 interface PublicProfile {
@@ -32,6 +43,9 @@ interface PublicProfile {
   display_name:          string | null
   username:              string
   bio:                   string | null
+  status_text:           string | null
+  status_updated_at:     string | null
+  bettor_type:           string | null
   created_at:            string | null
   is_pro:                boolean
   show_favorites_public: boolean | null
@@ -43,7 +57,7 @@ interface PublicProfile {
   display_social_2:      string | null
 }
 
-// ─── Inline SVG social icons (no external icon dependency) ────────────────────
+// ─── Social badge ──────────────────────────────────────────────────────────────
 
 type SocialPlatform = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
@@ -65,7 +79,7 @@ function SocialBadge({ platform, handle, size = 16 }: { platform: string; handle
       title={`${platform}: @${handle}`}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: size, height: size, borderRadius: 3,
+        width: size, height: size,
         background: meta.color + '22', border: `1px solid ${meta.color}55`,
         color: meta.color, fontSize: size * 0.45, fontWeight: 900,
         textDecoration: 'none', letterSpacing: '0.03em',
@@ -77,7 +91,7 @@ function SocialBadge({ platform, handle, size = 16 }: { platform: string; handle
   )
 }
 
-// ─── Mini chart strip (real game outcomes, moneyline) ─────────────────────────
+// ─── Mini chart strip ──────────────────────────────────────────────────────────
 
 function MiniChartStrip({ leagueId, teamName }: { leagueId: string; teamName: string }) {
   const [games, setGames] = useState<GameEntry[]>([])
@@ -89,7 +103,7 @@ function MiniChartStrip({ leagueId, teamName }: { leagueId: string; teamName: st
       .catch(() => setLoaded(true))
   }, [leagueId, teamName])
 
-  if (!loaded) return <div style={{ height: 16, width: 120, background: BORDER, borderRadius: 3 }} />
+  if (!loaded) return <div style={{ height: 14, width: 120, background: BORDER }} />
 
   return (
     <div style={{ display: 'flex', gap: 3 }}>
@@ -102,7 +116,7 @@ function MiniChartStrip({ leagueId, teamName }: { leagueId: string; teamName: st
           <div
             key={i}
             style={{
-              width: 14, height: 14, borderRadius: 3,
+              width: 14, height: 14,
               background: bg, opacity: g.moneylineResult ? 1 : 0.25,
               boxShadow: g.moneylineResult === 'win' ? `0 0 4px ${GREEN}88` : 'none',
             }}
@@ -113,7 +127,7 @@ function MiniChartStrip({ leagueId, teamName }: { leagueId: string; teamName: st
   )
 }
 
-// ─── Favorite card row ────────────────────────────────────────────────────────
+// ─── Favorite row ──────────────────────────────────────────────────────────────
 
 function FavoriteRow({ fav }: { fav: Favorite }) {
   const accent = BET_TYPE_ACCENTS[fav.bet_type] ?? GREEN
@@ -129,7 +143,7 @@ function FavoriteRow({ fav }: { fav: Favorite }) {
           </span>
           <span style={{
             fontSize: 8, color: accent, background: `${accent}18`,
-            border: `1px solid ${accent}44`, borderRadius: 3,
+            border: `1px solid ${accent}44`,
             padding: '1px 6px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
           }}>
             {BET_TYPE_LABELS[fav.bet_type]}
@@ -144,7 +158,7 @@ function FavoriteRow({ fav }: { fav: Favorite }) {
         href={`/leagues/${fav.league_id}/${slugify(fav.team_name)}`}
         style={{
           fontSize: 9, color: accent, border: `1px solid ${accent}44`,
-          borderRadius: 6, padding: '5px 10px', textDecoration: 'none',
+          padding: '5px 10px', textDecoration: 'none',
           letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
           whiteSpace: 'nowrap',
         }}
@@ -159,19 +173,19 @@ function FavoriteRow({ fav }: { fav: Favorite }) {
 
 export default function PublicProfilePage() {
   const { username: paramUsername } = useParams<{ username: string }>()
-  const { username: myUsername, user: myUser } = useAuth()
+  const { username: myUsername, user: myUser, isPro: viewerIsPro } = useAuth()
 
-  const [profile,    setProfile]    = useState<PublicProfile | null>(null)
-  const [favorites,  setFavorites]  = useState<Favorite[]>([])
-  const [notFound,   setNotFound]   = useState(false)
-  const [loading,    setLoading]    = useState(true)
+  const [profile,   setProfile]   = useState<PublicProfile | null>(null)
+  const [favorites, setFavorites] = useState<Favorite[]>([])
+  const [notFound,  setNotFound]  = useState(false)
+  const [loading,   setLoading]   = useState(true)
 
   useEffect(() => {
     if (!paramUsername) return
 
     supabase
       .from('profiles')
-      .select('id, display_name, username, bio, created_at, is_pro, show_favorites_public, twitter_handle, instagram_handle, tiktok_handle, youtube_handle, display_social_1, display_social_2')
+      .select('id, display_name, username, bio, status_text, status_updated_at, bettor_type, created_at, is_pro, show_favorites_public, twitter_handle, instagram_handle, tiktok_handle, youtube_handle, display_social_1, display_social_2')
       .eq('username', paramUsername)
       .maybeSingle()
       .then(async ({ data, error }) => {
@@ -179,7 +193,6 @@ export default function PublicProfilePage() {
 
         setProfile(data as PublicProfile)
 
-        // Fetch favorites if public
         if (data.show_favorites_public !== false) {
           const { data: favs } = await supabase
             .from('favorites')
@@ -193,15 +206,11 @@ export default function PublicProfilePage() {
       })
   }, [paramUsername])
 
-  // ── Loading ────────────────────────────────────────────────────────────────
-
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.1em', fontFamily: MONO }}>
       Loading profile…
     </div>
   )
-
-  // ── 404 ───────────────────────────────────────────────────────────────────
 
   if (notFound || !profile) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', background: BG, fontFamily: MONO }}>
@@ -221,28 +230,25 @@ export default function PublicProfilePage() {
     </div>
   )
 
-  const isOwnProfile = !!myUser && myUsername === profile.username
-
-  const memberSince = profile.created_at
+  const isOwnProfile  = !!myUser && myUsername === profile.username
+  const memberSince   = profile.created_at
     ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : null
-
   const displaySocials = [profile.display_social_1, profile.display_social_2].filter(Boolean) as string[]
-
-  const handleFor = (platform: string): string | null => {
-    if (platform === 'twitter')   return profile.twitter_handle
-    if (platform === 'instagram') return profile.instagram_handle
-    if (platform === 'tiktok')    return profile.tiktok_handle
-    if (platform === 'youtube')   return profile.youtube_handle
+  const handleFor = (p: string): string | null => {
+    if (p === 'twitter')   return profile.twitter_handle
+    if (p === 'instagram') return profile.instagram_handle
+    if (p === 'tiktok')    return profile.tiktok_handle
+    if (p === 'youtube')   return profile.youtube_handle
     return null
   }
-
-  const initial = (profile.display_name ?? profile.username)[0].toUpperCase()
+  const initial      = (profile.display_name ?? profile.username)[0].toUpperCase()
+  const bettorConfig = profile.bettor_type ? BETTOR_TYPES.find(b => b.id === profile.bettor_type) : null
 
   return (
     <div style={{ background: BG, minHeight: '100vh', paddingBottom: 80, fontFamily: MONO }}>
 
-      {/* Profile header */}
+      {/* ── Profile header ──────────────────────────────────────────────── */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '36px 24px 32px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
@@ -260,23 +266,34 @@ export default function PublicProfilePage() {
 
             {/* Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+              {/* Name row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
                 <h1 style={{ fontSize: 26, fontWeight: 700, color: TEXT, letterSpacing: '0.04em', margin: 0, fontFamily: OSWALD }}>
                   {profile.display_name ?? profile.username}
                 </h1>
                 {profile.is_pro && (
                   <span style={{
                     fontSize: 8, color: PURPLE, background: `${PURPLE}18`,
-                    border: `1px solid ${PURPLE}44`, borderRadius: 4,
+                    border: `1px solid ${PURPLE}44`,
                     padding: '2px 8px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
                   }}>⚡ Pro</span>
+                )}
+                {bettorConfig && (
+                  <span style={{
+                    fontSize: 8, color: bettorConfig.color,
+                    background: `${bettorConfig.color}15`,
+                    border: `1px solid ${bettorConfig.color}44`,
+                    padding: '2px 8px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  }}>
+                    {bettorConfig.icon} {bettorConfig.label}
+                  </span>
                 )}
                 {isOwnProfile && (
                   <Link
                     href="/profile/settings"
                     style={{
                       fontSize: 9, color: ACCENT, border: `1px solid ${ACCENT}44`,
-                      borderRadius: 5, padding: '3px 10px', textDecoration: 'none',
+                      padding: '3px 10px', textDecoration: 'none',
                       letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
                     }}
                   >
@@ -285,25 +302,18 @@ export default function PublicProfilePage() {
                 )}
               </div>
 
+              {/* Username */}
               <div style={{ fontSize: 11, color: MUTED, marginBottom: 8, letterSpacing: '0.04em' }}>
                 @{profile.username}
               </div>
 
-              {profile.bio && (
-                <p style={{ fontSize: 12, color: SUB, lineHeight: 1.6, margin: '0 0 10px', maxWidth: 540 }}>
-                  {profile.bio}
-                </p>
-              )}
-
-              {/* Meta row */}
+              {/* Meta row: member since + social icons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 {memberSince && (
                   <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.08em' }}>
                     Member since {memberSince}
                   </span>
                 )}
-
-                {/* Social icons */}
                 {displaySocials.map(platform => {
                   const handle = handleFor(platform)
                   if (!handle) return null
@@ -315,33 +325,120 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      {/* Favorites section */}
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
+      {/* ── Body ──────────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-        {profile.show_favorites_public !== false ? (
-          <>
-            <div style={{ fontSize: 9, color: ACCENT, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD, marginBottom: 16 }}>
-              Favorites
-            </div>
-
-            {favorites.length === 0 ? (
-              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '32px 24px', textAlign: 'center' }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>⭐</div>
-                <div style={{ fontSize: 11, color: MUTED }}>No public favorites yet.</div>
-              </div>
-            ) : (
-              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '8px 20px' }}>
-                {favorites.map(fav => <FavoriteRow key={fav.id} fav={fav} />)}
+        {/* Status quote block */}
+        {profile.status_text && (
+          <div style={{
+            borderLeft: `3px solid ${ACCENT}`,
+            padding: '14px 20px',
+            background: `${ACCENT}07`,
+            position: 'relative',
+          }}>
+            <div style={{
+              position: 'absolute', top: 8, left: 12,
+              fontSize: 28, color: ACCENT, opacity: 0.25,
+              fontFamily: 'Georgia, serif', lineHeight: 1,
+            }}>"</div>
+            <p style={{
+              fontSize: 14, fontWeight: 600, color: TEXT,
+              margin: '0 0 8px', lineHeight: 1.5,
+              fontFamily: OSWALD, letterSpacing: '0.03em',
+              paddingLeft: 12,
+            }}>
+              {profile.status_text}
+            </p>
+            {profile.status_updated_at && (
+              <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.08em', paddingLeft: 12 }}>
+                Updated {timeAgo(profile.status_updated_at)}
               </div>
             )}
-          </>
-        ) : (
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '32px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.06em' }}>
-              This member&apos;s favorites are private.
-            </div>
           </div>
         )}
+
+        {/* About / Bio */}
+        {profile.bio && (
+          <div>
+            <div style={{ fontSize: 9, color: ACCENT, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
+              About
+            </div>
+            <p style={{ fontSize: 12, color: SUB, lineHeight: 1.75, margin: 0, maxWidth: 620 }}>
+              {profile.bio}
+            </p>
+          </div>
+        )}
+
+        {/* Bettor Type (read-only) */}
+        {bettorConfig && (
+          <div>
+            <div style={{ fontSize: 9, color: ACCENT, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
+              Bettor Type
+            </div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'flex-start', gap: 14,
+              background: `${bettorConfig.color}0c`,
+              border: `1px solid ${bettorConfig.color}33`,
+              padding: '16px 20px', maxWidth: 480,
+            }}>
+              <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{bettorConfig.icon}</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 900, color: bettorConfig.color, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  {bettorConfig.label}
+                </div>
+                <p style={{ fontSize: 10, color: MUTED, margin: 0, lineHeight: 1.6 }}>
+                  {bettorConfig.flavor}
+                </p>
+              </div>
+            </div>
+            {isOwnProfile && (
+              <div style={{ marginTop: 8 }}>
+                <Link href="/profile/settings" style={{ fontSize: 9, color: ACCENT, textDecoration: 'none', letterSpacing: '0.08em' }}>
+                  Change bettor type →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Favorites ─────────────────────────────────────────────────── */}
+        <div>
+          <div style={{ fontSize: 9, color: ACCENT, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 14 }}>
+            Favorites
+          </div>
+
+          {/* Visitor is not Pro — show note */}
+          {!isOwnProfile && !viewerIsPro && (
+            <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.04em' }}>
+              Favorites are a Pro feature.
+            </div>
+          )}
+
+          {/* Favorites hidden by owner */}
+          {(isOwnProfile || viewerIsPro) && profile.show_favorites_public === false && !isOwnProfile && (
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '28px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.06em' }}>
+                This member&apos;s favorites are private.
+              </div>
+            </div>
+          )}
+
+          {/* Show favorites: own profile always, visitors if public */}
+          {(isOwnProfile || (viewerIsPro && profile.show_favorites_public !== false)) && (
+            favorites.length === 0 ? (
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '28px 24px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: MUTED }}>
+                  {isOwnProfile ? 'No favorites saved yet.' : 'No public favorites yet.'}
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '4px 20px' }}>
+                {favorites.map(fav => <FavoriteRow key={fav.id} fav={fav} />)}
+              </div>
+            )
+          )}
+        </div>
+
       </div>
     </div>
   )

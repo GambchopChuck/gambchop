@@ -28,10 +28,49 @@ const SOCIAL_FIELDS: { key: SocialKey; label: string; prefix: string }[] = [
   { key: 'youtube',   label: 'YouTube',       prefix: 'youtube.com/@'   },
 ]
 
+// ─── Bettor type config ────────────────────────────────────────────────────────
+
+export const BETTOR_TYPES = [
+  {
+    id:      'straight',
+    label:   'Straight Bettor',
+    icon:    '🎯',
+    color:   ACCENT,
+    flavor:  'No parlays. No gimmicks. Just the moneyline and the courage to back it. The Straight Bettor walks up to the counter with conviction, places the wager, and lets the result speak. They live for the doubled stack and they are not afraid of the house — they bring the bag every single time.',
+  },
+  {
+    id:      'parlayer',
+    label:   'Parlayer',
+    icon:    '🃏',
+    color:   '#60a5fa',
+    flavor:  'One ticket. Multiple legs. Maximum confidence. The Parlayer is calculated and composed — more sure of their reads than even the Straight Bettor. A fair stake for a fine return. Every leg is deliberate, every slip is a statement.',
+  },
+  {
+    id:      'microbettor',
+    label:   'Microbettor',
+    icon:    '🌱',
+    color:   '#fbbf24',
+    flavor:  'Patient above all else. The Microbettor does not chase — they identify. They zero in on a streak building in the data, plant a seed with a micropot, and reinvest every win until the return is right. It started small. It will not end that way.',
+  },
+  {
+    id:      'margin-mac',
+    label:   'Margin Mac',
+    icon:    '🎫',
+    color:   '#a855f7',
+    flavor:  'High volume. Tiny wagers. Massive ambitions. Margin Mac runs the lotto approach — super parlays stacked with the belief that all it takes is one. The confidence fluctuates but the plan never does. Mac is not here for small wins. Mac is here for the margin.',
+  },
+] as const
+
+export type BettorTypeId = (typeof BETTOR_TYPES)[number]['id']
+
+// ─── Form interface ────────────────────────────────────────────────────────────
+
 interface ProfileForm {
   display_name:          string
   username:              string
+  status_text:           string
   bio:                   string
+  bettor_type:           string
   twitter_handle:        string
   instagram_handle:      string
   tiktok_handle:         string
@@ -59,7 +98,7 @@ function isValidUsername(u: string): boolean {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: '#0c0c10', border: `1px solid ${BORDER}`,
-  borderRadius: 8, padding: '11px 14px', color: TEXT,
+  padding: '11px 14px', color: TEXT,
   fontSize: 12, letterSpacing: '0.03em', outline: 'none',
   fontFamily: MONO, boxSizing: 'border-box', transition: 'border-color 0.15s',
 }
@@ -82,7 +121,7 @@ function SettingsPaywall() {
   const { openModal } = useAuth()
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '40px 48px', maxWidth: 440, textAlign: 'center' }}>
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '40px 48px', maxWidth: 440, textAlign: 'center' }}>
         <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
         <div style={{ fontSize: 9, color: ACCENT, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700, fontFamily: OSWALD }}>Pro Feature</div>
         <h2 style={{ fontSize: 24, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', fontFamily: OSWALD }}>Profile Settings</h2>
@@ -93,7 +132,7 @@ function SettingsPaywall() {
           onClick={() => openModal('pro')}
           style={{
             background: `linear-gradient(135deg, ${ACCENT}, #22c55e)`, border: 'none',
-            borderRadius: 8, padding: '12px 28px', color: '#000', fontSize: 12, fontWeight: 900,
+            padding: '12px 28px', color: '#000', fontSize: 12, fontWeight: 900,
             letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
             fontFamily: OSWALD, boxShadow: `0 0 20px ${ACCENT}44`,
           }}
@@ -113,7 +152,9 @@ export default function ProfileSettingsPage() {
   const [form, setForm] = useState<ProfileForm>({
     display_name:          '',
     username:              '',
+    status_text:           '',
     bio:                   '',
+    bettor_type:           '',
     twitter_handle:        '',
     instagram_handle:      '',
     tiktok_handle:         '',
@@ -131,20 +172,21 @@ export default function ProfileSettingsPage() {
   const [saveSuccess,     setSaveSuccess]     = useState(false)
   const [loading,         setLoading]         = useState(true)
 
-  // Load existing profile data
   useEffect(() => {
     if (!user) return
     supabase
       .from('profiles')
-      .select('display_name, username, bio, twitter_handle, instagram_handle, tiktok_handle, youtube_handle, show_favorites_public, display_social_1, display_social_2')
+      .select('display_name, username, status_text, bio, bettor_type, twitter_handle, instagram_handle, tiktok_handle, youtube_handle, show_favorites_public, display_social_1, display_social_2')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (data) {
-          const f: ProfileForm = {
+          setForm({
             display_name:          data.display_name          ?? '',
             username:              data.username              ?? '',
+            status_text:           (data as any).status_text  ?? '',
             bio:                   data.bio                   ?? '',
+            bettor_type:           (data as any).bettor_type  ?? '',
             twitter_handle:        data.twitter_handle        ?? '',
             instagram_handle:      data.instagram_handle      ?? '',
             tiktok_handle:         data.tiktok_handle         ?? '',
@@ -152,29 +194,21 @@ export default function ProfileSettingsPage() {
             show_favorites_public: data.show_favorites_public ?? true,
             display_social_1:      data.display_social_1      ?? '',
             display_social_2:      data.display_social_2      ?? '',
-          }
-          setForm(f)
+          })
           setInitialUsername(data.username ?? '')
         }
         setLoading(false)
       })
   }, [user])
 
-  // Debounced username uniqueness check
   const checkUsername = useCallback((value: string) => {
     if (!value || value === initialUsername) { setUsernameError(''); setUsernameOk(false); return }
     if (!isValidUsername(value)) { setUsernameError('3–20 chars, lowercase letters/numbers/underscores only, no reserved words'); setUsernameOk(false); return }
-
     const timer = setTimeout(async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', value)
-        .maybeSingle()
+      const { data } = await supabase.from('profiles').select('id').eq('username', value).maybeSingle()
       if (data) { setUsernameError('Username already taken'); setUsernameOk(false) }
       else       { setUsernameError(''); setUsernameOk(true) }
     }, 500)
-
     return () => clearTimeout(timer)
   }, [initialUsername])
 
@@ -188,14 +222,12 @@ export default function ProfileSettingsPage() {
     setSaveSuccess(false)
   }
 
-  // Toggle display_social selection (max 2)
   function toggleDisplaySocial(key: SocialKey) {
     const { display_social_1: s1, display_social_2: s2 } = form
     if (s1 === key) { set('display_social_1', s2); set('display_social_2', ''); return }
     if (s2 === key) { set('display_social_2', ''); return }
     if (!s1)        { set('display_social_1', key); return }
     if (!s2)        { set('display_social_2', key); return }
-    // Both slots full — replace slot 2
     set('display_social_2', key)
   }
 
@@ -204,32 +236,31 @@ export default function ProfileSettingsPage() {
     if (usernameError) { setSaveError('Fix the username error first'); return }
     if (form.username && !isValidUsername(form.username)) { setSaveError('Invalid username'); return }
 
-    setSaving(true)
-    setSaveError('')
-    setSaveSuccess(false)
+    setSaving(true); setSaveError(''); setSaveSuccess(false)
 
     const { error } = await supabase
       .from('profiles')
       .upsert({
         id:                    user.id,
-        display_name:          form.display_name          || null,
-        username:              form.username              || null,
-        bio:                   form.bio                   || null,
-        twitter_handle:        form.twitter_handle        || null,
-        instagram_handle:      form.instagram_handle      || null,
-        tiktok_handle:         form.tiktok_handle         || null,
-        youtube_handle:        form.youtube_handle        || null,
+        display_name:          form.display_name   || null,
+        username:              form.username        || null,
+        status_text:           form.status_text     || null,
+        bio:                   form.bio             || null,
+        bettor_type:           form.bettor_type     || null,
+        twitter_handle:        form.twitter_handle  || null,
+        instagram_handle:      form.instagram_handle|| null,
+        tiktok_handle:         form.tiktok_handle   || null,
+        youtube_handle:        form.youtube_handle  || null,
         show_favorites_public: form.show_favorites_public,
-        display_social_1:      form.display_social_1      || null,
-        display_social_2:      form.display_social_2      || null,
+        display_social_1:      form.display_social_1|| null,
+        display_social_2:      form.display_social_2|| null,
+        ...(form.status_text ? { status_updated_at: new Date().toISOString() } : {}),
       }, { onConflict: 'id' })
 
     setSaving(false)
     if (error) setSaveError('Save failed: ' + error.message)
     else       setSaveSuccess(true)
   }
-
-  // ── Gates ──────────────────────────────────────────────────────────────────
 
   if (memberTier !== 'pro') return (
     <div style={{ background: BG, minHeight: '100vh', fontFamily: MONO }}>
@@ -243,9 +274,10 @@ export default function ProfileSettingsPage() {
     </div>
   )
 
-  // ── Which platforms have handles + are eligible to display ─────────────────
   const filledPlatforms = SOCIAL_FIELDS.filter(p => !!form[`${p.key}_handle` as keyof ProfileForm])
   const selected = [form.display_social_1, form.display_social_2].filter(Boolean)
+  const statusRemaining = 140 - form.status_text.length
+  const bioRemaining    = 300 - form.bio.length
 
   return (
     <div style={{ background: BG, minHeight: '100vh', paddingBottom: 80, fontFamily: MONO }}>
@@ -271,11 +303,10 @@ export default function ProfileSettingsPage() {
         </div>
       </div>
 
-      {/* Form */}
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-        {/* Identity */}
-        <section style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '24px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* ── Identity ──────────────────────────────────────────────────── */}
+        <section style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ fontSize: 10, color: ACCENT, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD }}>Identity</div>
 
           <Field label="Display Name" hint="Shown on your public profile. Max 40 characters.">
@@ -288,44 +319,120 @@ export default function ProfileSettingsPage() {
             />
           </Field>
 
-          <Field label="Username" hint="Lowercase letters, numbers, underscores. 3–20 chars. Cannot use reserved words.">
+          <Field label="Username" hint="Lowercase letters, numbers, underscores. 3–20 chars.">
             <div style={{ position: 'relative' }}>
               <input
-                style={{
-                  ...inputStyle,
-                  borderColor: usernameError ? RED : usernameOk ? ACCENT : BORDER,
-                  paddingRight: 36,
-                }}
+                style={{ ...inputStyle, borderColor: usernameError ? RED : usernameOk ? ACCENT : BORDER, paddingRight: 36 }}
                 placeholder="e.g. sharpbettor99"
                 value={form.username}
                 onChange={e => set('username', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20))}
                 maxLength={20}
               />
               {form.username && (
-                <span style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 12, color: usernameError ? RED : usernameOk ? ACCENT : MUTED,
-                }}>
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: usernameError ? RED : usernameOk ? ACCENT : MUTED }}>
                   {usernameError ? '✗' : usernameOk ? '✓' : '…'}
                 </span>
               )}
             </div>
             {usernameError && <div style={{ fontSize: 9, color: RED }}>{usernameError}</div>}
           </Field>
+        </section>
 
-          <Field label="Bio" hint={`${form.bio.length}/160 characters`}>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80, resize: 'vertical' } as React.CSSProperties}
-              placeholder="A short bio shown on your public profile…"
-              value={form.bio}
-              onChange={e => set('bio', e.target.value.slice(0, 160))}
-              maxLength={160}
-            />
+        {/* ── Status & Bio ──────────────────────────────────────────────── */}
+        <section style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ fontSize: 10, color: ACCENT, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD }}>Status & Bio</div>
+
+          <Field label="Status">
+            <div style={{ position: 'relative' }}>
+              <input
+                style={{ ...inputStyle, paddingRight: 52 }}
+                placeholder="e.g. Riding the Braves all week."
+                value={form.status_text}
+                onChange={e => set('status_text', e.target.value.slice(0, 140))}
+                maxLength={140}
+              />
+              <span style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 9, color: statusRemaining < 20 ? '#f97316' : MUTED,
+                fontFamily: MONO, letterSpacing: '0.04em',
+              }}>
+                {statusRemaining}
+              </span>
+            </div>
+            <div style={{ fontSize: 9, color: MUTED }}>Pinned quote shown on your public profile. Max 140 characters.</div>
+          </Field>
+
+          <Field label="About">
+            <div style={{ position: 'relative' }}>
+              <textarea
+                style={{ ...inputStyle, minHeight: 88, resize: 'vertical', paddingBottom: 24 } as React.CSSProperties}
+                placeholder="A short bio shown on your public profile…"
+                value={form.bio}
+                onChange={e => set('bio', e.target.value.slice(0, 300))}
+                maxLength={300}
+              />
+              <span style={{
+                position: 'absolute', right: 12, bottom: 10,
+                fontSize: 9, color: bioRemaining < 40 ? '#f97316' : MUTED,
+                fontFamily: MONO, letterSpacing: '0.04em',
+              }}>
+                {bioRemaining}
+              </span>
+            </div>
+            <div style={{ fontSize: 9, color: MUTED }}>Max 300 characters.</div>
           </Field>
         </section>
 
-        {/* Social handles */}
-        <section style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '24px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* ── Bettor Type ───────────────────────────────────────────────── */}
+        <section style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, color: ACCENT, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD, marginBottom: 4 }}>Bettor Type</div>
+            <div style={{ fontSize: 9, color: MUTED }}>Select the style that best fits how you approach betting. Displayed as a badge on your public profile.</div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+            {BETTOR_TYPES.map(bt => {
+              const isSelected = form.bettor_type === bt.id
+              return (
+                <button
+                  key={bt.id}
+                  onClick={() => set('bettor_type', isSelected ? '' : bt.id)}
+                  style={{
+                    background:    isSelected ? `${bt.color}10` : 'transparent',
+                    border:        `1.5px solid ${isSelected ? bt.color : BORDER}`,
+                    padding:       '16px 18px',
+                    cursor:        'pointer',
+                    textAlign:     'left',
+                    fontFamily:    MONO,
+                    transition:    'border-color 0.15s, background 0.15s',
+                    position:      'relative',
+                    boxShadow:     isSelected ? `0 0 18px ${bt.color}22` : 'none',
+                  }}
+                >
+                  {isSelected && (
+                    <span style={{
+                      position: 'absolute', top: 10, right: 12,
+                      fontSize: 10, color: bt.color,
+                    }}>✓</span>
+                  )}
+                  <div style={{ fontSize: 20, marginBottom: 8, lineHeight: 1 }}>{bt.icon}</div>
+                  <div style={{
+                    fontSize: 11, fontWeight: 900, color: isSelected ? bt.color : TEXT,
+                    letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
+                  }}>
+                    {bt.label}
+                  </div>
+                  <div style={{ fontSize: 10, color: MUTED, lineHeight: 1.55, letterSpacing: '0.01em' }}>
+                    {bt.flavor.slice(0, 100)}…
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── Social handles ────────────────────────────────────────────── */}
+        <section style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ fontSize: 10, color: ACCENT, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD }}>Social Handles</div>
           <div style={{ fontSize: 9, color: MUTED }}>Enter handles without the @ symbol.</div>
 
@@ -343,7 +450,6 @@ export default function ProfileSettingsPage() {
             </Field>
           ))}
 
-          {/* Choose 2 to display */}
           {filledPlatforms.length > 0 && (
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20 }}>
               <div style={{ fontSize: 9, color: SUB, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD, marginBottom: 12 }}>
@@ -360,7 +466,6 @@ export default function ProfileSettingsPage() {
                       style={{
                         background:    isSelected ? `${ACCENT}18` : 'transparent',
                         border:        `1px solid ${isSelected ? ACCENT : BORDER}`,
-                        borderRadius:  6,
                         color:         isSelected ? ACCENT : MUTED,
                         fontSize:      11, fontWeight: isSelected ? 700 : 400,
                         letterSpacing: '0.06em', padding: '7px 14px',
@@ -370,7 +475,7 @@ export default function ProfileSettingsPage() {
                     >
                       {label}
                       {slotLabel && (
-                        <span style={{ fontSize: 8, color: ACCENT, background: `${ACCENT}22`, borderRadius: 3, padding: '1px 5px', fontWeight: 800, letterSpacing: '0.1em' }}>
+                        <span style={{ fontSize: 8, color: ACCENT, background: `${ACCENT}22`, padding: '1px 5px', fontWeight: 800, letterSpacing: '0.1em' }}>
                           {slotLabel}
                         </span>
                       )}
@@ -387,19 +492,14 @@ export default function ProfileSettingsPage() {
           )}
         </section>
 
-        {/* Privacy */}
-        <section style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '24px 24px' }}>
+        {/* ── Privacy ───────────────────────────────────────────────────── */}
+        <section style={{ background: CARD, border: `1px solid ${BORDER}`, padding: '24px' }}>
           <div style={{ fontSize: 10, color: ACCENT, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD, marginBottom: 16 }}>Privacy</div>
 
           <button
             onClick={() => set('show_favorites_public', !form.show_favorites_public)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 0, fontFamily: MONO, width: '100%', textAlign: 'left',
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: MONO, width: '100%', textAlign: 'left' }}
           >
-            {/* Toggle pill */}
             <div className="toggle-track" style={{
               width: 44, height: 24, borderRadius: 12, flexShrink: 0, position: 'relative',
               background: form.show_favorites_public ? ACCENT : '#2a2a34',
@@ -426,7 +526,7 @@ export default function ProfileSettingsPage() {
           </button>
         </section>
 
-        {/* Save */}
+        {/* ── Save ──────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             {saveError   && <div style={{ fontSize: 11, color: RED }}>{saveError}</div>}
@@ -437,7 +537,7 @@ export default function ProfileSettingsPage() {
             disabled={saving || !!usernameError}
             style={{
               background:    saving || usernameError ? '#1a1a24' : `linear-gradient(135deg, ${ACCENT}, #22c55e)`,
-              border:        'none', borderRadius: 8,
+              border:        'none',
               color:         saving || usernameError ? MUTED : '#000',
               fontSize:      12, fontWeight: 900, letterSpacing: '0.1em',
               textTransform: 'uppercase', cursor: saving || usernameError ? 'default' : 'pointer',
