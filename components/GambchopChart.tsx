@@ -6,6 +6,7 @@ import type { MemberTier } from '@/lib/auth-context'
 import { useFilters } from '@/lib/filter-context'
 import type { VisibleRows } from '@/lib/filter-context'
 import { computeStreak } from '@/lib/chart-data'
+import { TEAM_COLORS } from '@/lib/teamColors'
 
 const FREE_COLS = 3
 
@@ -365,12 +366,16 @@ export default function GambchopChart({
   const [atEnd,   setAtEnd]   = useState(false)
   const scrollPosRef  = useRef(0)
   const teamRefs      = useRef<(HTMLDivElement | null)[]>([])
+  const glowRefs      = useRef<(HTMLDivElement | null)[]>([])
   const isSyncing     = useRef(false)
   const syncTimer     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Keep teamRefs sized to match current data
+  // Keep teamRefs + glowRefs sized to match current data
   if (teamRefs.current.length !== data.length) {
     teamRefs.current = new Array(data.length).fill(null)
+  }
+  if (glowRefs.current.length !== data.length) {
+    glowRefs.current = new Array(data.length).fill(null)
   }
 
   function allScrollRefs(): (HTMLDivElement | null)[] {
@@ -462,6 +467,20 @@ export default function GambchopChart({
     const firstEl = teamRefs.current.find(r => r !== null)
     if (firstEl) updateEdges(scrollPosRef.current, firstEl)
   }, [data.length, daysInMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // IntersectionObserver — only animate glow on visible team cards
+  useEffect(() => {
+    const els = glowRefs.current.filter((el): el is HTMLDivElement => el !== null)
+    if (!els.length) return
+    const observer = new IntersectionObserver(
+      entries => entries.forEach(e =>
+        e.target.classList.toggle('team-glow-active', e.isIntersecting)
+      ),
+      { threshold: 0.1 }
+    )
+    els.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [data.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ width: '100%' }}>
@@ -558,8 +577,20 @@ export default function GambchopChart({
 
           const visibleRowList = ROWS.filter(row => visibleRows[ROW_VISIBLE_KEY[row.key]])
 
+          const teamColors = TEAM_COLORS[team.teamName]
+
           return (
-            <div key={team.teamName} style={{ position: 'relative' }}>
+            <div
+              key={team.teamName}
+              ref={el => { glowRefs.current[ti] = el }}
+              className="team-glow-border"
+              style={{
+                position: 'relative',
+                marginBottom: ti < data.length - 1 ? 6 : 0,
+                '--team-primary':   teamColors?.primary   ?? '#39ff9a',
+                '--team-secondary': teamColors?.secondary ?? '#ffffff',
+              } as React.CSSProperties}
+            >
               {/* Edge gradients per team */}
               {!atStart && (
                 <div style={{ position: 'absolute', left: LABEL_W, top: 0, bottom: 0, width: 48, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to right, #0a0a0f, transparent)' }} />
