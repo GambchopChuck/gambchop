@@ -103,7 +103,7 @@ function FAQ({ q, a }: { q: string; a: string }) {
         style={{
           width: '100%', background: 'none', border: 'none', cursor: 'pointer',
           padding: '18px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, fontFamily: 'var(--font-geist-mono), monospace',
+          gap: 12, fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
         }}
       >
         <span style={{ fontSize: 12, color: TEXT, fontWeight: 700, letterSpacing: '0.03em', textAlign: 'left' }}>{q}</span>
@@ -298,7 +298,7 @@ const COMPARE_ROWS: { label: string; free: string; pro: string }[] = [
 function ComparisonTable() {
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-geist-mono), monospace' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
         <thead>
           <tr>
             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, width: '40%' }}>
@@ -391,7 +391,7 @@ function PricingContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      fontFamily: 'var(--font-geist-mono), monospace',
+      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
       paddingLeft: 80,
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 32px 100px' }}>

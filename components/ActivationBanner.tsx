@@ -29,7 +29,7 @@ export default function ActivationBanner() {
       borderBottom: `1px solid ${PURPLE}33`,
       padding: '10px 20px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      fontFamily: 'var(--font-geist-mono), monospace',
+      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
     }}>
       <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.04em' }}>
         ⚡ Your Pro access is activating — if features aren&apos;t unlocked yet, refresh in a moment.

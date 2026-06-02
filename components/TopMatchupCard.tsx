@@ -34,7 +34,7 @@ function slugify(s: string): string {
 
 // ─── Font stacks ──────────────────────────────────────────────────────────────
 
-const MONO   = 'var(--font-geist-mono), monospace'
+const MONO   = 'var(--font-oswald), "Oswald", sans-serif'
 const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 
 // ─── fp-card color tokens (identical to Also Featured section) ────────────────

@@ -13,7 +13,7 @@ import type { TopMatchupData } from '@/lib/topMatchups'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ACCENT  = '#39ff9a'
-const MONO    = 'var(--font-geist-mono), monospace'
+const MONO    = 'var(--font-oswald), "Oswald", sans-serif'
 const FREE_CELLS = 3
 
 const LEAGUE_TABS = [

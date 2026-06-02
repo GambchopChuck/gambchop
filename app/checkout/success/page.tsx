@@ -91,7 +91,7 @@ function SuccessContent() {
     <div style={{
       minHeight: '100vh', background: BG,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24, fontFamily: 'var(--font-geist-mono), monospace',
+      padding: 24, fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
     }}>
       <div style={{
         width: '100%', maxWidth: 520,

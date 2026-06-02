@@ -17,7 +17,7 @@ const INPUT: React.CSSProperties = {
   width: '100%', background: '#0c0c10', border: '1px solid #2a2a34',
   borderRadius: 8, padding: '12px 14px', color: TEXT,
   fontSize: 12, letterSpacing: '0.04em', outline: 'none',
-  fontFamily: 'var(--font-geist-mono), monospace', boxSizing: 'border-box',
+  fontFamily: 'var(--font-oswald), "Oswald", sans-serif', boxSizing: 'border-box',
 }
 
 export default function ResetPasswordPage() {
@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
     <div style={{
       minHeight: '100vh', background: BG,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24, fontFamily: 'var(--font-geist-mono), monospace',
+      padding: 24, fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
     }}>
       <div style={{
         width: '100%', maxWidth: 420,

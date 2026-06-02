@@ -45,7 +45,7 @@ export default async function NewsPreview() {
           margin-top: 16px;
           font-size: 10px;
           color: #ffffff;
-          font-family: var(--font-geist-mono), monospace;
+          font-family: var(--font-oswald), "Oswald", sans-serif;
           text-decoration: none;
           letter-spacing: 0.14em;
           text-transform: uppercase;
@@ -73,14 +73,14 @@ export default async function NewsPreview() {
             <h2 style={{
               fontSize: 12, fontWeight: 700, color: ACCENT,
               letterSpacing: '0.28em', textTransform: 'uppercase', margin: 0,
-              fontFamily: 'var(--font-geist-mono), monospace',
+              fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
             }}>
               Gambchop News
             </h2>
           </div>
           <Link href="/news" style={{
             fontSize: 10, color: '#ffffff',
-            fontFamily: 'var(--font-geist-mono), monospace',
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
             textDecoration: 'none', letterSpacing: '0.14em',
             textTransform: 'uppercase', transition: 'color 0.15s',
           }}>
@@ -104,7 +104,7 @@ export default async function NewsPreview() {
           <p style={{
             fontSize: 9, color: '#ffffff', letterSpacing: '0.22em',
             textTransform: 'uppercase', margin: '0 0 14px',
-            fontFamily: 'var(--font-geist-mono), monospace', fontWeight: 700,
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif', fontWeight: 700,
           }}>
             Sports News
           </p>
@@ -142,7 +142,7 @@ export default async function NewsPreview() {
                           fontSize: 8, fontWeight: 700,
                           letterSpacing: '0.13em', textTransform: 'uppercase',
                           padding: '2px 5px', borderRadius: 3,
-                          fontFamily: 'var(--font-geist-mono), monospace',
+                          fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                           whiteSpace: 'nowrap',
                         }}>
                           {a.sport}
@@ -189,7 +189,7 @@ export default async function NewsPreview() {
           <p style={{
             fontSize: 9, color: '#ffffff', letterSpacing: '0.22em',
             textTransform: 'uppercase', margin: '0 0 14px',
-            fontFamily: 'var(--font-geist-mono), monospace', fontWeight: 700,
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif', fontWeight: 700,
           }}>
             Chart News
           </p>
@@ -220,7 +220,7 @@ export default async function NewsPreview() {
                       fontSize: 7, fontWeight: 700,
                       letterSpacing: '0.12em', textTransform: 'uppercase',
                       padding: '2px 5px', borderRadius: 3,
-                      fontFamily: 'var(--font-geist-mono), monospace',
+                      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                       whiteSpace: 'nowrap',
                     }}>
                       {badge.label}

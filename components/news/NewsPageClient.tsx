@@ -87,7 +87,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   cursor:        'pointer',
-                  fontFamily:    'var(--font-geist-mono), monospace',
+                  fontFamily:    'var(--font-oswald), "Oswald", sans-serif',
                   transition:    'all 0.15s',
                   boxShadow:     active ? `0 0 12px ${ACCENT}55` : 'none',
                 }}
@@ -123,7 +123,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
                     cursor:        'pointer',
-                    fontFamily:    'var(--font-geist-mono), monospace',
+                    fontFamily:    'var(--font-oswald), "Oswald", sans-serif',
                     transition:    'all 0.15s',
                   }}
                   onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#ffffff' }}
@@ -142,7 +142,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
         <p style={{
           fontSize: 10, color: '#ffffff', letterSpacing: '0.3em',
           textTransform: 'uppercase', margin: '0 0 6px',
-          fontFamily: 'var(--font-geist-mono), monospace',
+          fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
         }}>
           {primaryTab === 'sports' ? 'Daily feed' : 'Gambchop data'}
         </p>
@@ -293,7 +293,7 @@ function HeroCard({ article }: { article: NewsArticle }) {
             <span style={{
               fontSize: 9, fontWeight: 700, letterSpacing: '0.25em',
               textTransform: 'uppercase', color: ACCENT,
-              fontFamily: 'var(--font-geist-mono), monospace',
+              fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
               background: `${ACCENT}15`, border: `1px solid ${ACCENT}33`,
               padding: '3px 10px', borderRadius: 4,
             }}>
@@ -308,7 +308,7 @@ function HeroCard({ article }: { article: NewsArticle }) {
                 border: `1px solid ${sc.border}`, fontSize: 10, fontWeight: 700,
                 letterSpacing: '0.18em', textTransform: 'uppercase',
                 padding: '3px 10px', borderRadius: 4, marginBottom: 14,
-                fontFamily: 'var(--font-geist-mono), monospace',
+                fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
               }}>
                 {article.sport}
               </span>
@@ -372,7 +372,7 @@ function ArticleRow({ article }: { article: NewsArticle }) {
               border: `1px solid ${sc.border}`, fontSize: 9, fontWeight: 700,
               letterSpacing: '0.15em', textTransform: 'uppercase',
               padding: '2px 8px', borderRadius: 3,
-              fontFamily: 'var(--font-geist-mono), monospace', whiteSpace: 'nowrap',
+              fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
             }}>
               {article.sport}
             </span>
@@ -437,7 +437,7 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
           background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`,
           fontSize: 7, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
           padding: '3px 6px', borderRadius: 3,
-          fontFamily: 'var(--font-geist-mono), monospace', whiteSpace: 'nowrap',
+          fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
         }}>
           {badge.label}
         </span>
@@ -538,7 +538,7 @@ function StoryCountWidget({ count, label }: { count: number; label: string }) {
     }}>
       <p style={{
         fontSize: 10, color: '#ffffff', letterSpacing: '0.22em', textTransform: 'uppercase',
-        margin: '0 0 10px', fontFamily: 'var(--font-geist-mono), monospace',
+        margin: '0 0 10px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
       }}>
         In feed
       </p>
@@ -570,7 +570,7 @@ function ChartLegend() {
     }}>
       <p style={{
         fontSize: 10, color: '#ffffff', letterSpacing: '0.22em', textTransform: 'uppercase',
-        margin: '0 0 14px', fontFamily: 'var(--font-geist-mono), monospace',
+        margin: '0 0 14px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
       }}>
         Chart key
       </p>
@@ -597,7 +597,7 @@ function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
     }}>
       <p style={{
         fontSize: 10, color: '#ffffff', letterSpacing: '0.22em', textTransform: 'uppercase',
-        margin: '0 0 16px', fontFamily: 'var(--font-geist-mono), monospace',
+        margin: '0 0 16px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
       }}>
         Trending
       </p>
@@ -615,7 +615,7 @@ function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
             >
               <span style={{
                 fontSize: 22, fontWeight: 900, color: '#1f1f2a', lineHeight: 1.1,
-                minWidth: 22, flexShrink: 0, fontFamily: 'var(--font-geist-mono), monospace',
+                minWidth: 22, flexShrink: 0, fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
               }}>
                 {i + 1}
               </span>
@@ -627,7 +627,7 @@ function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
                     border: `1px solid ${sc.border}`, fontSize: 8, fontWeight: 700,
                     letterSpacing: '0.18em', textTransform: 'uppercase',
                     padding: '2px 6px', borderRadius: 3, marginBottom: 5,
-                    fontFamily: 'var(--font-geist-mono), monospace',
+                    fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                   }}>
                     {article.sport}
                   </span>

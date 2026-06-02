@@ -24,7 +24,7 @@ const TEXT   = '#f4f4f5'
 const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 const ACCENT = '#39ff9a'
-const MONO   = 'var(--font-geist-mono), monospace'
+const MONO   = 'var(--font-oswald), "Oswald", sans-serif'
 const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 
 // ─── League color map ──────────────────────────────────────────────────────────

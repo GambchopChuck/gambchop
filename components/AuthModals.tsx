@@ -16,7 +16,7 @@ const OVERLAY: React.CSSProperties = {
 const PANEL: React.CSSProperties = {
   background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 16,
   padding: '40px 36px', width: '100%', maxWidth: 420,
-  fontFamily: 'var(--font-geist-mono), monospace',
+  fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
   position: 'relative',
 }
 

@@ -23,7 +23,7 @@ const SUB         = '#a1a1aa'
 const GREEN       = '#22c55e'
 const ACCENT_PILL = '#39ff9a'   // Matches NewsPageClient tab accent
 const OSWALD      = 'var(--font-oswald), "Oswald", sans-serif'
-const MONO        = 'var(--font-geist-mono), monospace'
+const MONO        = 'var(--font-oswald), "Oswald", sans-serif'
 
 // TimeRange, RANGE_OPTIONS, filterGamesByRange imported from @/lib/time-range
 

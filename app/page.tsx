@@ -105,7 +105,7 @@ export default async function HomePage() {
             <p style={{
               fontSize: 11, color: '#22c55e', letterSpacing: '0.25em',
               textTransform: 'uppercase', fontWeight: 700,
-              fontFamily: 'var(--font-geist-mono), monospace',
+              fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
               margin: '0 0 24px',
             }}>
               Your sports data assistant.

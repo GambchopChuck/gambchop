@@ -358,20 +358,20 @@ function LoginGate() {
         <h1 style={{ fontSize: 24, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>
           Favorites
         </h1>
-        <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.8, margin: '0 0 28px', fontFamily: 'var(--font-geist-mono), monospace' }}>
+        <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.8, margin: '0 0 28px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
           Track any team × bet type combination across all supported leagues. Sign in to get started.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={() => openModal('join')} style={{
             background: `linear-gradient(135deg, ${GREEN}, #16a34a)`, border: 'none', borderRadius: 8,
             color: '#000', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
-            cursor: 'pointer', padding: '12px 24px', fontFamily: 'var(--font-geist-mono), monospace',
+            cursor: 'pointer', padding: '12px 24px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
             boxShadow: `0 0 20px ${GREEN}35`,
           }}>Join Free</button>
           <button onClick={() => openModal('login')} style={{
             background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8,
             color: SUB, fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
-            cursor: 'pointer', padding: '12px 24px', fontFamily: 'var(--font-geist-mono), monospace',
+            cursor: 'pointer', padding: '12px 24px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
           }}>Sign In</button>
         </div>
       </div>
@@ -629,7 +629,7 @@ export default function FavoritesPage() {
             background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8,
             padding: '8px 14px', fontSize: 10,
             color: favorites.length >= 16 ? '#ef4444' : SUB,
-            fontFamily: 'var(--font-geist-mono), monospace',
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
           }}>
             {favorites.length} <span style={{ color: MUTED }}>/</span> 16
           </div>
@@ -643,7 +643,7 @@ export default function FavoritesPage() {
               style={{
                 background: CARD, border: `1px solid ${BORDER}`, borderRadius: 6,
                 color: SUB, fontSize: 10, padding: '7px 10px',
-                fontFamily: 'var(--font-geist-mono), monospace',
+                fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                 cursor: 'pointer', outline: 'none',
               }}
             >
@@ -671,7 +671,7 @@ export default function FavoritesPage() {
           background: '#1a1a24', border: `1px solid ${BORDER}`, borderRadius: 10,
           padding: '12px 24px', fontSize: 11, color: SUB,
           zIndex: 500, boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-          fontFamily: 'var(--font-geist-mono), monospace', whiteSpace: 'nowrap',
+          fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
         }}>
           {toast}
         </div>
@@ -690,7 +690,7 @@ export default function FavoritesPage() {
           <button onClick={() => openModal('pro')} style={{
             background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`, border: 'none', borderRadius: 7,
             color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
-            cursor: 'pointer', padding: '9px 18px', fontFamily: 'var(--font-geist-mono), monospace',
+            cursor: 'pointer', padding: '9px 18px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
             boxShadow: `0 0 16px ${PURPLE}44`, whiteSpace: 'nowrap',
           }}>
             🔒 Go Pro
@@ -808,7 +808,7 @@ export default function FavoritesPage() {
                         border: 'none', borderRadius: 8, padding: '10px 22px',
                         color: '#fff', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em',
                         textTransform: 'uppercase', cursor: 'pointer',
-                        boxShadow: `0 0 24px ${PURPLE}55`, fontFamily: 'var(--font-geist-mono), monospace',
+                        boxShadow: `0 0 24px ${PURPLE}55`, fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                       }}>
                         🔒 Go Pro — Unlock Full Month
                       </button>

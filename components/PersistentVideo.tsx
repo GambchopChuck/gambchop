@@ -12,7 +12,7 @@ export default function PersistentVideo() {
   const [collapsed, setCollapsed] = useState(true)
 
   return (
-    <div style={{ fontFamily: 'var(--font-geist-mono), monospace' }}>
+    <div style={{ fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
 
       {/* Video section */}
       <div style={{

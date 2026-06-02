@@ -73,7 +73,7 @@ export default function NotificationBell() {
           borderRadius: 12, zIndex: 200,
           boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
           overflow: 'hidden',
-          fontFamily: 'var(--font-geist-mono), monospace',
+          fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
         }}>
           {/* Header */}
           <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

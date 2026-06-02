@@ -45,7 +45,7 @@ export default function FiltersDropdown({ onClose }: { onClose: () => void }) {
       borderTop: '1px solid #14141c',
       borderBottom: '1px solid #14141c',
       padding: '16px 24px 20px',
-      fontFamily: 'var(--font-geist-mono), monospace',
+      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
     }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
 

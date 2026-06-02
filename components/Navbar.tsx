@@ -152,7 +152,7 @@ export default function Navbar() {
                   background: '#0f0f14', border: '1px solid #1a1a24',
                   borderRadius: 10, padding: 6, minWidth: 180,
                   boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                  fontFamily: 'var(--font-geist-mono), monospace',
+                  fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                   zIndex: 100,
                 }}>
                   {/* Identity header */}

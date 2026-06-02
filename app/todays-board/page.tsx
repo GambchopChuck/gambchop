@@ -206,7 +206,7 @@ export default function StreakBoardPage() {
   const selectSt: React.CSSProperties = {
     background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 6,
     color: '#ffffff', fontSize: 10, padding: '7px 10px',
-    fontFamily: 'var(--font-geist-mono), monospace',
+    fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
     cursor: 'pointer', outline: 'none',
   }
 

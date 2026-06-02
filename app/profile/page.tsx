@@ -66,7 +66,7 @@ function UsernameSetup({ authId, onSet }: { authId?: string; onSet: (u: Communit
         <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8, fontWeight: 700 }}>Profile Setup</div>
         <h2 style={{ fontSize: 20, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 24px' }}>Pick Your Username</h2>
         <input
-          style={{ width: '100%', background: '#0c0c10', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 12, letterSpacing: '0.03em', outline: 'none', fontFamily: 'var(--font-geist-mono), monospace', boxSizing: 'border-box', marginBottom: 8 }}
+          style={{ width: '100%', background: '#0c0c10', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 12, letterSpacing: '0.03em', outline: 'none', fontFamily: 'var(--font-oswald), "Oswald", sans-serif', boxSizing: 'border-box', marginBottom: 8 }}
           placeholder="e.g. SharpBettor99"
           value={name}
           onChange={e => { setName(e.target.value); setErr('') }}
@@ -135,7 +135,7 @@ export default function ProfilePage() {
   // Non-member gate
   if (ready && memberTier === 'none') {
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, background: BG, fontFamily: 'var(--font-geist-mono), monospace' }}>
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, background: BG, fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>👤</div>
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 10 }}>Profile</div>
@@ -155,7 +155,7 @@ export default function ProfilePage() {
   // Username setup
   if (ready && !user) {
     return (
-      <div style={{ background: BG, minHeight: '100vh', fontFamily: 'var(--font-geist-mono), monospace' }}>
+      <div style={{ background: BG, minHeight: '100vh', fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
         <UsernameSetup authId={authUser?.id} onSet={u => setUser(u)} />
       </div>
     )
@@ -168,7 +168,7 @@ export default function ProfilePage() {
   const followLimit = isPro ? null : FREE_FOLLOWS
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'var(--font-geist-mono), monospace', padding: '0 0 80px' }}>
+    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'var(--font-oswald), "Oswald", sans-serif', padding: '0 0 80px' }}>
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div style={{ borderBottom: `1px solid ${BORDER}`, padding: '28px 24px 24px' }}>

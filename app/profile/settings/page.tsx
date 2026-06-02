@@ -17,7 +17,7 @@ const ACCENT = '#39ff9a'
 const RED    = '#ef4444'
 const PURPLE = '#8b5cf6'
 const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
-const MONO   = 'var(--font-geist-mono), monospace'
+const MONO   = 'var(--font-oswald), "Oswald", sans-serif'
 
 type SocialKey = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
