@@ -231,10 +231,10 @@ function CommentCard({ comment, currentUser, isThreadAuthor, profile, onPin, onD
             if (!handle || !platform) return null
             return <SocialBadge key={platform} platform={platform} handle={handle as string} />
           })}
-          <span style={{ fontSize: 10, color: '#3f3f46' }}>·</span>
+          <span style={{ fontSize: 10, color: '#ffffff' }}>·</span>
           <span style={{ fontSize: 10, color: MUTED }}>{timeAgo(comment.created_at)}</span>
           {isEditable(comment.created_at) && isOwn && (
-            <span style={{ fontSize: 9, color: '#3f3f46', border: `1px solid #2a2a34`, borderRadius: 3, padding: '1px 5px', letterSpacing: '0.1em' }}>Editable</span>
+            <span style={{ fontSize: 9, color: '#ffffff', border: `1px solid #2a2a34`, borderRadius: 3, padding: '1px 5px', letterSpacing: '0.1em' }}>Editable</span>
           )}
         </div>
         {/* Actions */}
@@ -538,7 +538,7 @@ export default function ThreadPage() {
               maxLength={2000}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 10, color: replyErr ? RED : '#3f3f46' }}>{replyErr || `${reply.length}/2000`}</div>
+              <div style={{ fontSize: 10, color: replyErr ? RED : '#ffffff' }}>{replyErr || `${reply.length}/2000`}</div>
               <button onClick={postReply} disabled={posting || reply.trim().length < 2} style={{ ...btnGreen, opacity: posting || reply.trim().length < 2 ? 0.5 : 1 }}>
                 {posting ? 'Posting…' : 'Post Reply →'}
               </button>

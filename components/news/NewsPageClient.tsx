@@ -78,7 +78,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                 onClick={() => setPrimaryTab(tab)}
                 style={{
                   background:    active ? ACCENT       : 'transparent',
-                  color:         active ? '#000'        : '#71717a',
+                  color:         active ? '#000'        : '#ffffff',
                   border:        active ? 'none'        : '1px solid transparent',
                   borderRadius:  6,
                   padding:       '5px 16px',
@@ -92,7 +92,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                   boxShadow:     active ? `0 0 12px ${ACCENT}55` : 'none',
                 }}
                 onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#d4d4d8' }}
-                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#71717a' }}
+                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#ffffff' }}
               >
                 {label}
               </button>
@@ -114,7 +114,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                   onClick={() => setLeagueTab(tag)}
                   style={{
                     background:    active ? `${ACCENT}18` : 'transparent',
-                    color:         active ? ACCENT         : '#52525b',
+                    color:         active ? ACCENT         : '#ffffff',
                     border:        active ? `1px solid ${ACCENT}44` : '1px solid transparent',
                     borderRadius:  5,
                     padding:       '3px 12px',
@@ -126,8 +126,8 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
                     fontFamily:    'var(--font-geist-mono), monospace',
                     transition:    'all 0.15s',
                   }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#a1a1aa' }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#52525b' }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#ffffff' }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#ffffff' }}
                 >
                   {tag}
                 </button>
@@ -140,7 +140,7 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
       {/* ── Page header ────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0' }}>
         <p style={{
-          fontSize: 10, color: '#52525b', letterSpacing: '0.3em',
+          fontSize: 10, color: '#ffffff', letterSpacing: '0.3em',
           textTransform: 'uppercase', margin: '0 0 6px',
           fontFamily: 'var(--font-geist-mono), monospace',
         }}>
@@ -204,7 +204,7 @@ function SportsNewsFeed({
       }}>
         <div>
           {feed.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#52525b', padding: '12px 0' }}>
+            <p style={{ fontSize: 13, color: '#ffffff', padding: '12px 0' }}>
               Only one article found for this league right now.
             </p>
           ) : (
@@ -323,7 +323,7 @@ function HeroCard({ article }: { article: NewsArticle }) {
 
             {article.summary && (
               <p style={{
-                fontSize: 15, color: '#a1a1aa', margin: '0 0 16px',
+                fontSize: 15, color: '#ffffff', margin: '0 0 16px',
                 lineHeight: 1.55, maxWidth: 680,
                 display: '-webkit-box', WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
@@ -332,7 +332,7 @@ function HeroCard({ article }: { article: NewsArticle }) {
               </p>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: '#71717a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: '#ffffff' }}>
               {article.source && <span style={{ color: ACCENT, fontWeight: 600 }}>{article.source}</span>}
               {article.source && article.published_at && <span>·</span>}
               {article.published_at && <span>{timeAgo(article.published_at)}</span>}
@@ -387,8 +387,8 @@ function ArticleRow({ article }: { article: NewsArticle }) {
           }}>
             {article.headline}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#52525b' }}>
-            {article.source && <span style={{ color: '#71717a' }}>{article.source}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#ffffff' }}>
+            {article.source && <span style={{ color: '#ffffff' }}>{article.source}</span>}
             {article.source && article.published_at && <span>·</span>}
             {article.published_at && <span>{timeAgo(article.published_at)}</span>}
           </div>
@@ -453,7 +453,7 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
 
         {/* eslint-disable-next-line react/no-danger */}
         <p
-          style={{ fontSize: 13, color: '#71717a', margin: '0 0 10px', lineHeight: 1.55 }}
+          style={{ fontSize: 13, color: '#ffffff', margin: '0 0 10px', lineHeight: 1.55 }}
           dangerouslySetInnerHTML={{ __html: linkifyTeamNames(article.body) }}
         />
 
@@ -462,7 +462,7 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
 
         <div style={{
           display: 'flex', alignItems: 'center', flexWrap: 'wrap',
-          gap: 6, fontSize: 11, color: '#52525b', marginTop: 8,
+          gap: 6, fontSize: 11, color: '#ffffff', marginTop: 8,
         }}>
           {TEAM_ROUTES[article.team_name] ? (
             <Link
@@ -481,7 +481,7 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
           <span>·</span>
           <span>{BET_TYPE_LABELS[article.bet_type] ?? article.bet_type}</span>
           <span>·</span>
-          <span style={{ color: '#a1a1aa' }}>{footerSuffix}</span>
+          <span style={{ color: '#ffffff' }}>{footerSuffix}</span>
           {article.generated_at && <><span>·</span><span>{timeAgo(article.generated_at)}</span></>}
         </div>
       </div>
@@ -537,7 +537,7 @@ function StoryCountWidget({ count, label }: { count: number; label: string }) {
       background: '#0a0a0f', border: '1px solid #1a1a24', borderRadius: 10, padding: '18px 20px',
     }}>
       <p style={{
-        fontSize: 10, color: '#52525b', letterSpacing: '0.22em', textTransform: 'uppercase',
+        fontSize: 10, color: '#ffffff', letterSpacing: '0.22em', textTransform: 'uppercase',
         margin: '0 0 10px', fontFamily: 'var(--font-geist-mono), monospace',
       }}>
         In feed
@@ -548,7 +548,7 @@ function StoryCountWidget({ count, label }: { count: number; label: string }) {
       }}>
         {count}
       </p>
-      <p style={{ fontSize: 11, color: '#52525b', margin: '6px 0 0' }}>{label}</p>
+      <p style={{ fontSize: 11, color: '#ffffff', margin: '6px 0 0' }}>{label}</p>
     </div>
   )
 }
@@ -569,7 +569,7 @@ function ChartLegend() {
       background: '#0a0a0f', border: '1px solid #1a1a24', borderRadius: 10, padding: '18px 20px',
     }}>
       <p style={{
-        fontSize: 10, color: '#52525b', letterSpacing: '0.22em', textTransform: 'uppercase',
+        fontSize: 10, color: '#ffffff', letterSpacing: '0.22em', textTransform: 'uppercase',
         margin: '0 0 14px', fontFamily: 'var(--font-geist-mono), monospace',
       }}>
         Chart key
@@ -578,7 +578,7 @@ function ChartLegend() {
         {entries.map(({ color, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 12, height: 12, borderRadius: 2, background: color, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: '#71717a' }}>{label}</span>
+            <span style={{ fontSize: 12, color: '#ffffff' }}>{label}</span>
           </div>
         ))}
       </div>
@@ -596,7 +596,7 @@ function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
       background: '#0a0a0f', border: '1px solid #1a1a24', borderRadius: 10, padding: '18px 20px',
     }}>
       <p style={{
-        fontSize: 10, color: '#52525b', letterSpacing: '0.22em', textTransform: 'uppercase',
+        fontSize: 10, color: '#ffffff', letterSpacing: '0.22em', textTransform: 'uppercase',
         margin: '0 0 16px', fontFamily: 'var(--font-geist-mono), monospace',
       }}>
         Trending
@@ -667,7 +667,7 @@ function EmptyState({ label }: { label: string }) {
       }}>
         {label}
       </div>
-      <p style={{ fontSize: 14, color: '#52525b', margin: 0 }}>
+      <p style={{ fontSize: 14, color: '#ffffff', margin: 0 }}>
         No articles yet. Check back after the next daily refresh.
       </p>
     </div>

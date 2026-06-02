@@ -45,9 +45,9 @@ body {
   --color-hairline:   #1F1F23;
   --color-strong:     #2A2A30;
   --color-pri:        #F5F5F4;
-  --color-sec:        #A1A1AA;
-  --color-muted-c:    #71717A;
-  --color-faint:      #52525B;
+  --color-sec:        #ffffff;
+  --color-muted-c:    #ffffff;
+  --color-faint:      #ffffff;
   --color-accent:     #C5F84A;
   --color-accent-dim: #8FB833;
 }

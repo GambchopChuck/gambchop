@@ -16,11 +16,11 @@ import RankedList from './RankedList'
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 
 const T = {
-  sec:      '#A1A1AA',
+  sec:      '#ffffff',
   pri:      '#F5F5F4',
   hairline: '#1F1F23',
   green:    '#22C55E',
-  muted:    '#52525b',
+  muted:    '#ffffff',
   card:     '#0f0f14',
   border:   '#1a1a24',
 }
@@ -58,7 +58,7 @@ function TimeFrameToggle({ value, onChange }: { value: TimeRange; onChange: (r: 
             onClick={() => onChange(opt.value)}
             style={{
               background:    active ? ACCENT      : 'transparent',
-              color:         active ? '#000'       : '#71717a',
+              color:         active ? '#000'       : '#ffffff',
               border:        active ? 'none'       : '1px solid transparent',
               borderRadius:  6,
               padding:       '5px 16px',
@@ -72,7 +72,7 @@ function TimeFrameToggle({ value, onChange }: { value: TimeRange; onChange: (r: 
               boxShadow:     active ? `0 0 12px ${ACCENT}55` : 'none',
             }}
             onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#d4d4d8' }}
-            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#71717a' }}
+            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#ffffff' }}
           >
             {opt.label}
           </button>
@@ -254,7 +254,7 @@ export default function CategoryPills() {
                 fontFamily:    SANS,
                 fontSize:      13,
                 fontWeight:    isActive ? 600 : 500,
-                color:         isActive ? '#0A0A0B' : clickable ? T.sec : '#3f3f46',
+                color:         isActive ? '#0A0A0B' : clickable ? T.sec : '#ffffff',
                 background:    isActive ? T.green   : 'transparent',
                 border:        isActive ? `1.5px solid ${T.green}` : `1px solid ${T.hairline}`,
                 borderRadius:  isActive ? 8 : 6,
@@ -302,7 +302,7 @@ export default function CategoryPills() {
                 <span style={{
                   fontSize:      7,
                   fontWeight:    700,
-                  color:         '#52525b',
+                  color:         '#ffffff',
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                   fontFamily:    MONO,

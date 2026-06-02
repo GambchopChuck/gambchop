@@ -44,7 +44,7 @@ export default async function NewsPreview() {
           text-align: center;
           margin-top: 16px;
           font-size: 10px;
-          color: #52525b;
+          color: #ffffff;
           font-family: var(--font-geist-mono), monospace;
           text-decoration: none;
           letter-spacing: 0.14em;
@@ -79,7 +79,7 @@ export default async function NewsPreview() {
             </h2>
           </div>
           <Link href="/news" style={{
-            fontSize: 10, color: '#52525b',
+            fontSize: 10, color: '#ffffff',
             fontFamily: 'var(--font-geist-mono), monospace',
             textDecoration: 'none', letterSpacing: '0.14em',
             textTransform: 'uppercase', transition: 'color 0.15s',
@@ -102,7 +102,7 @@ export default async function NewsPreview() {
         {/* ── Sports News ──────────────────────────────────────────────────── */}
         <div className="fp-card" style={{ padding: '20px 20px 4px' }}>
           <p style={{
-            fontSize: 9, color: '#52525b', letterSpacing: '0.22em',
+            fontSize: 9, color: '#ffffff', letterSpacing: '0.22em',
             textTransform: 'uppercase', margin: '0 0 14px',
             fontFamily: 'var(--font-geist-mono), monospace', fontWeight: 700,
           }}>
@@ -110,7 +110,7 @@ export default async function NewsPreview() {
           </p>
 
           {newsArticles.length === 0 ? (
-            <p style={{ fontSize: 12, color: '#3f3f46', margin: '0 0 16px' }}>
+            <p style={{ fontSize: 12, color: '#ffffff', margin: '0 0 16px' }}>
               No articles yet.
             </p>
           ) : (
@@ -164,10 +164,10 @@ export default async function NewsPreview() {
                       </p>
                       <div style={{
                         display: 'flex', gap: 4,
-                        fontSize: 10, color: '#52525b',
+                        fontSize: 10, color: '#ffffff',
                       }}>
                         {a.source && (
-                          <span style={{ color: '#71717a' }}>{a.source}</span>
+                          <span style={{ color: '#ffffff' }}>{a.source}</span>
                         )}
                         {a.source && a.published_at && <span>·</span>}
                         {a.published_at && <span>{timeAgo(a.published_at)}</span>}
@@ -187,7 +187,7 @@ export default async function NewsPreview() {
         {/* ── Chart News ───────────────────────────────────────────────────── */}
         <div className="fp-card" style={{ padding: '20px 20px 4px' }}>
           <p style={{
-            fontSize: 9, color: '#52525b', letterSpacing: '0.22em',
+            fontSize: 9, color: '#ffffff', letterSpacing: '0.22em',
             textTransform: 'uppercase', margin: '0 0 14px',
             fontFamily: 'var(--font-geist-mono), monospace', fontWeight: 700,
           }}>
@@ -195,7 +195,7 @@ export default async function NewsPreview() {
           </p>
 
           {streakArticles.length === 0 ? (
-            <p style={{ fontSize: 12, color: '#3f3f46', margin: '0 0 16px' }}>
+            <p style={{ fontSize: 12, color: '#ffffff', margin: '0 0 16px' }}>
               No articles yet.
             </p>
           ) : (
@@ -248,7 +248,7 @@ export default async function NewsPreview() {
                       />
                     )}
 
-                    <div style={{ display: 'flex', gap: 4, fontSize: 10, color: '#52525b' }}>
+                    <div style={{ display: 'flex', gap: 4, fontSize: 10, color: '#ffffff' }}>
                       <span style={{ color: badge.color, fontWeight: 600 }}>
                         {a.team_name}
                       </span>

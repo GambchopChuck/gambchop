@@ -44,7 +44,7 @@ export default function ChartLegend() {
     }}>
       <div style={{
         fontSize: 9,
-        color: '#3f3f46',
+        color: '#ffffff',
         letterSpacing: '0.22em',
         textTransform: 'uppercase',
         fontWeight: 700,
@@ -58,7 +58,7 @@ export default function ChartLegend() {
         {ITEMS.map(({ bg, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 12, height: 12, background: bg, borderRadius: 3, flexShrink: 0 }} />
-            <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.04em' }}>{label}</span>
+            <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.04em' }}>{label}</span>
           </div>
         ))}
       </div>

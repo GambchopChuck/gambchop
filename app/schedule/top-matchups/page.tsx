@@ -107,7 +107,7 @@ function SubNav({ active }: { active: 'schedule' | 'top-matchups' }) {
             <Link key={tab.key} href={tab.href} style={{ textDecoration: 'none' }}>
               <div style={{
                 background:    isActive ? ACCENT : 'transparent',
-                color:         isActive ? '#000' : '#3f3f46',
+                color:         isActive ? '#000' : '#ffffff',
                 border:        isActive ? 'none' : '1px solid transparent',
                 borderRadius:  6,
                 padding:       '5px 14px',
@@ -279,7 +279,7 @@ function MatchupCard({ matchup }: { matchup: TopMatchupData }) {
             paddingTop:     6,
           }}>
             <div style={{ width: 1, height: 20, background: BORDER }} />
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#3f3f46', letterSpacing: '0.1em', fontFamily: MONO, margin: '4px 0' }}>VS</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#ffffff', letterSpacing: '0.1em', fontFamily: MONO, margin: '4px 0' }}>VS</span>
             <div style={{ width: 1, height: 20, background: BORDER }} />
           </div>
 

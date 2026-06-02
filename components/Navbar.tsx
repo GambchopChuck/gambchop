@@ -167,7 +167,7 @@ export default function Navbar() {
                         </div>
                       )}
                       {user?.email && (
-                        <div style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.03em', wordBreak: 'break-all' }}>
+                        <div style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.03em', wordBreak: 'break-all' }}>
                           {user.email}
                         </div>
                       )}
@@ -180,11 +180,11 @@ export default function Navbar() {
                   >
                     <div style={{
                       padding: '9px 12px', borderRadius: 7,
-                      fontSize: 11, color: '#a1a1aa', letterSpacing: '0.06em',
+                      fontSize: 11, color: '#ffffff', letterSpacing: '0.06em',
                       cursor: 'pointer', transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#1a1a24'; (e.currentTarget as HTMLDivElement).style.color = '#f4f4f5' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#a1a1aa' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#ffffff' }}
                     >
                       My Profile
                     </div>
@@ -196,11 +196,11 @@ export default function Navbar() {
                   >
                     <div style={{
                       padding: '9px 12px', borderRadius: 7,
-                      fontSize: 11, color: '#a1a1aa', letterSpacing: '0.06em',
+                      fontSize: 11, color: '#ffffff', letterSpacing: '0.06em',
                       cursor: 'pointer', transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#1a1a24'; (e.currentTarget as HTMLDivElement).style.color = '#f4f4f5' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#a1a1aa' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#ffffff' }}
                     >
                       Settings
                     </div>
@@ -224,11 +224,11 @@ export default function Navbar() {
                       onClick={handleSignOut}
                       style={{
                         padding: '9px 12px', borderRadius: 7,
-                        fontSize: 11, color: '#52525b', letterSpacing: '0.06em',
+                        fontSize: 11, color: '#ffffff', letterSpacing: '0.06em',
                         cursor: 'pointer', transition: 'all 0.12s',
                       }}
                       onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#ef444414'; (e.currentTarget as HTMLDivElement).style.color = '#ef4444' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#52525b' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#ffffff' }}
                     >
                       Sign Out
                     </div>

@@ -125,7 +125,7 @@ function ChartStrip({ cells, isPro }: { cells: OutcomeRow[]; isPro: boolean }) {
   const svgHtml = buildSvg(shown)
   if (!svgHtml) {
     return (
-      <span style={{ fontSize: 10, color: '#3f3f46', fontFamily: MONO }}>no data</span>
+      <span style={{ fontSize: 10, color: '#ffffff', fontFamily: MONO }}>no data</span>
     )
   }
   return (
@@ -186,7 +186,7 @@ function TeamColumn({
         )}
         {isHome && (
           <span style={{
-            fontSize: 7, fontWeight: 700, color: '#52525b', letterSpacing: '0.14em',
+            fontSize: 7, fontWeight: 700, color: '#ffffff', letterSpacing: '0.14em',
             textTransform: 'uppercase', fontFamily: MONO,
             background: '#1a1a24', padding: '1px 5px', borderRadius: 2,
           }}>
@@ -200,12 +200,12 @@ function TeamColumn({
         <div key={label} style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <span style={{
-              fontSize: 8, fontWeight: 700, color: '#52525b', letterSpacing: '0.14em',
+              fontSize: 8, fontWeight: 700, color: '#ffffff', letterSpacing: '0.14em',
               textTransform: 'uppercase', fontFamily: MONO, width: 22, flexShrink: 0,
             }}>
               {label}
             </span>
-            <span style={{ fontSize: 10, color: '#71717a', fontFamily: MONO }}>
+            <span style={{ fontSize: 10, color: '#ffffff', fontFamily: MONO }}>
               {line}
             </span>
           </div>
@@ -214,7 +214,7 @@ function TeamColumn({
             {!isPro && cells.length > 0 && (
               <Link href="/pricing" style={{ textDecoration: 'none' }}>
                 <span style={{
-                  fontSize: 7, color: '#52525b', fontFamily: MONO,
+                  fontSize: 7, color: '#ffffff', fontFamily: MONO,
                   letterSpacing: '0.1em', textTransform: 'uppercase',
                 }}>
                   +{Math.max(0, cells.length - FREE_CELLS)} more →
@@ -245,11 +245,11 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
     }}>
       {/* Time header */}
       <div style={{
-        fontSize: 9, color: '#52525b', letterSpacing: '0.22em',
+        fontSize: 9, color: '#ffffff', letterSpacing: '0.22em',
         textTransform: 'uppercase', fontFamily: MONO,
         marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <span style={{ color: '#71717a' }}>{timeStr} ET</span>
+        <span style={{ color: '#ffffff' }}>{timeStr} ET</span>
       </div>
 
       {/* Venue + pitcher meta — small muted, below time and above team columns */}
@@ -257,16 +257,16 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
         <div style={{
           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14,
           marginBottom: 14,
-          fontSize: 9, color: '#52525b', fontFamily: MONO, letterSpacing: '0.08em',
+          fontSize: 9, color: '#ffffff', fontFamily: MONO, letterSpacing: '0.08em',
         }}>
           {game.venue && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#52525b' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ffffff' }}>
               <StadiumIcon />
               {game.venue.name} · {game.venue.city}
             </span>
           )}
           {hasPitchers && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#52525b' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ffffff' }}>
               <PersonIcon />
               SP: {awayLast} vs {homeLast}
             </span>
@@ -289,7 +289,7 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
         }}>
           <div style={{ width: 1, height: 28, background: '#1a1a24' }} />
           <span style={{
-            fontSize: 9, fontWeight: 700, color: '#3f3f46', letterSpacing: '0.1em',
+            fontSize: 9, fontWeight: 700, color: '#ffffff', letterSpacing: '0.1em',
             fontFamily: MONO, margin: '4px 0',
           }}>
             VS
@@ -354,7 +354,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
               <Link key={tab.key} href={tab.href} style={{ textDecoration: 'none' }}>
                 <div style={{
                   background:    isActive ? ACCENT : 'transparent',
-                  color:         isActive ? '#000' : '#3f3f46',
+                  color:         isActive ? '#000' : '#ffffff',
                   border:        isActive ? 'none' : '1px solid transparent',
                   borderRadius:  6,
                   padding:       '5px 14px',
@@ -385,7 +385,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
                 disabled={!tab.active}
                 style={{
                   background:    tab.active ? ACCENT : 'transparent',
-                  color:         tab.active ? '#000' : '#3f3f46',
+                  color:         tab.active ? '#000' : '#ffffff',
                   border:        tab.active ? 'none' : '1px solid transparent',
                   borderRadius:  6, padding: '5px 14px',
                   fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
@@ -398,7 +398,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
               </button>
               {!tab.active && (
                 <span style={{
-                  fontSize: 7, fontWeight: 700, color: '#52525b',
+                  fontSize: 7, fontWeight: 700, color: '#ffffff',
                   letterSpacing: '0.12em', textTransform: 'uppercase',
                   fontFamily: MONO, background: '#1a1a24',
                   padding: '1px 5px', borderRadius: 2,
@@ -414,7 +414,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0' }}>
         <p style={{
-          fontSize: 10, color: '#52525b', letterSpacing: '0.3em',
+          fontSize: 10, color: '#ffffff', letterSpacing: '0.3em',
           textTransform: 'uppercase', margin: '0 0 6px', fontFamily: MONO,
         }}>
           Upcoming matchups
@@ -462,7 +462,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
         {!error && grouped.length === 0 && (
           <div style={{
             padding: '80px 24px', textAlign: 'center',
-            fontSize: 13, color: '#52525b', fontFamily: MONO,
+            fontSize: 13, color: '#ffffff', fontFamily: MONO,
             letterSpacing: '0.1em', textTransform: 'uppercase',
           }}>
             No upcoming games found in the next 7 days.
@@ -482,7 +482,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
                 {dateLabel(etDate)}
               </span>
               <div style={{ flex: 1, height: 1, background: '#1a1a24' }} />
-              <span style={{ fontSize: 9, color: '#3f3f46', fontFamily: MONO }}>
+              <span style={{ fontSize: 9, color: '#ffffff', fontFamily: MONO }}>
                 {dayGames.length} {dayGames.length === 1 ? 'game' : 'games'}
               </span>
             </div>
@@ -518,7 +518,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
               }}>
                 See the full 10-game chart strip
               </p>
-              <p style={{ fontSize: 11, color: '#71717a', margin: 0, fontFamily: MONO }}>
+              <p style={{ fontSize: 11, color: '#ffffff', margin: 0, fontFamily: MONO }}>
                 Pro members see all 10 outcome cells per team and bet type.
               </p>
             </div>

@@ -90,7 +90,7 @@ function SignUpForm() {
               Check Your Email
             </h2>
             <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.7, textAlign: 'center', margin: '0 0 24px' }}>
-              We sent a confirmation link to <strong style={{ color: '#a1a1aa' }}>{email}</strong>.
+              We sent a confirmation link to <strong style={{ color: '#ffffff' }}>{email}</strong>.
               Click it to activate your account, then sign in.
             </p>
             <Link href="/auth/login" style={{
@@ -140,7 +140,7 @@ function SignUpForm() {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
-                  Display Name <span style={{ color: '#3f3f46' }}>(optional)</span>
+                  Display Name <span style={{ color: '#ffffff' }}>(optional)</span>
                 </label>
                 <input
                   style={INPUT} type="text" placeholder="e.g. SharpBettor99"

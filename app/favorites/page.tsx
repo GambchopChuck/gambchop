@@ -149,7 +149,7 @@ function DateHeader({ year, month, daysInMonth, populatedDays }: {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: `1px solid ${BORDER}`, padding: '8px 0 6px', background: BG }}>
       <div style={{ width: TOTAL_LABEL_W, minWidth: TOTAL_LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: BG, paddingLeft: 46, zIndex: 20 }}>
-        <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
+        <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
       </div>
       {Array.from({ length: daysInMonth }, (_, i) => {
         const day = i + 1

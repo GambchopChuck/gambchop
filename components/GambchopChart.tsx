@@ -42,13 +42,13 @@ const rec = {
   ou:     (g: GameEntry[])      => ({ o: g.filter(x => x.ouResult === 'over').length, u: g.filter(x => x.ouResult === 'under').length }),
 }
 
-function wlColor(r: WL) { return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#52525b' }
+function wlColor(r: WL) { return r.w > r.l ? '#4ade80' : r.w < r.l ? '#f87171' : '#ffffff' }
 
 function RecordBadge({ r }: { r: WL }) {
   return <span style={{ color: wlColor(r), fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>&nbsp;({r.w}-{r.l})</span>
 }
 function OUBadge({ o, u }: { o: number; u: number }) {
-  const color = o > u ? C.violet : o < u ? C.brown : '#52525b'
+  const color = o > u ? C.violet : o < u ? C.brown : '#ffffff'
   return <span style={{ color, fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>&nbsp;({o}-{u})</span>
 }
 
@@ -161,11 +161,11 @@ function Legend({ lastUpdated }: { lastUpdated?: string | null }) {
       {LEGEND.map(({ bg, label }) => (
         <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 10, height: 10, background: bg, borderRadius: 2, flexShrink: 0 }} />
-          <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
+          <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
         </div>
       ))}
       {updatedLabel && (
-        <span style={{ marginLeft: 'auto', fontSize: 9, color: '#3f3f46', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: '#ffffff', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, whiteSpace: 'nowrap' }}>
           ◷ {updatedLabel}
         </span>
       )}
@@ -184,7 +184,7 @@ function MonthNav({ year, month, onPrev, onNext, canPrev, canNext }: {
 }) {
   const btnBase: React.CSSProperties = {
     background: 'none', border: '1px solid #1a1a24', borderRadius: 5,
-    color: '#a1a1aa', cursor: 'pointer', fontFamily: 'inherit',
+    color: '#ffffff', cursor: 'pointer', fontFamily: 'inherit',
     fontSize: 13, lineHeight: 1, padding: '4px 10px',
     transition: 'all 0.15s',
   }
@@ -212,7 +212,7 @@ function DateHeader({ year, month, daysInMonth, populatedDays }: {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #1a1a24', padding: '8px 0 6px', background: '#0a0a0f' }}>
       <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: '#0a0a0f', paddingLeft: 20, zIndex: 20 }}>
-        <span style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
+        <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Team / Metric</span>
       </div>
       {Array.from({ length: daysInMonth }, (_, i) => {
         const day = i + 1
@@ -240,15 +240,15 @@ function NoMemberOverlay({ onJoin, onPro }: { onJoin: () => void; onPro: () => v
     }}>
       <div style={{ textAlign: 'center', padding: '32px', background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 16, maxWidth: 400 }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
-        <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8 }}>Membership Required</div>
+        <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 8 }}>Membership Required</div>
         <h3 style={{ fontSize: 18, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', margin: '0 0 10px' }}>View Team Charts</h3>
-        <p style={{ fontSize: 11, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, color: '#ffffff', margin: '0 0 24px', lineHeight: 1.6 }}>
           Free members see the last 3 game days.<br />Pro members get the full season.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={onJoin} style={{
             background: 'none', border: '1px solid #2a2a34', borderRadius: 8,
-            color: '#a1a1aa', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+            color: '#ffffff', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
             textTransform: 'uppercase', cursor: 'pointer', padding: '10px 20px', fontFamily: 'inherit',
           }}>Join Free — Last 3 Game Days</button>
           <button onClick={onPro} style={{
@@ -499,7 +499,7 @@ export default function GambchopChart({
             onClick={resetFilters}
             style={{
               marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase',
+              fontSize: 9, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase',
               fontFamily: 'inherit', textDecoration: 'underline', padding: 0, flexShrink: 0,
             }}
           >Clear All</button>
@@ -510,7 +510,7 @@ export default function GambchopChart({
         <div style={{ background: '#8b5cf60d', border: '1px solid #8b5cf633', borderRadius: 10, padding: '14px 20px', margin: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#c4b5fd', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Upgrade to unlock full season</div>
-            <div style={{ fontSize: 10, color: '#52525b', marginTop: 4 }}>
+            <div style={{ fontSize: 10, color: '#ffffff', marginTop: 4 }}>
               {tier === 'free' ? `Showing last ${FREE_COLS} game days. Pro unlocks every month for every team.` : 'Pro unlocks the complete season for every team.'}
             </div>
           </div>
@@ -587,14 +587,14 @@ export default function GambchopChart({
                       <div style={{ width: 3, alignSelf: 'stretch', background: accent, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>{team.teamName}</div>
-                        <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{populatedDays.length} Games</div>
+                        <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{populatedDays.length} Games</div>
                       </div>
                     </div>
                     <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
                   </div>
 
                   {allRowsHidden && (
-                    <div style={{ padding: '14px 20px', fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    <div style={{ padding: '14px 20px', fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                       No rows selected — open filters to enable rows
                     </div>
                   )}
@@ -606,7 +606,7 @@ export default function GambchopChart({
                         {/* Sticky label column */}
                         <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
                           <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
-                          <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
+                          <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
                           {row.record(seasonGames)}
                           {(() => {
                             const s = streakFor[row.key]
@@ -630,7 +630,7 @@ export default function GambchopChart({
                                 style={{
                                   background: 'none', border: 'none', cursor: 'pointer',
                                   padding: '4px 6px', lineHeight: 1, transition: 'color 0.15s',
-                                  fontSize: 15, color: starred ? '#eab308' : '#71717a',
+                                  fontSize: 15, color: starred ? '#eab308' : '#ffffff',
                                   marginLeft: 'auto',
                                 }}
                               >

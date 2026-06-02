@@ -21,7 +21,7 @@ export default function StreakLeaderboardPage() {
           <h1 style={{ fontSize: 28, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 8px' }}>
             Streak Leaderboard
           </h1>
-          <p style={{ fontSize: 11, color: '#52525b', letterSpacing: '0.1em', margin: 0 }}>
+          <p style={{ fontSize: 11, color: '#ffffff', letterSpacing: '0.1em', margin: 0 }}>
             Current winning and covering streaks across all leagues
           </p>
         </div>
@@ -35,14 +35,14 @@ export default function StreakLeaderboardPage() {
               display: 'flex', alignItems: 'center', gap: 16,
             }}>
               {/* Rank */}
-              <div style={{ fontSize: s.rank <= 3 ? 20 : 16, fontWeight: 900, color: s.rank <= 3 ? s.accent : '#3f3f46', minWidth: 32, textAlign: 'center' }}>
+              <div style={{ fontSize: s.rank <= 3 ? 20 : 16, fontWeight: 900, color: s.rank <= 3 ? s.accent : '#ffffff', minWidth: 32, textAlign: 'center' }}>
                 {s.rank <= 3 ? ['🥇','🥈','🥉'][s.rank - 1] : `#${s.rank}`}
               </div>
 
               {/* Name */}
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{s.name}</div>
-                <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
                   {s.league} · {s.metric}
                 </div>
               </div>
@@ -50,7 +50,7 @@ export default function StreakLeaderboardPage() {
               {/* Streak */}
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 20, fontWeight: 900, color: s.accent, lineHeight: 1 }}>{s.streak}</div>
-                <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>Game Streak</div>
+                <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>Game Streak</div>
               </div>
 
               {/* Record */}

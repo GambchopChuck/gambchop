@@ -92,7 +92,7 @@ function TimeFrameToggle({ value, onChange }: { value: TimeRange; onChange: (r: 
             onClick={() => onChange(opt.value)}
             style={{
               background:    active ? ACCENT_PILL : 'transparent',
-              color:         active ? '#000'       : '#71717a',
+              color:         active ? '#000'       : '#ffffff',
               border:        active ? 'none'        : '1px solid transparent',
               borderRadius:  6,
               padding:       '5px 16px',
@@ -106,7 +106,7 @@ function TimeFrameToggle({ value, onChange }: { value: TimeRange; onChange: (r: 
               boxShadow:     active ? `0 0 12px ${ACCENT_PILL}55` : 'none',
             }}
             onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#d4d4d8' }}
-            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#71717a' }}
+            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#ffffff' }}
           >
             {opt.label}
           </button>
@@ -191,7 +191,7 @@ function TeamDropdown({ slot, value, onChange }: { slot: 1 | 2; value: string; o
             )}
             {grouped.map(({ league, teams }) => (
               <div key={league.id}>
-                <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, position: 'sticky', top: 0, background: '#0d0d14' }}>
+                <div style={{ padding: '8px 14px 4px', fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, position: 'sticky', top: 0, background: '#0d0d14' }}>
                   {league.emoji} {league.name}
                 </div>
                 {teams.map(team => (
@@ -692,7 +692,7 @@ function CompareClient() {
               <div style={{ fontSize: 9, color: GREEN, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, fontFamily: OSWALD }}>
                 ◈ Chart Comparison
               </div>
-              <div style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: MONO }}>
+              <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: MONO }}>
                 · {RANGE_OPTIONS.find(o => o.value === range)?.label ?? 'This Season'}
               </div>
             </div>
@@ -740,7 +740,7 @@ function CompareClient() {
 export default function ComparePage() {
   return (
     <Suspense fallback={
-      <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+      <div style={{ padding: 60, textAlign: 'center', color: '#ffffff', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
         Loading…
       </div>
     }>

@@ -61,13 +61,13 @@ export default function ForgotPasswordPage() {
             </h2>
             <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.7, textAlign: 'center', margin: '0 0 24px' }}>
               We sent a reset link to{' '}
-              <strong style={{ color: '#a1a1aa' }}>{email}</strong>.
+              <strong style={{ color: '#ffffff' }}>{email}</strong>.
               Click it to set a new password.
             </p>
             <Link href="/auth/login" style={{
               display: 'block', width: '100%', padding: '12px', borderRadius: 8,
               border: '1px solid #2a2a34', background: 'transparent',
-              color: '#71717a', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+              color: '#ffffff', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
               textTransform: 'uppercase', textDecoration: 'none', textAlign: 'center',
               boxSizing: 'border-box', fontFamily: 'var(--font-geist-mono), monospace',
             }}>

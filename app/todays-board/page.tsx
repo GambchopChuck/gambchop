@@ -205,7 +205,7 @@ export default function StreakBoardPage() {
 
   const selectSt: React.CSSProperties = {
     background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 6,
-    color: '#a1a1aa', fontSize: 10, padding: '7px 10px',
+    color: '#ffffff', fontSize: 10, padding: '7px 10px',
     fontFamily: 'var(--font-geist-mono), monospace',
     cursor: 'pointer', outline: 'none',
   }
@@ -223,7 +223,7 @@ export default function StreakBoardPage() {
           <h1 style={{ fontSize: 26, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 6px' }}>
             Streak Board
           </h1>
-          <p style={{ fontSize: 11, color: '#52525b', letterSpacing: '0.08em', margin: 0 }}>
+          <p style={{ fontSize: 11, color: '#ffffff', letterSpacing: '0.08em', margin: 0 }}>
             Teams on {MIN_STREAK}+ game streaks across all leagues
           </p>
         </div>
@@ -233,14 +233,14 @@ export default function StreakBoardPage() {
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '14px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>League:</span>
+            <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>League:</span>
             <select value={leagueFilter} onChange={e => handleLeagueChange(e.target.value)} style={selectSt}>
               <option value="all">All Leagues</option>
               {LEAGUES.map(l => <option key={l.id} value={l.id}>{l.emoji} {l.name}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sort:</span>
+            <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sort:</span>
             <select value={sortMode} onChange={e => handleSortChange(e.target.value as SortMode)} style={selectSt}>
               {(Object.keys(SORT_LABELS) as SortMode[]).map(k => (
                 <option key={k} value={k}>{SORT_LABELS[k]}</option>
@@ -248,7 +248,7 @@ export default function StreakBoardPage() {
             </select>
           </div>
           {lastRefreshed !== null && (
-            <span style={{ marginLeft: 'auto', fontSize: 9, color: '#3f3f46', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <span style={{ marginLeft: 'auto', fontSize: 9, color: '#ffffff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               ◷ Refreshed {formatAgo(lastRefreshed)}
             </span>
           )}
@@ -273,7 +273,7 @@ export default function StreakBoardPage() {
           ] as const).map(({ bg, label }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 10, height: 10, background: bg, borderRadius: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
+              <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
             </div>
           ))}
         </div>
@@ -282,11 +282,11 @@ export default function StreakBoardPage() {
       {/* Streak rows */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
         {loading ? (
-          <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+          <div style={{ padding: 60, textAlign: 'center', color: '#ffffff', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             Loading streak data…
           </div>
         ) : displayRows.length === 0 ? (
-          <div style={{ padding: 60, textAlign: 'center', fontSize: 11, color: '#52525b', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+          <div style={{ padding: 60, textAlign: 'center', fontSize: 11, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             No active streaks of {MIN_STREAK}+ games — check back soon.
           </div>
         ) : (
@@ -323,7 +323,7 @@ export default function StreakBoardPage() {
                   </span>
 
                   {/* Category */}
-                  <span style={{ fontSize: 9, color: '#71717a', letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0, minWidth: 88 }}>
+                  <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0, minWidth: 88 }}>
                     {KIND_LABEL[row.kind]}
                   </span>
 

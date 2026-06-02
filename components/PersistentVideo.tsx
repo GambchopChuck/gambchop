@@ -69,7 +69,7 @@ export default function PersistentVideo() {
             <span style={{ fontSize: 9, color: '#22c55e', letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 800 }}>
               Gambchop Daily
             </span>
-            <span style={{ fontSize: 8, color: '#71717a', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 8, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               Yesterday&apos;s Recap · Today&apos;s Preview
             </span>
 
@@ -78,7 +78,7 @@ export default function PersistentVideo() {
               onClick={() => setCollapsed(v => !v)}
               style={{
                 background: 'none', border: '1px solid #27272a', borderRadius: 4,
-                color: '#a1a1aa', cursor: 'pointer', fontFamily: 'inherit',
+                color: '#ffffff', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: 8, letterSpacing: '0.12em', textTransform: 'uppercase',
                 padding: '3px 9px', transition: 'color 0.15s, border-color 0.15s', flexShrink: 0,
                 marginLeft: 'auto',
@@ -128,7 +128,7 @@ export default function PersistentVideo() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: '#0c0c12', borderRadius: 8,
                 }}>
-                  <span style={{ fontSize: 10, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                     Video coming soon
                   </span>
                 </div>

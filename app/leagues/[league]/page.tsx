@@ -204,7 +204,7 @@ export default function LeaguePage() {
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 36 }}>{meta.emoji}</span>
           <div>
-            <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 4 }}>
+            <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 4 }}>
               {meta.full}
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
@@ -213,7 +213,7 @@ export default function LeaguePage() {
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: meta.accent, boxShadow: `0 0 10px ${meta.accent}` }} />
-            <span style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
               {meta.entities.length} {meta.entityType === 'player' ? 'Players' : 'Teams'}
             </span>
           </div>
@@ -226,7 +226,7 @@ export default function LeaguePage() {
               key={name}
               href={`/leagues/${leagueId}/${slugify(name)}`}
               style={{
-                textDecoration: 'none', fontSize: 9, color: '#52525b',
+                textDecoration: 'none', fontSize: 9, color: '#ffffff',
                 background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 4,
                 padding: '4px 10px', letterSpacing: '0.08em', textTransform: 'uppercase',
                 fontWeight: 600, transition: 'all 0.15s',
@@ -251,13 +251,13 @@ export default function LeaguePage() {
 
         {/* Sort + Filters controls */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sort:</span>
+          <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sort:</span>
           <select
             value={sortMode}
             onChange={e => handleSortChange(e.target.value as SortMode)}
             style={{
               background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 6,
-              color: '#a1a1aa', fontSize: 10, padding: '7px 10px',
+              color: '#ffffff', fontSize: 10, padding: '7px 10px',
               fontFamily: 'var(--font-geist-mono), monospace',
               cursor: 'pointer', outline: 'none',
             }}
@@ -299,7 +299,7 @@ export default function LeaguePage() {
         {filtersOpen && <FiltersDropdown onClose={() => setFiltersOpen(false)} />}
 
         {dataLoading || authLoading ? (
-          <div style={{ padding: 60, textAlign: 'center', color: '#52525b', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+          <div style={{ padding: 60, textAlign: 'center', color: '#ffffff', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             Loading game data…
           </div>
         ) : (
@@ -327,7 +327,7 @@ export default function LeaguePage() {
       </div>
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '16px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>
+        <p style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>
           Gambchop · For entertainment purposes only
         </p>
       </footer>

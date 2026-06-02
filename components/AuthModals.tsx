@@ -38,7 +38,7 @@ const BTN_GREEN: React.CSSProperties = {
 
 const BTN_GHOST: React.CSSProperties = {
   background: 'none', border: '1px solid #2a2a34', borderRadius: 8,
-  color: '#71717a', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+  color: '#ffffff', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
   cursor: 'pointer', padding: '10px 20px', fontFamily: 'inherit', fontWeight: 600,
 }
 
@@ -47,7 +47,7 @@ function CloseBtn() {
   return (
     <button onClick={closeModal} style={{
       position: 'absolute', top: 16, right: 16,
-      background: 'none', border: 'none', color: '#52525b',
+      background: 'none', border: 'none', color: '#ffffff',
       cursor: 'pointer', fontSize: 18, lineHeight: 1,
     }}>×</button>
   )
@@ -55,7 +55,7 @@ function CloseBtn() {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label style={{ display: 'block', fontSize: 9, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
+    <label style={{ display: 'block', fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
       {children}
     </label>
   )
@@ -164,8 +164,8 @@ function LoginModal() {
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', textAlign: 'center' }}>
               Check Your Email
             </h2>
-            <p style={{ fontSize: 11, color: '#71717a', lineHeight: 1.7, textAlign: 'center', margin: '0 0 24px' }}>
-              We sent a reset link to <strong style={{ color: '#a1a1aa' }}>{email}</strong>.
+            <p style={{ fontSize: 11, color: '#ffffff', lineHeight: 1.7, textAlign: 'center', margin: '0 0 24px' }}>
+              We sent a reset link to <strong style={{ color: '#ffffff' }}>{email}</strong>.
               Click it to set a new password.
             </p>
             <button onClick={() => { setView('signin'); setError('') }} style={BTN_GHOST}>
@@ -174,7 +174,7 @@ function LoginModal() {
           </>
         ) : view === 'forgot' ? (
           <>
-            <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
               Password reset
             </div>
             <h2 style={{ fontSize: 22, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 28px' }}>
@@ -195,14 +195,14 @@ function LoginModal() {
               </button>
             </form>
             <div style={{ textAlign: 'center' }}>
-              <button onClick={() => { setView('signin'); setError('') }} style={{ background: 'none', border: 'none', color: '#52525b', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}>
+              <button onClick={() => { setView('signin'); setError('') }} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}>
                 ← Back to Sign In
               </button>
             </div>
           </>
         ) : (
           <>
-            <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
               Welcome back
             </div>
             <h2 style={{ fontSize: 22, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 28px' }}>
@@ -231,11 +231,11 @@ function LoginModal() {
               </button>
             </form>
             <div style={{ textAlign: 'right', marginBottom: 20 }}>
-              <button onClick={() => { setView('forgot'); setError('') }} style={{ background: 'none', border: 'none', color: '#52525b', cursor: 'pointer', fontSize: 10, fontFamily: 'inherit', letterSpacing: '0.05em' }}>
+              <button onClick={() => { setView('forgot'); setError('') }} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: 10, fontFamily: 'inherit', letterSpacing: '0.05em' }}>
                 Forgot password?
               </button>
             </div>
-            <div style={{ textAlign: 'center', fontSize: 11, color: '#52525b' }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#ffffff' }}>
               No account?{' '}
               <button onClick={() => openModal('join')} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', fontWeight: 700 }}>
                 Join Free →
@@ -295,8 +295,8 @@ function JoinModal() {
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px', textAlign: 'center' }}>
               Check Your Email
             </h2>
-            <p style={{ fontSize: 11, color: '#71717a', lineHeight: 1.7, textAlign: 'center', margin: '0 0 24px' }}>
-              We sent a confirmation link to <strong style={{ color: '#a1a1aa' }}>{email}</strong>.
+            <p style={{ fontSize: 11, color: '#ffffff', lineHeight: 1.7, textAlign: 'center', margin: '0 0 24px' }}>
+              We sent a confirmation link to <strong style={{ color: '#ffffff' }}>{email}</strong>.
               Click it to activate your account, then sign in.
             </p>
             <button onClick={() => openModal('login')} style={BTN_GREEN}>
@@ -305,7 +305,7 @@ function JoinModal() {
           </>
         ) : (
           <>
-            <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
               Free forever
             </div>
             <h2 style={{ fontSize: 22, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 28px' }}>
@@ -314,7 +314,7 @@ function JoinModal() {
             <ErrorMsg msg={error} />
             <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
               <div>
-                <Label>Display Name <span style={{ color: '#3f3f46', fontWeight: 400 }}>(optional)</span></Label>
+                <Label>Display Name <span style={{ color: '#ffffff', fontWeight: 400 }}>(optional)</span></Label>
                 <input
                   style={INPUT} type="text" placeholder="e.g. SharpBettor99"
                   value={displayName} onChange={e => setDisplayName(e.target.value)}
@@ -346,7 +346,7 @@ function JoinModal() {
                 Or go Pro →
               </button>
             </div>
-            <div style={{ textAlign: 'center', fontSize: 11, color: '#52525b' }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#ffffff' }}>
               Already have an account?{' '}
               <button onClick={() => openModal('login')} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', fontWeight: 700 }}>
                 Sign in →
@@ -415,9 +415,9 @@ function ProModal() {
                     {badge}
                   </div>
                 )}
-                <div style={{ fontSize: 10, color: selected ? '#a78bfa' : '#71717a', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>{period}</div>
+                <div style={{ fontSize: 10, color: selected ? '#a78bfa' : '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>{period}</div>
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#f4f4f5', lineHeight: 1 }}>
-                  {price}<span style={{ fontSize: 12, color: '#52525b', fontWeight: 500 }}>{sub}</span>
+                  {price}<span style={{ fontSize: 12, color: '#ffffff', fontWeight: 500 }}>{sub}</span>
                 </div>
               </div>
             )
@@ -426,7 +426,7 @@ function ProModal() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
           {PRO_FEATURES.map(f => (
-            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#a1a1aa' }}>
+            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#ffffff' }}>
               <span style={{ color: '#22c55e', flexShrink: 0 }}>✓</span>
               {f}
             </div>
@@ -444,7 +444,7 @@ function ProModal() {
           <button style={BTN_GHOST} onClick={closeModal}>Free Plan</button>
         </div>
 
-        <p style={{ fontSize: 9, color: '#3f3f46', textAlign: 'center', marginTop: 16, letterSpacing: '0.1em' }}>
+        <p style={{ fontSize: 9, color: '#ffffff', textAlign: 'center', marginTop: 16, letterSpacing: '0.1em' }}>
           Card required · Cancel before day 3 and you won&apos;t be charged
         </p>
       </div>

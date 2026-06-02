@@ -16,11 +16,11 @@ export default function ResponsibleGamblingPage() {
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
           <div style={{ fontSize: 9, color: '#22c55e', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>Commitment</div>
           <h1 style={{ fontSize: 28, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0 }}>Responsible Gambling</h1>
-          <div style={{ fontSize: 10, color: '#52525b', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 10 }}>Last updated: May 2026</div>
+          <div style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 10 }}>Last updated: May 2026</div>
         </div>
       </div>
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '32px 24px 60px' }}>
-        <div style={{ fontSize: 13, color: '#a1a1aa', lineHeight: 1.85, letterSpacing: '0.01em' }}>
+        <div style={{ fontSize: 13, color: '#ffffff', lineHeight: 1.85, letterSpacing: '0.01em' }}>
 
           <p style={p}>Gambchop is a data visualization tool. We display historical sports betting outcomes so users can observe patterns and trends. We are not a sportsbook — we do not accept wagers, hold funds, or process bets — and nothing on Gambchop is betting advice, a pick, or a prediction. We want every person who uses Gambchop to do so safely, and to treat sports betting as entertainment, never as a way to make money or recover losses.</p>
 

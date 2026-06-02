@@ -31,14 +31,14 @@ export default function ActivationBanner() {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
       fontFamily: 'var(--font-geist-mono), monospace',
     }}>
-      <span style={{ fontSize: 10, color: '#a1a1aa', letterSpacing: '0.04em' }}>
+      <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.04em' }}>
         ⚡ Your Pro access is activating — if features aren&apos;t unlocked yet, refresh in a moment.
       </span>
       <button
         onClick={() => { localStorage.removeItem('gambchop-pro-activating'); setVisible(false) }}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          fontSize: 14, color: '#52525b', lineHeight: 1, padding: 0,
+          fontSize: 14, color: '#ffffff', lineHeight: 1, padding: 0,
           fontFamily: 'inherit', flexShrink: 0,
         }}
       >

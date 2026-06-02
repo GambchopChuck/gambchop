@@ -22,11 +22,11 @@ export default function FiltersPage() {
     <div style={{ minHeight: '100vh', padding: '32px 24px' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 8 }}>◧ Advanced</div>
+          <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 8 }}>◧ Advanced</div>
           <h1 style={{ fontSize: 28, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 8px' }}>
             Filters
           </h1>
-          <p style={{ fontSize: 11, color: '#52525b', letterSpacing: '0.1em', margin: 0 }}>
+          <p style={{ fontSize: 11, color: '#ffffff', letterSpacing: '0.1em', margin: 0 }}>
             Narrow down trends across leagues, bet types, and date ranges
           </p>
         </div>
@@ -34,13 +34,13 @@ export default function FiltersPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: 32 }}>
           {FILTER_GROUPS.map(group => (
             <div key={group.label} style={{ background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 12, padding: '20px' }}>
-              <div style={{ fontSize: 9, color: '#52525b', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
+              <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
                 {group.label}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {group.options.map(opt => (
                   <div key={opt} style={{
-                    fontSize: 10, color: '#52525b', background: '#0c0c10',
+                    fontSize: 10, color: '#ffffff', background: '#0c0c10',
                     border: '1px solid #2a2a34', borderRadius: 4, padding: '5px 10px',
                     letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'not-allowed',
                     opacity: 0.7,
@@ -57,7 +57,7 @@ export default function FiltersPage() {
           <div style={{ fontSize: 14, fontWeight: 800, color: '#c4b5fd', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
             Advanced Filters — Pro Feature
           </div>
-          <p style={{ fontSize: 11, color: '#52525b', margin: '0 0 20px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 11, color: '#ffffff', margin: '0 0 20px', lineHeight: 1.6 }}>
             Filter across every league, metric, and date range. Export results to CSV.
           </p>
           <button style={{

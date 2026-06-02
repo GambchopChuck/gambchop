@@ -18,7 +18,7 @@ function SoonBadge() {
       fontWeight: 500,
       letterSpacing: '0.15em',
       textTransform: 'uppercase' as const,
-      color: '#52525B',
+      color: '#ffffff',
       lineHeight: 1,
       verticalAlign: 'middle',
     }}>
@@ -90,7 +90,7 @@ export default function SubNav() {
           fontSize: 10,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
-          color: '#A1A1AA',
+          color: '#ffffff',
           fontWeight: 500,
           padding: '0 14px',
           lineHeight: '36px',

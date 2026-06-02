@@ -285,7 +285,7 @@ export default function TeamPage() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {stats.map(s => (
                 <div key={s.label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '14px 18px', minWidth: 100, textAlign: 'center', filter: 'blur(4px)', opacity: 0.4 }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: '#3f3f46' }}>---</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#ffffff' }}>---</div>
                   <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 5 }}>{s.label}</div>
                 </div>
               ))}

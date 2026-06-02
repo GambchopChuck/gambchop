@@ -130,7 +130,7 @@ function SuccessContent() {
           )}
 
           {sessionId && (
-            <div style={{ marginTop: 12, fontSize: 9, color: '#3f3f46', letterSpacing: '0.08em' }}>
+            <div style={{ marginTop: 12, fontSize: 9, color: '#ffffff', letterSpacing: '0.08em' }}>
               Confirmation: {sessionId.slice(-12)}
             </div>
           )}
