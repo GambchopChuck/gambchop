@@ -206,29 +206,20 @@ function PodiumCard({ row, cfg, countUnit, rangeLabel, isCenter = false }: Podiu
   )
 }
 
-// Empty bronze placeholder card
-function EmptyBronzeCard() {
+// Empty slot — fallback for edge case with < 3 teams (should not occur in production)
+function EmptySlotCard({ cfg }: { cfg: MedalConfig }) {
   return (
     <div style={{
-      height: 340,
-      minWidth: 0,
-      background: '#121215',
-      border: `1px solid ${T.hairline}`,
-      borderRadius: 12,
-      padding: 24,
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
+      height: cfg.height, minWidth: 0,
+      background: '#121215', border: `1px solid ${T.hairline}`,
+      borderRadius: 12, padding: cfg.padding, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 500, color: T.faint }}>03</div>
+      <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 500, color: T.faint }}>{cfg.rank}</div>
       <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 600, color: T.faint, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 4 }}>
-        BRONZE
+        {cfg.label}
       </div>
-      <div style={{
-        marginTop: 'auto', marginBottom: 'auto',
-        fontFamily: MONO, fontSize: 22, fontWeight: 500, color: T.faint,
-        textAlign: 'center',
-      }}>
+      <div style={{ marginTop: 'auto', marginBottom: 'auto', fontFamily: MONO, fontSize: 22, fontWeight: 500, color: T.faint, textAlign: 'center' }}>
         —
       </div>
     </div>
@@ -236,33 +227,20 @@ function EmptyBronzeCard() {
 }
 
 interface PodiumProps {
-  category:   LeaderboardCategory
+  category:    LeaderboardCategory
   rangeLabel?: string
 }
 
+// Podium always shows exactly 3 cards: 02 SILVER left · 01 GOLD center · 03 BRONZE right.
+// Rankings are determined upstream with deterministic tiebreakers so rows[0/1/2] are always unique.
 export default function Podium({ category, rangeLabel }: PodiumProps) {
   const rows = category.rows
-  if (rows.length === 0) return null
+  if (!rows.length) return null
 
-  const rank1 = rows.filter(r => r.rank === 1)
-  const rank2 = rows.filter(r => r.rank === 2)
-  const rank3 = rows.filter(r => r.rank === 3)
-
-  // Detect tie at rank 2 (bronze empty case from spec)
-  const isTieAt2 = rank2.length > 1 && rank3.length === 0
-  // Detect tie at rank 1
-  const isTieAt1 = rank1.length > 1
-
-  const gold1 = rank1[0]
-  const gold2 = rank1[1] // exists on tie at 1
-
-  // Left slot = rank 2 (first entry)
-  const leftRow = rank2[0] ?? null
-  // Right slot = rank 3 OR second rank2 on tie
-  const rightRow = isTieAt2 ? rank2[1] : (rank3[0] ?? null)
-
-  const leftCfg  = SILVER_CFG
-  const rightCfg = isTieAt2 ? { ...SILVER_CFG } : BRONZE_CFG
+  const rl = rangeLabel ?? 'Last 30 Days'
+  const gold   = rows[0]        // rank 1 — always present
+  const silver = rows[1] ?? null // rank 2
+  const bronze = rows[2] ?? null // rank 3
 
   return (
     <div>
@@ -275,29 +253,18 @@ export default function Podium({ category, rangeLabel }: PodiumProps) {
           .podium-card:not(.podium-card-center) .podium-team-name { font-size: 22px !important; }
         }
         @media (max-width: 767px) {
-          .podium-grid {
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .podium-card, .podium-card-center {
-            height: 320px !important;
-          }
+          .podium-grid { display: flex !important; flex-direction: column !important; }
+          .podium-card, .podium-card-center { height: 320px !important; }
           .podium-card-center .podium-team-name { font-size: 28px !important; }
           .podium-card:not(.podium-card-center) .podium-team-name { font-size: 22px !important; }
         }
         @media (max-width: 479px) {
-          .podium-card, .podium-card-center {
-            padding: 16px !important;
-          }
-          .lb-chart-strip {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-          }
+          .podium-card, .podium-card-center { padding: 16px !important; }
+          .lb-chart-strip { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         }
       `}</style>
 
-      {/* Olympic 3-column grid — center column bottom-aligned */}
+      {/* Olympic layout — silver left · gold center (taller) · bronze right */}
       <div
         className="podium-grid"
         style={{
@@ -307,44 +274,21 @@ export default function Podium({ category, rangeLabel }: PodiumProps) {
           alignItems: 'end',
         }}
       >
-        {/* Left — #2 Silver */}
-        {leftRow ? (
-          <PodiumCard row={leftRow} cfg={leftCfg} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} />
-        ) : (
-          <EmptyBronzeCard />
-        )}
+        {/* Left — 02 Silver */}
+        {silver
+          ? <PodiumCard row={silver} cfg={SILVER_CFG} countUnit={category.countUnit} rangeLabel={rl} />
+          : <EmptySlotCard cfg={SILVER_CFG} />
+        }
 
-        {/* Center — #1 Gold */}
-        {isTieAt1 && gold2 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <PodiumCard row={gold1} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} isCenter />
-            <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'center' }}>
-              TIE AT #1
-            </div>
-            <PodiumCard row={gold2} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} isCenter />
-          </div>
-        ) : (
-          <PodiumCard row={gold1} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} isCenter />
-        )}
+        {/* Center — 01 Gold (tallest card, elevated by alignItems:end) */}
+        <PodiumCard row={gold} cfg={GOLD_CFG} countUnit={category.countUnit} rangeLabel={rl} isCenter />
 
-        {/* Right — #3 Bronze or tied #2 Silver */}
-        {rightRow ? (
-          <PodiumCard row={rightRow} cfg={rightCfg} countUnit={category.countUnit} rangeLabel={rangeLabel ?? 'This Season'} />
-        ) : (
-          <EmptyBronzeCard />
-        )}
+        {/* Right — 03 Bronze */}
+        {bronze
+          ? <PodiumCard row={bronze} cfg={BRONZE_CFG} countUnit={category.countUnit} rangeLabel={rl} />
+          : <EmptySlotCard cfg={BRONZE_CFG} />
+        }
       </div>
-
-      {/* Tie note */}
-      {isTieAt2 && (
-        <div style={{
-          fontFamily: MONO, fontSize: 10, fontWeight: 500,
-          color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase',
-          textAlign: 'center', marginTop: 16,
-        }}>
-          TIE AT #2 — NO BRONZE POSITION THIS MONTH
-        </div>
-      )}
     </div>
   )
 }

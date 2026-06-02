@@ -286,22 +286,47 @@ const CATEGORY_SPECS: CategorySpec[] = [
 export const LEADERBOARD_CATEGORY_IDS = CATEGORY_SPECS.map(s => s.id)
 
 // ─── Build a ranked LeaderboardCategory from team data ────────────────────────
+// Sorting is fully deterministic: count → win rate → active streak → alphabetical.
+// Because team names are unique, no two teams can ever tie after all four levels.
 
 function buildCategory(spec: CategorySpec, teams: TeamSummary[], maxGames: number): LeaderboardCategory {
-  const sorted = [...teams].sort((a, b) => spec.getValue(b) - spec.getValue(a))
+  // Pre-compute streaks once so the sort comparator doesn't recompute them repeatedly.
+  const streakCache = new Map<string, number>()
+  for (const t of teams) {
+    const s = t.games.length ? computeStreak(t.games, spec.streakMetric) : null
+    streakCache.set(t.teamSlug, s?.count ?? 0)
+  }
 
-  const rows: LeaderboardRow[] = sorted.map((t, _i, arr) => {
-    const count = spec.getValue(t)
-    const firstIdx = arr.findIndex(s => spec.getValue(s) === count)
-    return {
-      rank:       firstIdx + 1,
-      team:       t.teamName,
-      teamColor:  t.teamColor,
-      count,
-      totalGames: t.totalGames,
-      outcomes:   spec.getOutcomes(t),
-    }
+  const sorted = [...teams].sort((a, b) => {
+    const countA = spec.getValue(a)
+    const countB = spec.getValue(b)
+
+    // 1. Count descending
+    if (countB !== countA) return countB - countA
+
+    // 2. Win rate descending (wins ÷ totalGames)
+    const rateA = a.totalGames > 0 ? countA / a.totalGames : 0
+    const rateB = b.totalGames > 0 ? countB / b.totalGames : 0
+    if (rateB !== rateA) return rateB - rateA
+
+    // 3. Active streak length descending
+    const sA = streakCache.get(a.teamSlug) ?? 0
+    const sB = streakCache.get(b.teamSlug) ?? 0
+    if (sB !== sA) return sB - sA
+
+    // 4. Alphabetical ascending — always deterministic, never random
+    return a.teamName.localeCompare(b.teamName)
   })
+
+  // Sequential ranks — tiebreakers guarantee a fully-ordered list, so ranks are always unique.
+  const rows: LeaderboardRow[] = sorted.map((t, i) => ({
+    rank:       i + 1,
+    team:       t.teamName,
+    teamColor:  t.teamColor,
+    count:      spec.getValue(t),
+    totalGames: t.totalGames,
+    outcomes:   spec.getOutcomes(t),
+  }))
 
   return {
     id:        spec.id,
