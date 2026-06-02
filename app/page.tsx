@@ -6,6 +6,7 @@ import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
 import ChopperBanner from '@/components/ChopperBanner'
 import NewsPreview from '@/components/NewsPreview'
 import TopMatchupTicker from '@/components/TopMatchupTicker'
+import OurMission from '@/components/OurMission'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { rowToTopMatchup } from '@/lib/topMatchups'
 import type { TopMatchupData } from '@/lib/topMatchups'
@@ -277,6 +278,7 @@ export default async function HomePage() {
       <FeaturedPagesWithAuth />
       <NewsPreview />
       <CommunityPreview />
+      <OurMission />
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '20px 24px', textAlign: 'center' }}>
         <p style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>
