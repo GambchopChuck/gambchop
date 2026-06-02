@@ -440,13 +440,10 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
               </span>
               <div style={{ flex: 1, height: 1, background: '#1a1a24' }} />
             </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))',
-              gap: 12,
-            }}>
+            {/* Full-width column — card stretches edge to edge */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {topMatchups.map((tm, i) => (
-                <TopMatchupCard key={`${tm.league}-${i}`} matchup={tm} compact={false} />
+                <TopMatchupCard key={`${tm.league}-${i}`} matchup={tm} />
               ))}
             </div>
           </div>
