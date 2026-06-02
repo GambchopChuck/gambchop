@@ -54,6 +54,52 @@ function dateLabel(etDate: string): string {
   return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
 }
 
+// ─── Pitcher name helper ──────────────────────────────────────────────────────
+
+// Extract last name from a full name, skipping common suffixes (Jr., III, etc.)
+function pitcherLastName(fullName: string | null | undefined): string {
+  if (!fullName) return 'TBD'
+  const SUFFIXES = new Set(['jr.', 'sr.', 'ii', 'iii', 'iv', 'v'])
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  let i = parts.length - 1
+  while (i > 0 && SUFFIXES.has(parts[i].toLowerCase())) i--
+  return parts[i] ?? fullName
+}
+
+// ─── Inline SVG icons (Tabler-style thin stroke — no external dependency) ──────
+
+function StadiumIcon() {
+  return (
+    <svg
+      width="12" height="12" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0, display: 'block' }}
+      aria-hidden
+    >
+      {/* Simplified stadium bowl outline */}
+      <ellipse cx="12" cy="9" rx="10" ry="4" />
+      <path d="M2 9v5c0 2.8 4.5 5 10 5s10-2.2 10-5V9" />
+      <path d="M7 14v4M12 15v3M17 14v4" />
+    </svg>
+  )
+}
+
+function PersonIcon() {
+  return (
+    <svg
+      width="12" height="12" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0, display: 'block' }}
+      aria-hidden
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.8 3.6-7 8-7s8 3.2 8 7" />
+    </svg>
+  )
+}
+
 // ─── Line formatting ──────────────────────────────────────────────────────────
 
 function fmtOdds(n: number | null | undefined): string {
@@ -186,6 +232,11 @@ function TeamColumn({
 
 function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
   const { etDate, timeStr } = toET(game.commenceTime)
+  void etDate  // used by the parent grouping, not needed inside the card
+
+  const awayLast = pitcherLastName(game.awayPitcher)
+  const homeLast = pitcherLastName(game.homePitcher)
+  const hasPitchers = game.awayPitcher !== null || game.homePitcher !== null
 
   return (
     <div style={{
@@ -196,10 +247,32 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
       <div style={{
         fontSize: 9, color: '#52525b', letterSpacing: '0.22em',
         textTransform: 'uppercase', fontFamily: MONO,
-        marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8,
+        marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span style={{ color: '#71717a' }}>{timeStr} ET</span>
       </div>
+
+      {/* Venue + pitcher meta — small muted, below time and above team columns */}
+      {(game.venue || hasPitchers) && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14,
+          marginBottom: 14,
+          fontSize: 9, color: '#52525b', fontFamily: MONO, letterSpacing: '0.08em',
+        }}>
+          {game.venue && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#52525b' }}>
+              <StadiumIcon />
+              {game.venue.name} · {game.venue.city}
+            </span>
+          )}
+          {hasPitchers && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#52525b' }}>
+              <PersonIcon />
+              SP: {awayLast} vs {homeLast}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Two team columns with VS divider */}
       <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start' }}>

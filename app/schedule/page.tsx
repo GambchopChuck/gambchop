@@ -27,14 +27,18 @@ export type GameLines   = {
   underJuice:  number | null
 }
 export type ScheduleGame = {
-  id:           string
-  homeTeam:     string
-  awayTeam:     string
-  commenceTime: string   // UTC ISO
-  lines:        GameLines
-  homeChart:    TeamChart
-  awayChart:    TeamChart
-  blurb:        string
+  id:            string
+  homeTeam:      string
+  awayTeam:      string
+  commenceTime:  string   // UTC ISO
+  lines:         GameLines
+  homeChart:     TeamChart
+  awayChart:     TeamChart
+  blurb:         string
+  // MLB Stats API enrichment (null if unavailable)
+  venue:         { name: string; city: string } | null
+  awayPitcher:   string | null   // full name from MLB Stats API
+  homePitcher:   string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,6 +60,81 @@ function buildChart(rows: any[]): TeamChart {
     spread:     cells('spread_result'),
     over_under: cells('over_under_result'),
   }
+}
+
+// ─── MLB Stats API ─────────────────────────────────────────────────────────────
+// Free, no API key. One call covers the full date range.
+// Docs: https://statsapi.mlb.com/api/v1/schedule
+
+interface MlbVenueLocation {
+  city?:         string
+  stateAbbrev?:  string
+  province?:     string   // Canada
+}
+
+interface MlbTeamSide {
+  team:              { name: string }
+  probablePitcher?:  { fullName: string }
+}
+
+interface MlbGame {
+  teams:  { away: MlbTeamSide; home: MlbTeamSide }
+  venue?: { name: string; location?: MlbVenueLocation }
+}
+
+interface GameMeta {
+  venue:       { name: string; city: string } | null
+  awayPitcher: string | null
+  homePitcher: string | null
+}
+
+async function fetchMlbMeta(etDates: string[]): Promise<Map<string, GameMeta>> {
+  if (!etDates.length) return new Map()
+
+  const startDate = etDates[0]
+  const endDate   = etDates[etDates.length - 1]
+
+  const url =
+    `https://statsapi.mlb.com/api/v1/schedule` +
+    `?sportId=1&startDate=${startDate}&endDate=${endDate}` +
+    `&hydrate=venue,probablePitcher(note)`
+
+  let data: { dates?: { date: string; games: MlbGame[] }[] }
+  try {
+    const res = await fetch(url, { next: { revalidate: 3600 } })
+    if (!res.ok) {
+      console.warn(`[schedule] MLB Stats API HTTP ${res.status}`)
+      return new Map()
+    }
+    data = await res.json()
+  } catch (err) {
+    console.warn('[schedule] MLB Stats API fetch failed:', err)
+    return new Map()
+  }
+
+  const map = new Map<string, GameMeta>()
+
+  for (const dateObj of (data?.dates ?? [])) {
+    for (const game of dateObj.games) {
+      const awayName = game.teams?.away?.team?.name ?? ''
+      const homeName = game.teams?.home?.team?.name ?? ''
+      if (!awayName || !homeName) continue
+
+      const loc       = game.venue?.location
+      const cityPart  = loc?.city ?? null
+      const statePart = loc?.stateAbbrev ?? loc?.province ?? null
+      const city      = cityPart ? (statePart ? `${cityPart}, ${statePart}` : cityPart) : null
+
+      map.set(`${awayName}|${homeName}`, {
+        venue:       game.venue?.name && city ? { name: game.venue.name, city } : null,
+        awayPitcher: game.teams.away.probablePitcher?.fullName ?? null,
+        homePitcher: game.teams.home.probablePitcher?.fullName ?? null,
+      })
+    }
+  }
+
+  console.log(`[schedule] MLB Stats API: ${map.size} games enriched for ${etDates.join(', ')}`)
+  return map
 }
 
 // AI blurb generation removed — no Claude API calls on this page.
@@ -95,7 +174,19 @@ export default async function SchedulePage() {
     return <ScheduleClient games={[]} />
   }
 
-  // ── 2. Look up team IDs in Supabase ────────────────────────────────────────
+  // ── 2. MLB Stats API: venue + probable pitchers (1-hour cached) ─────────────
+  // Collect distinct ET dates so one API call covers the full window.
+  const etDates = [
+    ...new Set(
+      upcoming.map(g =>
+        new Date(g.commence_time).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+      )
+    ),
+  ].sort()
+
+  const mlbMeta = await fetchMlbMeta(etDates)
+
+  // ── 3. Look up team IDs in Supabase ────────────────────────────────────────
   const teamNames = [...new Set(upcoming.flatMap(g => [g.home_team, g.away_team]))]
   const { data: teamRows } = await supabaseAdmin
     .from('teams')
@@ -107,7 +198,7 @@ export default async function SchedulePage() {
   )
   const teamIds = (teamRows ?? []).map((t: any) => t.id as string)
 
-  // ── 3. Fetch all recent outcomes for involved teams ─────────────────────────
+  // ── 4. Fetch all recent outcomes for involved teams ─────────────────────────
   let allRows: any[] = []
   if (teamIds.length > 0) {
     const { data } = await supabaseAdmin
@@ -142,13 +233,16 @@ export default async function SchedulePage() {
     rowsByTeam.set(row.team_id, list)
   }
 
-  // ── 4. Build schedule games (no blurb generation) ──────────────────────────
+  // ── 5. Build schedule games ─────────────────────────────────────────────────
   const scheduleGames: ScheduleGame[] = upcoming.map((game) => {
     const line     = extractLine(game)
     const homeId   = teamIdByName.get(game.home_team) ?? ''
     const awayId   = teamIdByName.get(game.away_team) ?? ''
     const homeRows = homeId ? (rowsByTeam.get(homeId) ?? []) : []
     const awayRows = awayId ? (rowsByTeam.get(awayId) ?? []) : []
+
+    // Match against MLB Stats API by team-name key
+    const meta = mlbMeta.get(`${game.away_team}|${game.home_team}`) ?? null
 
     return {
       id:           game.id,
@@ -165,13 +259,16 @@ export default async function SchedulePage() {
         overJuice:   line.over_juice,
         underJuice:  line.under_juice,
       },
-      homeChart: buildChart(homeRows),
-      awayChart: buildChart(awayRows),
-      blurb: '',
+      homeChart:   buildChart(homeRows),
+      awayChart:   buildChart(awayRows),
+      blurb:       '',
+      venue:       meta?.venue       ?? null,
+      awayPitcher: meta?.awayPitcher ?? null,
+      homePitcher: meta?.homePitcher ?? null,
     }
   })
 
-  // ── 5. Read today's top matchups from Supabase (written by cron) ────────────
+  // ── 6. Read today's top matchups from Supabase (written by cron) ────────────
   const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   let topMatchups: TopMatchupData[] = []
   try {
