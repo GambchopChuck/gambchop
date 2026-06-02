@@ -5,10 +5,29 @@ import ActivationBanner from '@/components/ActivationBanner'
 import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
 import ChopperBanner from '@/components/ChopperBanner'
 import NewsPreview from '@/components/NewsPreview'
+import TopMatchupCard from '@/components/TopMatchupCard'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { rowToTopMatchup } from '@/lib/topMatchups'
+import type { TopMatchupData } from '@/lib/topMatchups'
 import { X, ShoppingBag } from 'lucide-react'
 
+export const revalidate = 3600   // re-render at most once per hour
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Fetch today's MLB top matchup from the cron-populated table
+  let mlbTopMatchup: TopMatchupData | null = null
+  try {
+    const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+    const { data } = await supabaseAdmin
+      .from('top_matchups')
+      .select('*')
+      .eq('league', 'mlb')
+      .eq('game_date', todayET)
+      .maybeSingle()
+    mlbTopMatchup = data ? rowToTopMatchup(data) : null
+  } catch {
+    // Degrade gracefully if top_matchups table doesn't exist yet
+  }
   return (
     <div style={{ minHeight: '100vh' }}>
       <ActivationBanner />
@@ -249,6 +268,23 @@ export default function HomePage() {
       </section>
 
       <ChopperBanner />
+
+      {/* ── Today's Top Matchup (MLB) ─────────────────────────────────────── */}
+      {mlbTopMatchup && (
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px 40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <span style={{
+              fontSize: 9, color: '#39ff9a', fontWeight: 700,
+              letterSpacing: '0.22em', textTransform: 'uppercase',
+              fontFamily: 'var(--font-geist-mono), monospace',
+            }}>
+              Today's Top Matchup
+            </span>
+            <div style={{ flex: 1, height: 1, background: '#1a1a24' }} />
+          </div>
+          <TopMatchupCard matchup={mlbTopMatchup} compact />
+        </div>
+      )}
 
       <LeagueGrid />
       <FeaturedPagesWithAuth />

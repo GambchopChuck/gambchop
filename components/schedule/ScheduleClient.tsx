@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/auth-context'
 import { TEAM_ROUTES } from '@/lib/teamRoutes'
 import { buildSvg } from '@/lib/svgChart'
 import type { ScheduleGame, OutcomeRow } from '@/app/schedule/page'
+import TopMatchupCard from '@/components/TopMatchupCard'
+import type { TopMatchupData } from '@/lib/topMatchups'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,8 +26,9 @@ const LEAGUE_TABS = [
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  games: ScheduleGame[]
-  error?: string
+  games:        ScheduleGame[]
+  error?:       string
+  topMatchups?: TopMatchupData[]
 }
 
 // ─── ET helpers ───────────────────────────────────────────────────────────────
@@ -242,7 +245,7 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export default function ScheduleClient({ games, error }: Props) {
+export default function ScheduleClient({ games, error, topMatchups = [] }: Props) {
   const { isPro } = useAuth()
 
   // Group games by ET date
@@ -322,6 +325,27 @@ export default function ScheduleClient({ games, error }: Props) {
 
       {/* ── Content ─────────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px 64px' }}>
+
+        {/* Today's Top Matchups — powered by cron-cached data */}
+        {topMatchups.length > 0 && (
+          <div style={{ marginBottom: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: MONO }}>
+                Today's Top Matchups
+              </span>
+              <div style={{ flex: 1, height: 1, background: '#1a1a24' }} />
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))',
+              gap: 12,
+            }}>
+              {topMatchups.map((tm, i) => (
+                <TopMatchupCard key={`${tm.league}-${i}`} matchup={tm} compact={false} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div style={{

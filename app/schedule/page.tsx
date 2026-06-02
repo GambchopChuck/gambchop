@@ -7,6 +7,8 @@ import { supabaseAdmin }       from '@/lib/supabase-admin'
 import { extractLine }         from '@/lib/ingestion'
 import type { GameOdds }       from '@/lib/odds-api'
 import ScheduleClient          from '@/components/schedule/ScheduleClient'
+import { rowToTopMatchup }     from '@/lib/topMatchups'
+import type { TopMatchupData } from '@/lib/topMatchups'
 
 export const metadata = {
   title: 'Schedule | Gambchop',
@@ -212,5 +214,18 @@ export default async function SchedulePage() {
     })
   )
 
-  return <ScheduleClient games={scheduleGames} />
+  // ── 5. Read today's top matchups from Supabase (written by cron) ────────────
+  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  let topMatchups: TopMatchupData[] = []
+  try {
+    const { data: tmRows } = await supabaseAdmin
+      .from('top_matchups')
+      .select('*')
+      .eq('game_date', todayET)
+    topMatchups = (tmRows ?? []).map(rowToTopMatchup).filter(Boolean) as TopMatchupData[]
+  } catch {
+    // Table may not exist yet — degrade gracefully
+  }
+
+  return <ScheduleClient games={scheduleGames} topMatchups={topMatchups} />
 }

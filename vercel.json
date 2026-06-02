@@ -31,6 +31,10 @@
     {
       "path": "/api/cron/generate-streak-articles",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/top-matchups",
+      "schedule": "0 12 * * *"
     }
   ]
 }
