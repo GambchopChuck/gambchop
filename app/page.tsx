@@ -270,20 +270,43 @@ export default async function HomePage() {
 
       <ChopperBanner />
 
-      {/* ── Leagues section header ────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '48px 24px 0', fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#ffffff', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 14px' }}>
-          Leagues
-        </h2>
-        <p style={{ fontSize: 15, fontWeight: 400, color: '#ffffff', lineHeight: 1.7, margin: 0, maxWidth: 860 }}>
-          Explore Gambchop&apos;s league cards for MLB, NBA, NFL, NHL, WNBA, college football, men&apos;s and women&apos;s college basketball, college baseball, ATP, WTA, and all-league streak tracking. Each hub is built to help members quickly review moneyline, spread, totals, team trends, player trends, and active streaks through Gambchop&apos;s visual chart system.
-        </p>
-        <p style={{ fontSize: 15, fontWeight: 400, color: '#ffffff', lineHeight: 1.7, margin: '14px 0 0', maxWidth: 860 }}>
-          No hunting through messy stat pages. No switching between ten tabs like a sleep-deprived trader. Just pick a league and start skimming.
-        </p>
-      </div>
+      {/* ── Leagues section — video bg wraps header + cards ─────────────── */}
+      <div style={{ position: 'relative', overflow: 'hidden' }}>
 
-      <LeagueGrid showSectionHeader={false} />
+        {/* Background video */}
+        <video
+          autoPlay muted loop playsInline
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+        >
+          <source src="/images/Leagues_herobg.mp4" type="video/mp4" />
+        </video>
+
+        {/* Dark overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1 }} />
+
+        {/* All content above video + overlay */}
+        <div style={{ position: 'relative', zIndex: 2 }}>
+
+          {/* Header + description */}
+          <div style={{ maxWidth: 1400, margin: '0 auto', padding: '48px 24px 0', fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#ffffff', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 14px' }}>
+              Leagues
+            </h2>
+            <p style={{ fontSize: 15, fontWeight: 400, color: '#ffffff', lineHeight: 1.7, margin: 0, maxWidth: 860 }}>
+              Explore Gambchop&apos;s league cards for MLB, NBA, NFL, NHL, WNBA, college football, men&apos;s and women&apos;s college basketball, college baseball, ATP, WTA, and all-league streak tracking. Each hub is built to help members quickly review moneyline, spread, totals, team trends, player trends, and active streaks through Gambchop&apos;s visual chart system.
+            </p>
+            <p style={{ fontSize: 15, fontWeight: 400, color: '#ffffff', lineHeight: 1.7, margin: '14px 0 0', maxWidth: 860 }}>
+              No hunting through messy stat pages. No switching between ten tabs like a sleep-deprived trader. Just pick a league and start skimming.
+            </p>
+          </div>
+
+          {/* League cards — 2rem gap below description */}
+          <div style={{ marginTop: '2rem' }}>
+            <LeagueGrid showSectionHeader={false} showBackground={false} />
+          </div>
+
+        </div>
+      </div>
 
       {/* ── Top Matchup Ticker — sits directly above Also Featured ──────────── */}
       <TopMatchupTicker matchups={mlbTopMatchup ? [mlbTopMatchup] : []} />
