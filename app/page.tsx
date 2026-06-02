@@ -9,6 +9,7 @@ import ProTrialBanner from '@/components/ProTrialBanner'
 import TopMatchupTicker from '@/components/TopMatchupTicker'
 import OurMission from '@/components/OurMission'
 import HomepagePricingSection from '@/components/HomepagePricingSection'
+import SportsNewsPreview from '@/components/SportsNewsPreview'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { rowToTopMatchup } from '@/lib/topMatchups'
 import type { TopMatchupData } from '@/lib/topMatchups'
@@ -30,6 +31,23 @@ export default async function HomePage() {
     mlbTopMatchup = data ? rowToTopMatchup(data) : null
   } catch {
     // Degrade gracefully if top_matchups table doesn't exist yet
+  }
+
+  // Fetch 3 most recent sports news articles for Sports News preview
+  let sportsArticles: {
+    id: string; headline: string; source: string | null
+    sport: string | null; published_at: string | null
+    article_url: string | null; image_url: string | null
+  }[] = []
+  try {
+    const { data } = await supabaseAdmin
+      .from('news_articles')
+      .select('id, headline, source, sport, published_at, article_url, image_url')
+      .order('published_at', { ascending: false })
+      .limit(3)
+    sportsArticles = data ?? []
+  } catch {
+    // Degrade gracefully
   }
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -324,6 +342,7 @@ export default async function HomePage() {
       <FeaturedPagesWithAuth />
       <ProTrialBanner />
       <NewsPreview />
+      <SportsNewsPreview articles={sportsArticles} />
 
       <CommunityPreview />
       <OurMission />
