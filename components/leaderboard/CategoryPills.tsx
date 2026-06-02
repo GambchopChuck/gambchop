@@ -28,6 +28,19 @@ const SANS   = 'var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif'
 const MONO   = 'var(--font-jetbrains), "JetBrains Mono", monospace'
 const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 
+// ─── League filter config ─────────────────────────────────────────────────────
+
+const LEAGUE_FILTERS = [
+  { key: 'overall', label: 'Overall', color: T.green, active: true  },
+  { key: 'mlb',     label: 'MLB',     color: T.green, active: true  },
+  { key: 'nba',     label: 'NBA',     color: '#f97316', active: false },
+  { key: 'nfl',     label: 'NFL',     color: '#6366f1', active: false },
+  { key: 'nhl',     label: 'NHL',     color: '#38bdf8', active: false },
+  { key: 'wnba',    label: 'WNBA',    color: '#f472b6', active: false },
+] as const
+
+type LeagueKey = typeof LEAGUE_FILTERS[number]['key']
+
 // ─── Time frame toggle (identical pill style to /compare) ────────────────────
 
 function TimeFrameToggle({ value, onChange }: { value: TimeRange; onChange: (r: TimeRange) => void }) {
@@ -112,18 +125,19 @@ function LeagueStatBar({ stats, loading }: { stats: LeagueStats | null; loading:
 
 export default function CategoryPills() {
   const [range,            setRange]            = useState<TimeRange>('last-30')
+  const [leagueFilter,     setLeagueFilter]     = useState<LeagueKey>('overall')
   const [activeCategoryId, setActiveCategoryId] = useState('most-ml-wins')
   const [categories,       setCategories]       = useState<LeaderboardCategory[]>([])
   const [teamStats,        setTeamStats]        = useState<TeamSummary[]>([])
   const [totalGames,       setTotalGames]       = useState(0)
   const [loading,          setLoading]          = useState(true)
 
-  // Fetch real data whenever range changes
+  // Re-fetch whenever range OR league filter changes
   useEffect(() => {
     let cancelled = false
     setLoading(true)
 
-    fetchLeaderboardData(range).then(({ categories: cats, teamStats: ts, totalGames: tg }) => {
+    fetchLeaderboardData(range, leagueFilter).then(({ categories: cats, teamStats: ts, totalGames: tg }) => {
       if (cancelled) return
       setCategories(cats)
       setTeamStats(ts)
@@ -136,7 +150,7 @@ export default function CategoryPills() {
     })
 
     return () => { cancelled = true }
-  }, [range]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [range, leagueFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeCategory = categories.find(c => c.id === activeCategoryId) ?? null
 
@@ -223,6 +237,85 @@ export default function CategoryPills() {
             Loading…
           </div>
         )}
+      </div>
+
+      {/* League filter row — below category pills */}
+      <div className="lb-pills-row" style={{ marginTop: 12 }}>
+        {LEAGUE_FILTERS.map(lf => {
+          const isActive  = lf.key === leagueFilter
+          const clickable = lf.active
+
+          return (
+            <button
+              key={lf.key}
+              disabled={!clickable}
+              onClick={() => clickable && setLeagueFilter(lf.key as LeagueKey)}
+              style={{
+                fontFamily:    SANS,
+                fontSize:      13,
+                fontWeight:    isActive ? 600 : 500,
+                color:         isActive ? '#0A0A0B' : clickable ? T.sec : '#3f3f46',
+                background:    isActive ? T.green   : 'transparent',
+                border:        isActive ? `1.5px solid ${T.green}` : `1px solid ${T.hairline}`,
+                borderRadius:  isActive ? 8 : 6,
+                padding:       isActive ? '10px 18px' : '8px 14px',
+                cursor:        clickable ? 'pointer' : 'default',
+                whiteSpace:    'nowrap',
+                transition:    'all 200ms ease-out',
+                lineHeight:    1,
+                display:       'inline-flex',
+                alignItems:    'center',
+                gap:           6,
+                boxShadow:     isActive
+                  ? '0 0 24px rgba(34,197,94,0.45), inset 0 0 12px rgba(34,197,94,0.15)'
+                  : 'none',
+              }}
+              onMouseEnter={e => {
+                if (!isActive && clickable) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.color = T.pri
+                  el.style.borderColor = 'rgba(34,197,94,0.4)'
+                  el.style.background = 'rgba(34,197,94,0.04)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive && clickable) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.color = T.sec
+                  el.style.borderColor = T.hairline
+                  el.style.background = 'transparent'
+                }
+              }}
+            >
+              {/* League color dot */}
+              <span style={{
+                width:        6,
+                height:       6,
+                borderRadius: '50%',
+                background:   isActive ? '#000' : clickable ? lf.color : '#3f3f46',
+                flexShrink:   0,
+                display:      'inline-block',
+              }} />
+              {lf.label}
+              {/* SOON badge for inactive leagues */}
+              {!lf.active && (
+                <span style={{
+                  fontSize:      7,
+                  fontWeight:    700,
+                  color:         '#52525b',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  fontFamily:    MONO,
+                  background:    '#1a1a24',
+                  padding:       '1px 5px',
+                  borderRadius:  2,
+                }}>
+                  SOON
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Podium — 48px below pills */}

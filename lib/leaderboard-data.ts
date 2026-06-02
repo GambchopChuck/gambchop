@@ -118,16 +118,20 @@ async function resolveLeagueId(slug: string): Promise<string | null> {
 
 // ─── Supabase fetch ────────────────────────────────────────────────────────────
 
-async function fetchLeagueRows(leagueId: string, range: TimeRange): Promise<RawGameRow[]> {
+// leagueId = null → no league filter (OVERALL — all leagues combined)
+async function fetchLeagueRows(leagueId: string | null, range: TimeRange): Promise<RawGameRow[]> {
   const dr = dateRangeFor(range)
 
   let q = supabase
     .from('games')
     .select(OUTCOME_SELECT)
-    .eq('league_id', leagueId)
     .eq('status', 'final')
     .order('game_date', { ascending: true })
     .limit(10000)
+
+  if (leagueId) {
+    q = q.eq('league_id', leagueId)
+  }
 
   if (dr) {
     q = q.gte('game_date', dr.from).lte('game_date', dr.to)
@@ -338,14 +342,23 @@ function buildCategory(spec: CategorySpec, teams: TeamSummary[], maxGames: numbe
 }
 
 // ─── Main fetch ────────────────────────────────────────────────────────────────
+// league = 'overall' → no WHERE clause on league_id (all leagues combined)
+// league = 'mlb' (or any slug) → filter to that league only
 
-export async function fetchLeaderboardData(range: TimeRange): Promise<{
+export async function fetchLeaderboardData(
+  range:  TimeRange,
+  league: string = 'mlb',
+): Promise<{
   categories:  LeaderboardCategory[]
   teamStats:   TeamSummary[]
   totalGames:  number
 }> {
-  const leagueId = await resolveLeagueId('mlb')
-  if (!leagueId) return { categories: [], teamStats: [], totalGames: 0 }
+  let leagueId: string | null = null
+
+  if (league !== 'overall') {
+    leagueId = await resolveLeagueId(league)
+    if (!leagueId) return { categories: [], teamStats: [], totalGames: 0 }
+  }
 
   const rows = await fetchLeagueRows(leagueId, range)
   if (!rows.length) return { categories: [], teamStats: [], totalGames: 0 }
