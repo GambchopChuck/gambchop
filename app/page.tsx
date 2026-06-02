@@ -271,18 +271,26 @@ export default async function HomePage() {
       <ChopperBanner />
 
       {/* ── Leagues section — video bg wraps header + cards ─────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden' }}>
+      <section style={{ position: 'relative', overflow: 'hidden' }}>
 
         {/* Background video */}
         <video
           autoPlay muted loop playsInline
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            pointerEvents: 'none',
+          }}
         >
           <source src="/images/Leagues_herobg.mp4" type="video/mp4" />
         </video>
 
         {/* Dark overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1 }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1 }} />
 
         {/* All content above video + overlay */}
         <div style={{ position: 'relative', zIndex: 2 }}>
@@ -306,7 +314,7 @@ export default async function HomePage() {
           </div>
 
         </div>
-      </div>
+      </section>
 
       {/* ── Top Matchup Ticker — sits directly above Also Featured ──────────── */}
       <TopMatchupTicker matchups={mlbTopMatchup ? [mlbTopMatchup] : []} />
