@@ -8,6 +8,7 @@ import NewsPreview from '@/components/NewsPreview'
 import ProTrialBanner from '@/components/ProTrialBanner'
 import TopMatchupTicker from '@/components/TopMatchupTicker'
 import OurMission from '@/components/OurMission'
+import HomepagePricingSection from '@/components/HomepagePricingSection'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { rowToTopMatchup } from '@/lib/topMatchups'
 import type { TopMatchupData } from '@/lib/topMatchups'
@@ -326,6 +327,7 @@ export default async function HomePage() {
 
       <CommunityPreview />
       <OurMission />
+      <HomepagePricingSection />
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '20px 24px', textAlign: 'center' }}>
         <p style={{ fontSize: 9, color: '#f4f4f5', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0, fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
