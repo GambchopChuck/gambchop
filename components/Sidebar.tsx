@@ -13,6 +13,7 @@ const LINKS = [
   { href: '/compare',      label: 'Compare'   },
   { href: '/news',         label: 'News'      },
   { href: '/pricing',      label: 'Pricing'   },
+  { href: '/faq',          label: 'FAQ'       },
 ]
 
 export default function Sidebar() {
