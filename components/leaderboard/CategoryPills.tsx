@@ -155,6 +155,16 @@ export default function CategoryPills() {
         }
       `}</style>
 
+      {/* Dynamic subtitle — updates as category changes */}
+      {activeCategory && (
+        <p style={{
+          fontFamily: SANS, fontSize: 16, fontWeight: 400,
+          color: T.sec, lineHeight: 1.6, margin: '0 0 4px',
+        }}>
+          Ranked by {activeCategory.label}
+        </p>
+      )}
+
       {/* Time frame toggle */}
       <TimeFrameToggle value={range} onChange={setRange} />
 

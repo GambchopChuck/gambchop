@@ -35,15 +35,6 @@ export default function LeaderboardHero() {
         Leaderboard
       </h1>
 
-      {/* Subtitle */}
-      <p style={{
-        fontFamily: SANS, fontSize: 16, fontWeight: 400,
-        color: T.sec, lineHeight: 1.6, margin: '0 0 16px',
-        maxWidth: 600,
-      }}>
-        Last month&apos;s top five teams in every betting category. Frozen at month-end, archived forever.
-      </p>
-
       {/* Status row */}
       <p style={{
         fontFamily: MONO, fontSize: 10, fontWeight: 500,
