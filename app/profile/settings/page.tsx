@@ -400,7 +400,7 @@ export default function ProfileSettingsPage() {
             }}
           >
             {/* Toggle pill */}
-            <div style={{
+            <div className="toggle-track" style={{
               width: 44, height: 24, borderRadius: 12, flexShrink: 0, position: 'relative',
               background: form.show_favorites_public ? ACCENT : '#2a2a34',
               transition: 'background 0.2s',

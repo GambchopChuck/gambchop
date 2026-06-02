@@ -34,7 +34,7 @@ body {
 /* Scrollbar styling */
 ::-webkit-scrollbar { height: 4px; width: 4px; }
 ::-webkit-scrollbar-track { background: #0a0a1a; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 0; }
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
 
 /* ── Community page design tokens ───────────────────────────────────────── */
@@ -87,6 +87,23 @@ body {
 }
 @media (max-width: 639px) {
   .league-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Square corners site-wide ────────────────────────────────────────────── */
+/* Overrides all inline styles and CSS classes; exceptions below win via      */
+/* higher specificity (class/attribute selectors beat the universal selector) */
+*, *::before, *::after {
+  border-radius: 0 !important;
+}
+/* Keep circular: avatars, indicator dots, toggle knob, spinners              */
+[style*="border-radius: 50%"],
+.activation-spinner,
+.briefing-spinner {
+  border-radius: 50% !important;
+}
+/* Keep rounded pill for the toggle switch track                              */
+.toggle-track {
+  border-radius: 12px !important;
 }
 
 /* ── Chart News team name links ──────────────────────────────────────────── */
