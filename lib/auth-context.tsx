@@ -14,6 +14,7 @@ interface AuthContextValue {
   // Session-derived state
   user:                 User | null
   displayName:          string | null     // from profiles.display_name
+  username:             string | null     // from profiles.username (public handle)
   isMember:             boolean           // true when a real Supabase session exists
   isPro:                boolean           // profiles.is_pro, localStorage as fallback
   memberTier:           MemberTier
@@ -28,7 +29,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   modal: null, openModal: () => {}, closeModal: () => {},
-  user: null, displayName: null,
+  user: null, displayName: null, username: null,
   isMember: false, isPro: false, memberTier: 'none', loading: true,
   setIsPro: () => {}, setIsMember: () => {},
   beginProActivation: () => {}, endProActivation: () => {},
@@ -44,38 +45,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session,     setSession]     = useState<Session | null>(null)
   const [isPro,       setProState]    = useState<boolean>(readLocalPro)
   const [displayName, setDisplayName] = useState<string | null>(null)
+  const [username,    setUsername]    = useState<string | null>(null)
   const [loading,     setLoading]     = useState(true)
 
-  // Guards syncProfileFromSupabase from stomping is_pro=true while the Stripe
-  // webhook is still in-flight. Cleared when poll confirms, or on poll timeout.
   const proActivationPending = useRef(false)
 
   async function syncProfileFromSupabase(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('is_pro, display_name')
+      .select('is_pro, display_name, username')
       .eq('id', userId)
       .single()
 
     if (data) {
       if (data.is_pro) {
-        // Webhook confirmed — release guard and clear banner flag
         proActivationPending.current = false
         localStorage.removeItem('gambchop-pro-activating')
       }
-      // If activation is pending, hold is_pro=true regardless of what DB says
       const effectiveIsPro = proActivationPending.current ? true : data.is_pro
       setProState(effectiveIsPro)
       setDisplayName(data.display_name ?? null)
+      setUsername(data.username ?? null)
       localStorage.setItem('gambchop-is-pro', String(effectiveIsPro))
     } else {
-      // Profile row missing — backfill from localStorage
       const localPro = readLocalPro()
       await supabase
         .from('profiles')
         .upsert({ id: userId, is_pro: localPro }, { onConflict: 'id' })
       setProState(localPro)
       setDisplayName(null)
+      setUsername(null)
     }
   }
 
@@ -94,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProState(readLocalPro())
         setDisplayName(null)
+        setUsername(null)
       }
     })
 
@@ -111,20 +111,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user])
 
-  const beginProActivation = useCallback(() => {
-    proActivationPending.current = true
-  }, [])
-
-  const endProActivation = useCallback(() => {
-    proActivationPending.current = false
-  }, [])
+  const beginProActivation = useCallback(() => { proActivationPending.current = true }, [])
+  const endProActivation   = useCallback(() => { proActivationPending.current = false }, [])
 
   const memberTier: MemberTier = isPro && isMember ? 'pro' : isMember ? 'free' : 'none'
 
   return (
     <AuthContext.Provider value={{
       modal, openModal: setModal, closeModal: () => setModal(null),
-      user, displayName, isMember, isPro, memberTier, loading,
+      user, displayName, username, isMember, isPro, memberTier, loading,
       setIsPro,
       setIsMember: () => {},
       beginProActivation,

@@ -16,7 +16,7 @@ const NAV_LINKS = [
 ] as const
 
 export default function Navbar() {
-  const { openModal, isPro, memberTier, user, displayName } = useAuth()
+  const { openModal, isPro, memberTier, user, displayName, username } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef   = useRef<HTMLDivElement>(null)
 
@@ -174,7 +174,7 @@ export default function Navbar() {
                     </div>
                   )}
                   <Link
-                    href="/profile"
+                    href={username ? `/profile/${username}` : '/profile'}
                     onClick={() => setMenuOpen(false)}
                     style={{ textDecoration: 'none' }}
                   >
@@ -187,6 +187,22 @@ export default function Navbar() {
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#a1a1aa' }}
                     >
                       My Profile
+                    </div>
+                  </Link>
+                  <Link
+                    href="/profile/settings"
+                    onClick={() => setMenuOpen(false)}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div style={{
+                      padding: '9px 12px', borderRadius: 7,
+                      fontSize: 11, color: '#a1a1aa', letterSpacing: '0.06em',
+                      cursor: 'pointer', transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#1a1a24'; (e.currentTarget as HTMLDivElement).style.color = '#f4f4f5' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = '#a1a1aa' }}
+                    >
+                      Settings
                     </div>
                   </Link>
                   {!isPro && (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { supabase } from '@/lib/supabase'
 import {
   Thread, Comment, CommunityUser,
   TAG_COLORS, FLAG_REASONS,
@@ -16,6 +17,61 @@ import {
   isEditable, timeAgo,
   SEED_THREADS, SEED_COMMENTS,
 } from '@/lib/community'
+
+// ─── Commenter social profile ─────────────────────────────────────────────────
+
+interface CommentProfile {
+  display_social_1: string | null
+  display_social_2: string | null
+  twitter_handle:   string | null
+  instagram_handle: string | null
+  tiktok_handle:    string | null
+  youtube_handle:   string | null
+}
+
+type ProfileMap = Record<string, CommentProfile>
+
+async function fetchCommentProfiles(usernames: string[]): Promise<ProfileMap> {
+  if (!usernames.length) return {}
+  const { data } = await supabase
+    .from('profiles')
+    .select('username, display_social_1, display_social_2, twitter_handle, instagram_handle, tiktok_handle, youtube_handle')
+    .in('username', usernames)
+  if (!data) return {}
+  return Object.fromEntries(data.map(p => [p.username, p as CommentProfile]))
+}
+
+// ─── Inline social icon badge (no external icon library required) ─────────────
+
+const SOCIAL_META: Record<string, { url: (h: string) => string; color: string; label: string }> = {
+  twitter:   { url: h => `https://x.com/${h}`,         color: '#94a3b8', label: 'X'  },
+  instagram: { url: h => `https://instagram.com/${h}`,  color: '#e1306c', label: 'IG' },
+  tiktok:    { url: h => `https://tiktok.com/@${h}`,    color: '#ff0050', label: 'TT' },
+  youtube:   { url: h => `https://youtube.com/@${h}`,   color: '#ff0000', label: 'YT' },
+}
+
+function SocialBadge({ platform, handle }: { platform: string; handle: string }) {
+  const meta = SOCIAL_META[platform]
+  if (!meta) return null
+  return (
+    <a
+      href={meta.url(handle)}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`${platform}: @${handle}`}
+      onClick={e => e.stopPropagation()}
+      style={{
+        display:        'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 16,      height: 16,   borderRadius: 3,
+        background:     meta.color + '22', border: `1px solid ${meta.color}55`,
+        color:          meta.color, fontSize: 7, fontWeight: 900,
+        textDecoration: 'none', letterSpacing: '0.03em', flexShrink: 0,
+      }}
+    >
+      {meta.label}
+    </a>
+  )
+}
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -110,10 +166,11 @@ function FlagModal({ targetType, targetId, reporterId, onClose }: {
 
 // ─── Comment Card ─────────────────────────────────────────────────────────────
 
-function CommentCard({ comment, currentUser, isThreadAuthor, onPin, onDelete, onEdit }: {
+function CommentCard({ comment, currentUser, isThreadAuthor, profile, onPin, onDelete, onEdit }: {
   comment: Comment
   currentUser: CommunityUser | null
   isThreadAuthor: boolean
+  profile?: CommentProfile
   onPin: (id: string, pinned: boolean) => void
   onDelete: (id: string) => void
   onEdit: (id: string, content: string) => void
@@ -159,8 +216,21 @@ function CommentCard({ comment, currentUser, isThreadAuthor, onPin, onDelete, on
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>@{comment.username}</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link
+            href={`/profile/${comment.username}`}
+            style={{ fontSize: 11, fontWeight: 700, color: GREEN, textDecoration: 'none' }}
+            onClick={e => e.stopPropagation()}
+          >
+            @{comment.username}
+          </Link>
+          {/* Social icons from commenter's profile */}
+          {profile && [profile.display_social_1, profile.display_social_2].filter(Boolean).map(platform => {
+            const handleKey = `${platform}_handle` as keyof CommentProfile
+            const handle = profile[handleKey]
+            if (!handle || !platform) return null
+            return <SocialBadge key={platform} platform={platform} handle={handle as string} />
+          })}
           <span style={{ fontSize: 10, color: '#3f3f46' }}>·</span>
           <span style={{ fontSize: 10, color: MUTED }}>{timeAgo(comment.created_at)}</span>
           {isEditable(comment.created_at) && isOwn && (
@@ -242,6 +312,7 @@ export default function ThreadPage() {
   const [user, setUser] = useState<CommunityUser | null>(null)
   const [thread, setThread] = useState<Thread | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
+  const [profileMap, setProfileMap] = useState<ProfileMap>({})
   const [reply, setReply] = useState('')
   const [posting, setPosting] = useState(false)
   const [replyErr, setReplyErr] = useState('')
@@ -267,6 +338,11 @@ export default function ThreadPage() {
     let c = await fetchComments(threadId)
     if (c.length === 0 && SEED_COMMENTS[threadId]) c = SEED_COMMENTS[threadId]
     setComments(c)
+
+    // Batch-fetch social profiles for all commenters
+    const usernames = [...new Set(c.map((x: Comment) => x.username))]
+    fetchCommentProfiles(usernames).then(setProfileMap)
+
     setLoading(false)
   }
 
@@ -438,6 +514,7 @@ export default function ThreadPage() {
                   comment={comment}
                   currentUser={user}
                   isThreadAuthor={isAuthor}
+                  profile={profileMap[comment.username]}
                   onPin={handlePin}
                   onDelete={handleDelete}
                   onEdit={handleEdit}
