@@ -35,15 +35,6 @@ export default function LeaderboardHero() {
         Leaderboard
       </h1>
 
-      {/* Status row */}
-      <p style={{
-        fontFamily: MONO, fontSize: 10, fontWeight: 500,
-        color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase',
-        margin: '0 0 56px',
-      }}>
-        WINDOW: MAY 2026 &middot; FROZEN JUNE 01 2026 &middot; MLB
-      </p>
-
       {/* Divider */}
       <div style={{ height: 1, background: T.hairline }} />
 
