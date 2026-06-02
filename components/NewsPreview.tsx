@@ -60,31 +60,40 @@ export default async function NewsPreview() {
       `}</style>
 
       {/* ── Section header ──────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', marginBottom: 28,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 7, height: 7, borderRadius: '50%',
-            background: ACCENT, boxShadow: `0 0 8px ${ACCENT}`,
-          }} />
-          <h2 style={{
-            fontSize: 12, fontWeight: 700, color: ACCENT,
-            letterSpacing: '0.28em', textTransform: 'uppercase', margin: 0,
-            fontFamily: 'var(--font-geist-mono), monospace',
-          }}>
-            Gambchop News
-          </h2>
-        </div>
-        <Link href="/news" style={{
-          fontSize: 10, color: '#52525b',
-          fontFamily: 'var(--font-geist-mono), monospace',
-          textDecoration: 'none', letterSpacing: '0.14em',
-          textTransform: 'uppercase', transition: 'color 0.15s',
+      <div style={{ marginBottom: 28 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', marginBottom: 10,
         }}>
-          View All News →
-        </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: ACCENT, boxShadow: `0 0 8px ${ACCENT}`,
+            }} />
+            <h2 style={{
+              fontSize: 12, fontWeight: 700, color: ACCENT,
+              letterSpacing: '0.28em', textTransform: 'uppercase', margin: 0,
+              fontFamily: 'var(--font-geist-mono), monospace',
+            }}>
+              Gambchop News
+            </h2>
+          </div>
+          <Link href="/news" style={{
+            fontSize: 10, color: '#52525b',
+            fontFamily: 'var(--font-geist-mono), monospace',
+            textDecoration: 'none', letterSpacing: '0.14em',
+            textTransform: 'uppercase', transition: 'color 0.15s',
+          }}>
+            View All News →
+          </Link>
+        </div>
+        <p style={{
+          fontSize: 15, fontWeight: 400, color: '#ffffff',
+          margin: 0, lineHeight: 1.65, maxWidth: 780,
+          fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+        }}>
+          Gambchop News brings together daily sports headlines and Chart News generated from Gambchop&apos;s own outcome data. Track league stories, streaks, records, reversals, and betting-market patterns in one clean news section.
+        </p>
       </div>
 
       {/* ── Two columns ─────────────────────────────────────────────────────── */}

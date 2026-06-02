@@ -114,8 +114,8 @@ export default function CommunityPreview() {
           <h2 style={{ fontSize: 22, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>
             Community Board
           </h2>
-          <p style={{ fontSize: 10, color: MUTED, margin: '5px 0 0', letterSpacing: '0.08em' }}>
-            Strategy · Line Movement · Props · Analysis
+          <p style={{ fontSize: 13, color: '#f4f4f5', margin: '8px 0 0', lineHeight: 1.65, maxWidth: 680 }}>
+            Share observations, discuss streaks, follow league-specific threads, and compare notes with other Gambchop members. The Community Board keeps the conversation focused on what bettors are seeing across the data, not empty &ldquo;lock&rdquo; talk.
           </p>
         </div>
         <Link href="/community" style={{
