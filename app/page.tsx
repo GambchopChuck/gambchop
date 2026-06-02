@@ -5,6 +5,7 @@ import ActivationBanner from '@/components/ActivationBanner'
 import FeaturedPagesWithAuth from '@/components/landing/FeaturedPagesWithAuth'
 import ChopperBanner from '@/components/ChopperBanner'
 import NewsPreview from '@/components/NewsPreview'
+import ProTrialBanner from '@/components/ProTrialBanner'
 import TopMatchupTicker from '@/components/TopMatchupTicker'
 import OurMission from '@/components/OurMission'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -320,6 +321,7 @@ export default async function HomePage() {
       <TopMatchupTicker matchups={mlbTopMatchup ? [mlbTopMatchup] : []} />
 
       <FeaturedPagesWithAuth />
+      <ProTrialBanner />
       <NewsPreview />
 
       <CommunityPreview />
