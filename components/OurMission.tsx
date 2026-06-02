@@ -11,11 +11,39 @@ const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 export default function OurMission() {
   return (
     <section style={{
-      borderTop:  '1px solid #1a1a24',
-      background: '#08080d',
-      padding:    '80px 24px 96px',
+      position: 'relative',
+      overflow: 'hidden',
+      padding:  '80px 24px 96px',
     }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      {/* Background image — same source as Also Featured section */}
+      <div
+        style={{
+          position: 'absolute', inset: 0, zIndex: 0,
+          backgroundImage:    "url('/images/also-featured-bg.png')",
+          backgroundSize:     'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat:   'no-repeat',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Dark overlay for text contrast — same as Also Featured */}
+      <div
+        style={{ position: 'absolute', inset: 0, zIndex: 1, backgroundColor: 'rgba(10,10,11,0.72)' }}
+        aria-hidden="true"
+      />
+
+      {/* Edge fade — blends into surrounding bg-canvas */}
+      <div
+        style={{
+          position: 'absolute', inset: 0, zIndex: 2,
+          background: 'linear-gradient(to bottom, #0A0A0B 0%, transparent 15%, transparent 85%, #0A0A0B 100%)',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Content sits above all background layers */}
+      <div style={{ maxWidth: 900, margin: '0 auto', position: 'relative', zIndex: 3 }}>
 
         {/* Headline — lime green, radiant, Oswald */}
         <h2 style={{

@@ -281,7 +281,7 @@ export default async function HomePage() {
       <OurMission />
 
       <footer style={{ borderTop: '1px solid #1a1a24', padding: '20px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 9, color: '#3f3f46', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>
+        <p style={{ fontSize: 9, color: '#f4f4f5', letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0, fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
           Gambchop · For entertainment purposes only · Not affiliated with any sports league
         </p>
       </footer>
