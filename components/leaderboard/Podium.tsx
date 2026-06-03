@@ -4,8 +4,8 @@ import type { LeaderboardCategory, LeaderboardRow, Outcome } from '@/lib/mockLea
 
 const T = {
   pri:      '#F5F5F4',
-  sec:      '#A1A1AA',
-  faint:    '#52525B',
+  sec:      '#ffffff',
+  faint:    '#ffffff',
   elevated: '#18181C',
   hairline: '#1F1F23',
   accent:   '#C5F84A',
@@ -139,18 +139,12 @@ function PodiumCard({ row, cfg, countUnit, rangeLabel, isCenter = false }: Podiu
         if (nameEl) nameEl.style.color = T.pri
       }}
     >
-      {/* Rank badge */}
-      <div>
-        <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 500, color: T.faint, letterSpacing: '0.12em' }}>
-          {cfg.rank}
-        </div>
-        <div style={{
-          fontFamily: MONO, fontSize: 10, fontWeight: 600,
-          color: cfg.tagColor, letterSpacing: '0.18em', textTransform: 'uppercase',
-          marginTop: 4,
-        }}>
-          {cfg.label}
-        </div>
+      {/* Medal label */}
+      <div style={{
+        fontFamily: MONO, fontSize: 10, fontWeight: 600,
+        color: cfg.tagColor, letterSpacing: '0.18em', textTransform: 'uppercase',
+      }}>
+        {cfg.label}
       </div>
 
       {/* Team identity */}
@@ -215,8 +209,7 @@ function EmptySlotCard({ cfg }: { cfg: MedalConfig }) {
       borderRadius: 12, padding: cfg.padding, overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 500, color: T.faint }}>{cfg.rank}</div>
-      <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 600, color: T.faint, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 4 }}>
+      <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 600, color: T.faint, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
         {cfg.label}
       </div>
       <div style={{ marginTop: 'auto', marginBottom: 'auto', fontFamily: MONO, fontSize: 22, fontWeight: 500, color: T.faint, textAlign: 'center' }}>

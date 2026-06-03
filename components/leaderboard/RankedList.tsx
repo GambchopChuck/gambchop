@@ -7,8 +7,8 @@ import { TEAM_COLORS } from '@/lib/teamColors'
 
 const T = {
   pri:      '#F5F5F4',
-  sec:      '#A1A1AA',
-  faint:    '#52525B',
+  sec:      '#ffffff',
+  faint:    '#ffffff',
   elevated: '#18181C',
   hairline: '#1F1F23',
   accent:   '#C5F84A',
@@ -126,7 +126,7 @@ function RowItem({ row, countUnit, rangeLabel, isLast }: RowItemProps) {
     >
       {/* Cell 1 — Rank */}
       <div style={{
-        fontFamily: MONO, fontSize: 14, fontWeight: 500,
+        fontFamily: MONO, fontSize: 20, fontWeight: 700,
         color: T.faint, lineHeight: 1,
       }}>
         {rankStr}
