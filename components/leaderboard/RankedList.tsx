@@ -1,7 +1,9 @@
 'use client'
 
+import { useRef, useEffect } from 'react'
 import { Calendar } from 'lucide-react'
 import type { LeaderboardCategory, LeaderboardRow, Outcome } from '@/lib/mockLeaderboard'
+import { TEAM_COLORS } from '@/lib/teamColors'
 
 const T = {
   pri:      '#F5F5F4',
@@ -79,20 +81,36 @@ interface RowItemProps {
 function RowItem({ row, countUnit, rangeLabel, isLast }: RowItemProps) {
   const rankStr = String(row.rank).padStart(2, '0')
   const isZero  = row.count === 0
+  const rowRef  = useRef<HTMLDivElement>(null)
+  const colors  = TEAM_COLORS[row.team]
+
+  useEffect(() => {
+    const el = rowRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('team-glow-active', entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <div
-      className="rl-row"
+      ref={rowRef}
+      className="rl-row team-glow-border"
       style={{
         display: 'grid',
         gridTemplateColumns: '48px 1fr 100px',
         gap: 16,
         alignItems: 'start',
-        padding: '20px 0',
-        borderBottom: isLast ? 'none' : `1px solid ${T.hairline}`,
+        padding: '20px 16px',
+        marginBottom: isLast ? 0 : 8,
         cursor: 'default',
         transition: 'background 200ms ease-out',
-      }}
+        '--team-primary':   colors?.primary   ?? '#39ff9a',
+        '--team-secondary': colors?.secondary ?? '#ffffff',
+      } as React.CSSProperties}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLDivElement
         el.style.background = T.elevated
