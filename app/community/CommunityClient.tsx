@@ -25,13 +25,13 @@ const G = {
   surface:     '#0f1318',
   elevated:    '#141920',
   hairline:    '#1a2030',
-  cardBg:      'rgba(57,255,154,0.06)',
-  cardBgHover: 'rgba(57,255,154,0.12)',
-  cardBorder:  'rgba(57,255,154,0.18)',
-  accentFull:  '#39ff9a',
-  accentFaint: 'rgba(57,255,154,0.08)',
-  accentMid:   'rgba(57,255,154,0.15)',
-  accentText:  'rgba(57,255,154,0.7)',
+  cardBg:      'rgba(0,255,255,0.06)',
+  cardBgHover: 'rgba(0,255,255,0.12)',
+  cardBorder:  'rgba(0,255,255,0.18)',
+  accentFull:  '#00ffff',
+  accentFaint: 'rgba(0,255,255,0.08)',
+  accentMid:   'rgba(0,255,255,0.15)',
+  accentText:  'rgba(0,255,255,0.7)',
   white:       '#ffffff',
   muted:       'rgba(255,255,255,0.5)',
   dim:         'rgba(255,255,255,0.25)',
@@ -779,7 +779,7 @@ export default function CommunityClient({ topFavorites }: { topFavorites: TopFav
       <style>{`
         .comm-scroll::-webkit-scrollbar { width: 4px; }
         .comm-scroll::-webkit-scrollbar-track { background: transparent; }
-        .comm-scroll::-webkit-scrollbar-thumb { background: rgba(57,255,154,0.2); border-radius: 2px; }
+        .comm-scroll::-webkit-scrollbar-thumb { background: rgba(0,255,255,0.2); border-radius: 2px; }
 
         @media (max-width: 1199px) {
           .comm-right-sidebar { display: none !important; }
