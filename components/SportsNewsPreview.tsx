@@ -88,7 +88,7 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
           <div style={{
             position: 'relative', overflow: 'hidden',
             background: '#0f0f14', border: '1px solid #1a1a24',
-            height: 160, cursor: 'pointer',
+            minHeight: 240, cursor: 'pointer',
           }}>
             {/* Background image */}
             {hero.image_url && (
@@ -104,17 +104,16 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
                 />
                 <div style={{
                   position: 'absolute', inset: 0,
-                  background: 'linear-gradient(to top, rgba(2,4,2,0.95) 0%, rgba(5,6,10,0.65) 55%, rgba(5,6,10,0.20) 100%)',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                 }} />
               </>
             )}
 
-            {/* Content */}
+            {/* Content — pinned to bottom over gradient */}
             <div style={{
-              position: 'relative', zIndex: 1,
-              padding: '14px 20px 16px',
-              height: '100%', boxSizing: 'border-box',
-              display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1,
+              padding: '16px 20px 18px',
+              display: 'flex', flexDirection: 'column', gap: 0,
             }}>
               <SportBadge sport={hero.sport} />
               <p style={{
