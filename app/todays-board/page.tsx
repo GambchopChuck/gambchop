@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchLeagueOutcomes, computeStreak } from '@/lib/chart-data'
 import { LEAGUES, LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
-import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
+import type { TeamChartData, GameEntry, LeagueMeta } from '@/lib/leagues-data'
 import { STREAK_BOARD_MIN_LENGTH } from '@/lib/streaks/constants'
 import { TEAM_COLORS } from '@/lib/teamColors'
 
@@ -110,7 +110,7 @@ function StreakRowCard({
   row, meta, sc, sl, onNavigate,
 }: {
   row:        StreakRow
-  meta:       ReturnType<typeof LEAGUE_MAP['mlb']['valueOf']>
+  meta:       LeagueMeta
   sc:         string
   sl:         string
   onNavigate: () => void
