@@ -18,19 +18,33 @@ const MONO    = 'var(--font-oswald), "Oswald", sans-serif'
 const FREE_CELLS = 3
 
 const LEAGUE_TABS = [
-  { key: 'mlb',  label: 'MLB',  active: true  },
-  { key: 'nba',  label: 'NBA',  active: false },
-  { key: 'nfl',  label: 'NFL',  active: false },
-  { key: 'nhl',  label: 'NHL',  active: false },
-  { key: 'wnba', label: 'WNBA', active: false },
+  { key: 'mlb',            label: 'MLB',            active: true  },
+  { key: 'nba',            label: 'NBA',            active: false },
+  { key: 'nfl',            label: 'NFL',            active: false },
+  { key: 'nhl',            label: 'NHL',            active: false },
+  { key: 'wnba',           label: 'WNBA',           active: false },
+  { key: 'ncaaf',          label: 'NCAAF',          active: false },
+  { key: 'ncaab',          label: 'NCAAB',          active: false },
+  { key: 'ncaawb',         label: 'NCAAWB',         active: false },
+  { key: 'college-baseball', label: 'College Baseball', active: false },
+  { key: 'atp',            label: 'ATP',            active: false },
+  { key: 'wta',            label: 'WTA',            active: false },
 ] as const
 
+// TODO: replace fallback hero-bg.png with league-specific background images as they are sourced.
+// Naming convention: [league-slug]-bg.jpg in public/images/leagues/
 const LEAGUE_BACKGROUNDS: Record<string, string> = {
-  mlb:  '/images/leagues/mlb-bg.jpg',
-  nba:  '/images/leagues/nba.jpg',
-  nfl:  '/images/leagues/nfl-bg.jpg',
-  nhl:  '/images/leagues/nhl-bg.jpg',
-  wnba: '/images/leagues/wnba-bg.jpg',
+  mlb:              '/images/leagues/mlb-bg.jpg',
+  nba:              '/images/leagues/nba.jpg',
+  nfl:              '/images/leagues/nfl-bg.jpg',
+  nhl:              '/images/leagues/nhl-bg.jpg',
+  wnba:             '/images/leagues/wnba-bg.jpg',
+  ncaaf:            '/images/leagues/ncaaf-bg.jpg',
+  ncaab:            '/images/leagues/menscollegebasketball-bg.jpg',
+  ncaawb:           '/images/leagues/ncaawbb-bg.jpg',
+  'college-baseball': '/images/leagues/menscollegebaseball-bg.jpg',
+  atp:              '/images/leagues/atp-bg.jpg',
+  wta:              '/images/leagues/wta-bg.jpg',
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
