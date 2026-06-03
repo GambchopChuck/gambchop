@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchLeagueOutcomes, computeStreak } from '@/lib/chart-data'
 import { LEAGUES, LEAGUE_MAP, generateChartData, slugify } from '@/lib/leagues-data'
 import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
 import { STREAK_BOARD_MIN_LENGTH } from '@/lib/streaks/constants'
+import { TEAM_COLORS } from '@/lib/teamColors'
 
 const MIN_STREAK = STREAK_BOARD_MIN_LENGTH
 
@@ -99,6 +100,82 @@ function GameCell({ game, kind }: { game: GameEntry; kind: StreakKind }) {
       fontSize:   win && kind === 'spread' ? 7 : 8,
     }}>
       {win ? (kind === 'spread' ? 'COV' : 'W') : 'L'}
+    </div>
+  )
+}
+
+// ─── Streak row card ─────────────────────────────────────────────────────────
+
+function StreakRowCard({
+  row, meta, sc, sl, onNavigate,
+}: {
+  row:        StreakRow
+  meta:       ReturnType<typeof LEAGUE_MAP['mlb']['valueOf']>
+  sc:         string
+  sl:         string
+  onNavigate: () => void
+}) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const colors  = TEAM_COLORS[row.teamName]
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('team-glow-active', entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={cardRef}
+      className="team-glow-border"
+      onClick={onNavigate}
+      style={{
+        background: '#0f0f14',
+        padding: '14px 20px', display: 'flex', alignItems: 'center',
+        gap: 16, cursor: 'pointer', flexWrap: 'wrap',
+        '--team-primary':   colors?.primary   ?? '#39ff9a',
+        '--team-secondary': colors?.secondary ?? '#ffffff',
+      } as React.CSSProperties}
+    >
+      {/* League badge */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+        background: `${meta.accent}11`, border: `1px solid ${meta.accent}33`,
+        padding: '3px 8px',
+      }}>
+        <span style={{ fontSize: 12 }}>{meta.emoji}</span>
+        <span style={{ fontSize: 9, color: meta.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>{meta.name}</span>
+      </div>
+
+      {/* Team name */}
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', minWidth: 160, flexShrink: 0 }}>
+        {row.teamName}
+      </span>
+
+      {/* Category */}
+      <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0, minWidth: 88 }}>
+        {KIND_LABEL[row.kind]}
+      </span>
+
+      {/* Streak badge */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+        background: `${sc}11`, border: `1px solid ${sc}33`,
+        padding: '4px 10px',
+      }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc, boxShadow: `0 0 6px ${sc}` }} />
+        <span style={{ fontSize: 16, fontWeight: 900, color: sc, letterSpacing: '0.02em' }}>{sl}</span>
+      </div>
+
+      {/* Last N game cells */}
+      <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
+        {row.games.map((g, gi) => <GameCell key={gi} game={g} kind={row.kind} />)}
+      </div>
     </div>
   )
 }
@@ -291,59 +368,16 @@ export default function StreakBoardPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {displayRows.map(row => {
-              const meta = LEAGUE_MAP[row.leagueId]
-              const sc   = streakColor(row.streakType)
-              const sl   = streakLabel(row.kind, row.streakType, row.streakCount)
-              return (
-                <div
-                  key={`${row.leagueId}-${row.teamName}-${row.kind}`}
-                  onClick={() => router.push(`/leagues/${row.leagueId}/${row.teamSlug}`)}
-                  style={{
-                    background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 10,
-                    padding: '14px 20px', display: 'flex', alignItems: 'center',
-                    gap: 16, cursor: 'pointer', flexWrap: 'wrap',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#2a2a34' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#1a1a24' }}
-                >
-                  {/* League badge */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
-                    background: `${meta.accent}11`, border: `1px solid ${meta.accent}33`,
-                    borderRadius: 4, padding: '3px 8px',
-                  }}>
-                    <span style={{ fontSize: 12 }}>{meta.emoji}</span>
-                    <span style={{ fontSize: 9, color: meta.accent, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>{meta.name}</span>
-                  </div>
-
-                  {/* Team name */}
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', minWidth: 160, flexShrink: 0 }}>
-                    {row.teamName}
-                  </span>
-
-                  {/* Category */}
-                  <span style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0, minWidth: 88 }}>
-                    {KIND_LABEL[row.kind]}
-                  </span>
-
-                  {/* Streak badge */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-                    background: `${sc}11`, border: `1px solid ${sc}33`,
-                    borderRadius: 6, padding: '4px 10px',
-                  }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc, boxShadow: `0 0 6px ${sc}` }} />
-                    <span style={{ fontSize: 16, fontWeight: 900, color: sc, letterSpacing: '0.02em' }}>{sl}</span>
-                  </div>
-
-                  {/* Last N game cells */}
-                  <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
-                    {row.games.map((g, gi) => <GameCell key={gi} game={g} kind={row.kind} />)}
-                  </div>
-                </div>
-              )
-            })}
+            {displayRows.map(row => (
+              <StreakRowCard
+                key={`${row.leagueId}-${row.teamName}-${row.kind}`}
+                row={row}
+                meta={LEAGUE_MAP[row.leagueId]}
+                sc={streakColor(row.streakType)}
+                sl={streakLabel(row.kind, row.streakType, row.streakCount)}
+                onNavigate={() => router.push(`/leagues/${row.leagueId}/${row.teamSlug}`)}
+              />
+            ))}
           </div>
         )}
       </div>
