@@ -7,6 +7,21 @@ import { LEAGUES } from '@/lib/leagues-data'
 import { slugify } from '@/lib/leagues-data'
 import { TEAM_COLORS } from '@/lib/teamColors'
 
+// Same paths as Schedule page — no new images needed
+const LEAGUE_BACKGROUNDS: Record<string, string> = {
+  mlb:    '/images/leagues/mlb-bg.jpg',
+  nba:    '/images/leagues/nba.jpg',
+  nfl:    '/images/leagues/nfl-bg.jpg',
+  nhl:    '/images/leagues/nhl-bg.jpg',
+  wnba:   '/images/leagues/wnba-bg.jpg',
+  ncaaf:  '/images/leagues/ncaaf-bg.jpg',
+  ncaab:  '/images/leagues/menscollegebasketball-bg.jpg',
+  ncaawb: '/images/leagues/ncaawbb-bg.jpg',
+  ncaabl: '/images/leagues/menscollegebaseball-bg.jpg',
+  atp:    '/images/leagues/atp-bg.jpg',
+  wta:    '/images/leagues/wta-bg.jpg',
+}
+
 const CARD   = '#0f0f14'
 const BORDER = '#1a1a24'
 const TEXT   = '#f4f4f5'
@@ -73,38 +88,52 @@ function LeagueSection({ id, name, full, emoji, accent, entities, entityType }: 
   id: string; name: string; full: string; emoji: string
   accent: string; entities: string[]; entityType: string
 }) {
-  return (
-    <section style={{ marginBottom: 48 }}>
-      {/* League header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '14px 0 14px', borderBottom: `1px solid ${accent}33`,
-        marginBottom: 20,
-      }}>
-        <span style={{ fontSize: 28 }}>{emoji}</span>
-        <div>
-          <div style={{ fontSize: 9, color: accent, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 2 }}>{full}</div>
-          <h2 style={{ fontSize: 20, fontWeight: 900, color: TEXT, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{name}</h2>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            {entities.length} {entityType === 'player' ? 'Players' : 'Teams'}
-          </span>
-          <Link href={`/leagues/${id}`} style={{
-            textDecoration: 'none', fontSize: 9, color: accent,
-            border: `1px solid ${accent}44`, borderRadius: 4,
-            padding: '4px 10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
-          }}>
-            Full Chart →
-          </Link>
-        </div>
-      </div>
+  const bgImage = LEAGUE_BACKGROUNDS[id] ?? '/images/hero-bg.png'
 
-      {/* Team grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-        {entities.map(name => (
-          <TeamCard key={name} name={name} leagueId={id} accent={accent} />
-        ))}
+  return (
+    <section style={{
+      position: 'relative', overflow: 'hidden',
+      marginBottom: 48,
+      backgroundImage: `url(${bgImage})`,
+      backgroundSize: 'cover', backgroundPosition: 'center',
+      backgroundAttachment: 'local',
+    }}>
+      {/* Dark overlay */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 0 }} />
+
+      {/* Content above overlay */}
+      <div style={{ position: 'relative', zIndex: 1, padding: '20px 20px 24px' }}>
+        {/* League header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          padding: '0 0 14px', borderBottom: `1px solid ${accent}33`,
+          marginBottom: 20,
+        }}>
+          <span style={{ fontSize: 28 }}>{emoji}</span>
+          <div>
+            <div style={{ fontSize: 9, color: accent, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 2 }}>{full}</div>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: TEXT, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{name}</h2>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              {entities.length} {entityType === 'player' ? 'Players' : 'Teams'}
+            </span>
+            <Link href={`/leagues/${id}`} style={{
+              textDecoration: 'none', fontSize: 9, color: accent,
+              border: `1px solid ${accent}44`, borderRadius: 4,
+              padding: '4px 10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
+            }}>
+              Full Chart →
+            </Link>
+          </div>
+        </div>
+
+        {/* Team grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+          {entities.map(name => (
+            <TeamCard key={name} name={name} leagueId={id} accent={accent} />
+          ))}
+        </div>
       </div>
     </section>
   )
