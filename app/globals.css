@@ -165,3 +165,29 @@ body {
 @media (max-width: 1279px) {
   .chart-legend { display: none; }
 }
+
+/* ── Community page glow effects (#00ffff = rgb 0,255,255) ───────────────── */
+@keyframes communityBlueGlow {
+  0%   { box-shadow: 0 0 6px  1px rgba(0,255,255,0.20), 0 0 12px  2px rgba(0,255,255,0.10); }
+  50%  { box-shadow: 0 0 12px 3px rgba(0,255,255,0.35), 0 0 24px  6px rgba(0,255,255,0.15); }
+  100% { box-shadow: 0 0 6px  1px rgba(0,255,255,0.20), 0 0 12px  2px rgba(0,255,255,0.10); }
+}
+/* Post cards — animation toggled on/off by IntersectionObserver */
+.comm-card-glow { will-change: box-shadow; }
+.comm-card-glow-active { animation: communityBlueGlow 3s ease-in-out infinite; }
+/* Always-visible cards (Fan Favorite, Bettor Types, Poll, Favorites) */
+.comm-card-glow-static {
+  animation: communityBlueGlow 3s ease-in-out infinite;
+  will-change: box-shadow;
+}
+/* Button hover glow */
+.comm-btn-glow { transition: box-shadow 0.2s ease; }
+.comm-btn-glow:hover { box-shadow: 0 0 10px 2px rgba(0,255,255,0.4); }
+/* NEW TOPIC primary CTA — constant glow */
+.comm-cta-glow {
+  box-shadow: 0 0 10px 2px rgba(0,255,255,0.3), 0 0 20px 4px rgba(0,255,255,0.15);
+  transition: box-shadow 0.2s ease;
+}
+.comm-cta-glow:hover {
+  box-shadow: 0 0 14px 3px rgba(0,255,255,0.5), 0 0 28px 8px rgba(0,255,255,0.25);
+}

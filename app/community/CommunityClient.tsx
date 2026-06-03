@@ -458,11 +458,25 @@ function PostCard({ thread, isLiked, likeCount, bettorType, canLike, onLike }: {
   onLike:      () => void
 }) {
   const [hovered, setHovered] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
   const initial = thread.username[0]?.toUpperCase() ?? '?'
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('comm-card-glow-active', entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <Link href={`/community/${thread.id}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div
+        ref={cardRef}
+        className="comm-card-glow"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -511,10 +525,11 @@ function PostCard({ thread, isLiked, likeCount, bettorType, canLike, onLike }: {
 
         {/* Bottom action row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 44, flexWrap: 'wrap' }}>
-          <button style={actionBtnSt} onClick={e => e.preventDefault()}>Reply</button>
+          <button className="comm-btn-glow" style={actionBtnSt} onClick={e => e.preventDefault()}>Reply</button>
 
           {/* Like */}
           <button
+            className="comm-btn-glow"
             style={{ ...actionBtnSt, color: isLiked ? '#ef4444' : G.muted, cursor: canLike ? 'pointer' : 'default' }}
             onClick={e => { e.preventDefault(); if (canLike) onLike() }}
             title={canLike ? undefined : 'Sign in to like'}
@@ -524,6 +539,7 @@ function PostCard({ thread, isLiked, likeCount, bettorType, canLike, onLike }: {
           </button>
 
           <button
+            className="comm-btn-glow"
             style={{ ...actionBtnSt, color: G.accentFull, background: G.accentFaint, border: `1px solid ${G.cardBorder}` }}
             onClick={e => e.preventDefault()}
           >
@@ -651,7 +667,7 @@ function LeftSidebar({ user }: { user: CommunityUser }) {
       </div>
 
       {/* Bettor Types card */}
-      <div style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20, marginTop: 20 }}>
+      <div className="comm-card-glow-static" style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20, marginTop: 20, paddingBottom: 16 }}>
         <SectionHeader>Bettor Types</SectionHeader>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {BETTOR_SIDEBAR_ITEMS.map(bt => {
@@ -703,7 +719,7 @@ function FanFavoriteCard({ fav }: { fav: FanFavorite }) {
   return (
     <div
       ref={cardRef}
-      className="team-glow-border"
+      className="team-glow-border comm-card-glow-static"
       style={{
         background: G.cardBg,
         border: `1px solid ${G.cardBorder}`,
@@ -776,7 +792,7 @@ function FanFavoriteCard({ fav }: { fav: FanFavorite }) {
 
           {chartUrl ? (
             <Link href={chartUrl} style={{ textDecoration: 'none' }}>
-              <button style={{
+              <button className="comm-btn-glow" style={{
                 fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
                 fontWeight: 700, background: G.accentFull, border: 'none', borderRadius: 0,
                 color: '#000', padding: '7px 14px', cursor: 'pointer', whiteSpace: 'nowrap',
@@ -802,7 +818,7 @@ function FanFavoriteCard({ fav }: { fav: FanFavorite }) {
 
 function FanFavoriteEmpty() {
   return (
-    <div style={{
+    <div className="comm-card-glow-static" style={{
       border: `1px dashed ${G.cardBorder}`,
       padding: '16px 20px',
       marginBottom: 16,
@@ -835,7 +851,7 @@ function FavoriteCard({ fav }: { fav: TopFavorite | null }) {
   const betLabel = (BET_TYPE_LABELS[fav.bet_type as keyof typeof BET_TYPE_LABELS] ?? fav.bet_type).toUpperCase()
 
   return (
-    <div style={{
+    <div className="comm-card-glow-static" style={{
       background: G.elevated, border: `1px solid ${G.cardBorder}`,
       padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 5,
     }}>
@@ -867,7 +883,7 @@ function FavoriteCard({ fav }: { fav: TopFavorite | null }) {
       {/* View Chart button */}
       {chartUrl ? (
         <Link href={chartUrl} style={{ textDecoration: 'none' }}>
-          <button style={{
+          <button className="comm-btn-glow" style={{
             fontFamily: OSWALD, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase',
             background: G.accentFull, border: 'none', borderRadius: 0,
             color: '#000', padding: '4px 6px', cursor: 'pointer', width: '100%', textAlign: 'center',
@@ -902,7 +918,7 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
     <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
       {/* Live Poll */}
-      <div style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
+      <div className="comm-card-glow-static" style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
         <SectionHeader>Live Poll</SectionHeader>
         <div style={{ fontFamily: SANS, fontSize: 12, color: G.white, fontWeight: 600, marginBottom: 12, lineHeight: 1.4 }}>
           {POLL.question}
@@ -926,7 +942,7 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
       </div>
 
       {/* Top Member Favorites */}
-      <div style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
+      <div className="comm-card-glow-static" style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
         <SectionHeader>Top Member Favorites</SectionHeader>
         <p style={{ fontFamily: SANS, fontSize: 10, color: G.muted, margin: '0 0 12px', lineHeight: 1.5 }}>
           The most saved chart rows across all members.
@@ -1126,6 +1142,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
               })}
             </div>
             <button
+              className="comm-cta-glow"
               onClick={() => setShowNew(true)}
               style={{
                 fontFamily: OSWALD, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase',
