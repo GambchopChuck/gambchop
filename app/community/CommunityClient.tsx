@@ -89,8 +89,24 @@ const LEAGUE_CATS: { label: string; tag: string | null }[] = [
 // ─── Bettor type badge ────────────────────────────────────────────────────────
 // community_threads.user_id stores localStorage-generated IDs ('user-abc123'),
 // not Supabase auth UUIDs, so joining to profiles.id is not possible.
-// Bettor types are fetched separately by username after threads load (see
-// loadThreads in the main component).
+// Bettor types are fetched by username after threads load. For the logged-in
+// auth user, bettor_type is also fetched by UUID so their own posts always show
+// the badge regardless of username matching.
+// Seed data usernames get static assignments so the demo feed shows badges.
+
+const SEED_BETTOR_TYPES: Record<string, string> = {
+  GambchopMod:    'straight',
+  SharpBettor99:  'straight',
+  MLBAnalyst:     'parlayer',
+  PropHunter:     'microbettor',
+  TennisEdge:     'parlayer',
+  NFLContrarian:  'margin-mac',
+  NBASharp:       'microbettor',
+  LineMover77:    'straight',
+  OddsWatcher:    'parlayer',
+  ValueBetPro:    'margin-mac',
+  GambchopGuru:   'microbettor',
+}
 
 const BETTOR_TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; color: string }> = {
   straight:    { label: 'STRAIGHT',   bg: 'rgba(57,255,154,0.15)',  border: '#39ff9a', color: '#39ff9a' },
@@ -853,8 +869,11 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
   const [loading, setLoading] = useState(true)
   const loaded = useRef(false)
 
-  // Bettor types keyed by username
-  const [bettorTypes, setBettorTypes] = useState<Map<string, string>>(new Map())
+  // Bettor types keyed by username — seeded with static demo values so seed
+  // data posts always show badges; real profile data merges on top after load.
+  const [bettorTypes, setBettorTypes] = useState<Map<string, string>>(
+    () => new Map(Object.entries(SEED_BETTOR_TYPES))
+  )
   // Like state: Set of liked thread IDs, Map of like counts
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likeCounts, setLikeCounts] = useState<Map<string, number>>(new Map())
@@ -880,6 +899,22 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
     loadThreads()
   }, [sort, activeTag]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch the logged-in auth user's own bettor_type by UUID so their posts
+  // always show the badge regardless of username matching.
+  useEffect(() => {
+    if (!authUser || !user) return
+    supabase
+      .from('profiles')
+      .select('bettor_type')
+      .eq('id', authUser.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.bettor_type) {
+          setBettorTypes(prev => new Map(prev).set(user.username, data.bettor_type as string))
+        }
+      })
+  }, [authUser?.id, user?.username]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function loadThreads() {
     setLoading(true)
     const data = await fetchThreads(sort, activeTag ?? undefined)
@@ -887,7 +922,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
     setThreads(fetched)
     setLoading(false)
 
-    // Fetch bettor types for all post authors
+    // Fetch real bettor types from profiles by username and merge on top of seeds
     const usernames = [...new Set(fetched.map(t => t.username))]
     if (usernames.length) {
       supabase
@@ -896,11 +931,13 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
         .in('username', usernames)
         .then(({ data: pData }) => {
           if (!pData) return
-          const map = new Map<string, string>()
-          for (const row of pData as { username: string | null; bettor_type: string | null }[]) {
-            if (row.username && row.bettor_type) map.set(row.username, row.bettor_type)
-          }
-          setBettorTypes(map)
+          setBettorTypes(prev => {
+            const next = new Map(prev)
+            for (const row of pData as { username: string | null; bettor_type: string | null }[]) {
+              if (row.username && row.bettor_type) next.set(row.username, row.bettor_type)
+            }
+            return next
+          })
         })
     }
   }
