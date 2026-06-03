@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
@@ -9,6 +9,7 @@ import { buildSvg } from '@/lib/svgChart'
 import type { ScheduleGame, OutcomeRow } from '@/app/schedule/page'
 import TopMatchupCard from '@/components/TopMatchupCard'
 import type { TopMatchupData } from '@/lib/topMatchups'
+import { TEAM_COLORS } from '@/lib/teamColors'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -238,11 +239,33 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
   const homeLast = pitcherLastName(game.homePitcher)
   const hasPitchers = game.awayPitcher !== null || game.homePitcher !== null
 
+  const cardRef   = useRef<HTMLDivElement>(null)
+  const awayColor = TEAM_COLORS[game.awayTeam]?.primary ?? '#39ff9a'
+  const homeColor = TEAM_COLORS[game.homeTeam]?.primary ?? '#ffffff'
+
+  // Animate only while visible in the viewport
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('matchup-glow-active', entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <div style={{
-      background: '#0a0a0f', border: '1px solid #1a1a24', borderRadius: 10,
-      padding: '20px 24px', marginBottom: 12,
-    }}>
+    <div
+      ref={cardRef}
+      className="matchup-glow-border"
+      style={{
+        background: '#0a0a0f',
+        padding: '20px 24px', marginBottom: 12,
+        '--away-color': awayColor,
+        '--home-color': homeColor,
+      } as React.CSSProperties}
+    >
       {/* Time header */}
       <div style={{
         fontSize: 9, color: '#ffffff', letterSpacing: '0.22em',

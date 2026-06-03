@@ -106,6 +106,41 @@ body {
   border-radius: 12px !important;
 }
 
+/* ── Split team-color glow border (Schedule matchup cards) ──────────────── */
+@keyframes splitGlowPulse {
+  0% {
+    box-shadow:
+      -4px 0 12px 2px var(--away-color), -8px 0 24px 4px var(--away-color),
+       4px 0 12px 2px var(--home-color),  8px 0 24px 4px var(--home-color),
+      0 -4px 12px 2px color-mix(in srgb, var(--away-color) 50%, var(--home-color)),
+      0  4px 12px 2px color-mix(in srgb, var(--away-color) 50%, var(--home-color));
+  }
+  50% {
+    box-shadow:
+      -6px 0 20px 4px var(--away-color), -12px 0 36px 8px var(--away-color),
+       6px 0 20px 4px var(--home-color),  12px 0 36px 8px var(--home-color),
+      0 -6px 20px 4px color-mix(in srgb, var(--away-color) 50%, var(--home-color)),
+      0  6px 20px 4px color-mix(in srgb, var(--away-color) 50%, var(--home-color));
+  }
+  100% {
+    box-shadow:
+      -4px 0 12px 2px var(--away-color), -8px 0 24px 4px var(--away-color),
+       4px 0 12px 2px var(--home-color),  8px 0 24px 4px var(--home-color),
+      0 -4px 12px 2px color-mix(in srgb, var(--away-color) 50%, var(--home-color)),
+      0  4px 12px 2px color-mix(in srgb, var(--away-color) 50%, var(--home-color));
+  }
+}
+.matchup-glow-border {
+  border-left:   1px solid var(--away-color);
+  border-right:  1px solid var(--home-color);
+  border-top:    1px solid transparent;
+  border-bottom: 1px solid transparent;
+  will-change: box-shadow;
+}
+.matchup-glow-active {
+  animation: splitGlowPulse 2.5s ease-in-out infinite;
+}
+
 /* ── Team glow border (MLB chart cards) ──────────────────────────────────── */
 @keyframes teamGlowPulse {
   0%   { box-shadow: 0 0 6px 2px var(--team-primary), 0 0 12px 4px var(--team-secondary); }
