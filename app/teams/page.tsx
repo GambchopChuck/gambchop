@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LEAGUES } from '@/lib/leagues-data'
 import { slugify } from '@/lib/leagues-data'
+import { TEAM_COLORS } from '@/lib/teamColors'
 
 const CARD   = '#0f0f14'
 const BORDER = '#1a1a24'
@@ -16,27 +17,50 @@ const MUTED  = '#52525b'
 function TeamCard({ name, leagueId, accent }: {
   name: string; leagueId: string; accent: string
 }) {
-  const router = useRouter()
+  const router  = useRouter()
   const [hovered, setHovered] = useState(false)
-  const slug = slugify(name)
-  const href = `/leagues/${leagueId}/${slug}`
+  const slug    = slugify(name)
+  const href    = `/leagues/${leagueId}/${slug}`
+  const isMlb   = leagueId === 'mlb'
+  const colors  = isMlb ? TEAM_COLORS[name] : null
+  const cardRef = useRef<HTMLButtonElement>(null)
+
+  // Animate only when visible — MLB teams only
+  useEffect(() => {
+    if (!isMlb) return
+    const el = cardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('team-glow-active', entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [isMlb])
 
   return (
     <button
+      ref={cardRef}
       onClick={() => router.push(href)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className={isMlb ? 'team-glow-border' : undefined}
       style={{
-        background: hovered ? '#131318' : CARD,
-        border: `1px solid ${hovered ? accent + '55' : BORDER}`,
+        background:  hovered ? '#131318' : CARD,
+        // Non-MLB teams keep inline border; MLB border is handled by team-glow-border class
+        ...(!isMlb ? { border: `1px solid ${hovered ? accent + '55' : BORDER}` } : {}),
         borderRadius: 10, padding: '14px 12px',
         cursor: 'pointer', transition: 'all 0.15s',
-        transform: hovered ? 'translateY(-2px)' : 'none',
-        boxShadow: hovered ? `0 6px 20px ${accent}18` : 'none',
+        transform:   hovered ? 'translateY(-2px)' : 'none',
+        boxShadow:   hovered ? `0 6px 20px ${accent}18` : 'none',
         width: '100%', textAlign: 'center', fontFamily: 'inherit',
         fontSize: 11, fontWeight: 800, color: '#ffffff',
         letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.3,
-      }}
+        ...(isMlb ? {
+          '--team-primary':   colors?.primary   ?? '#39ff9a',
+          '--team-secondary': colors?.secondary ?? '#ffffff',
+        } : {}),
+      } as React.CSSProperties}
     >
       {name}
     </button>
@@ -145,6 +169,8 @@ export default function TeamsPage() {
       </div>
 
       {/* Content */}
+      {/* NOTE: MLB glow borders come from TEAM_COLORS. */}
+      {/* TODO Phase 2: add team colors for each league to lib/teamColors.ts to enable glow borders. */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '32px 24px' }}>
         {filtered.map(l => (
           <LeagueSection
