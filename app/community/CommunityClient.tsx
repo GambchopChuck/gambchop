@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Minus, X, Send, Flame } from 'lucide-react'
+import { ChevronRight, Flame, Heart } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import {
   Thread, SortMode, CommunityUser,
@@ -17,6 +17,7 @@ import {
 import { BET_TYPE_LABELS } from '@/lib/favorites'
 import { TEAM_ROUTES } from '@/lib/teamRoutes'
 import { TEAM_COLORS } from '@/lib/teamColors'
+import { supabase } from '@/lib/supabase'
 import type { TopFavorite, FanFavorite } from './page'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -71,13 +72,6 @@ const POLL = {
   ts: '2 hrs ago',
 }
 
-const CHAT_MSGS = [
-  { initial: 'S', username: 'SharpEdge99',  text: 'Overs hitting at 68% on night games this week 🔥' },
-  { initial: 'L', username: 'LineMover77',  text: 'Line moved 2.5 pts on the Cubs game, sharp action' },
-  { initial: 'O', username: 'OddsWatcher',  text: 'Props market is soft tonight, good spot' },
-  { initial: 'V', username: 'ValueBetPro',  text: 'Anyone tailing the Jays ML tonight?' },
-  { initial: 'G', username: 'GambchopGuru', text: 'Total on BOS/NYY set too high imo' },
-]
 
 const LEAGUE_CATS: { label: string; tag: string | null }[] = [
   { label: 'ALL',   tag: null      },
@@ -92,19 +86,37 @@ const LEAGUE_CATS: { label: string; tag: string | null }[] = [
   { label: 'WTA',   tag: '#WTA'    },
 ]
 
-// ─── Sparkline placeholder ────────────────────────────────────────────────────
+// ─── Bettor type badge ────────────────────────────────────────────────────────
 
-function Sparkline() {
-  const pts = [40, 55, 45, 65, 50, 72, 60, 80, 68, 85]
-  const w = 80, h = 28
-  const max = Math.max(...pts), min = Math.min(...pts)
-  const norm = (v: number) => h - ((v - min) / (max - min)) * h
-  const d = pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i / (pts.length - 1)) * w} ${norm(v)}`).join(' ')
+const BETTOR_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  straight:    { label: 'STRAIGHT BETTOR', color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
+  parlayer:    { label: 'PARLAYER',         color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  microbettor: { label: 'MICROBETTOR',      color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
+  'margin-mac':{ label: 'MARGIN MAC',       color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
+}
+
+function BettorTypeBadge({ type }: { type: string }) {
+  const cfg = BETTOR_TYPE_CONFIG[type]
+  if (!cfg) return null
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: 'visible' }}>
-      <path d={d} fill="none" stroke={G.accentFull} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.7} />
-    </svg>
+    <span style={{
+      fontFamily: MONO, fontSize: 7, letterSpacing: '0.06em', textTransform: 'uppercase',
+      color: cfg.color, background: cfg.bg,
+      border: `1px solid ${cfg.color}30`,
+      borderRadius: 2, padding: '1px 5px', flexShrink: 0,
+    }}>
+      {cfg.label}
+    </span>
   )
+}
+
+// ─── Action button style ──────────────────────────────────────────────────────
+
+const actionBtnSt: React.CSSProperties = {
+  fontFamily: OSWALD, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
+  background: 'transparent', border: `1px solid ${G.cardBorder}`, borderRadius: 0,
+  color: G.muted, padding: '3px 8px', cursor: 'pointer', display: 'flex',
+  alignItems: 'center', gap: 4,
 }
 
 // ─── Avatar circle ────────────────────────────────────────────────────────────
@@ -376,7 +388,14 @@ function NewThreadModal({ user, onClose, onCreate }: {
 
 // ─── Post Card ────────────────────────────────────────────────────────────────
 
-function PostCard({ thread }: { thread: Thread }) {
+function PostCard({ thread, isLiked, likeCount, bettorType, canLike, onLike }: {
+  thread:      Thread
+  isLiked:     boolean
+  likeCount:   number
+  bettorType:  string | null
+  canLike:     boolean
+  onLike:      () => void
+}) {
   const [hovered, setHovered] = useState(false)
   const initial = thread.username[0]?.toUpperCase() ?? '?'
 
@@ -388,67 +407,78 @@ function PostCard({ thread }: { thread: Thread }) {
         style={{
           background: hovered ? G.cardBgHover : G.cardBg,
           border: `1px solid ${G.cardBorder}`,
-          borderRadius: 0,
-          padding: '18px 18px 14px',
+          padding: '12px 16px',
           cursor: 'pointer',
-          transition: 'background 200ms ease-out',
-          display: 'flex', flexDirection: 'column', gap: 10,
+          transition: 'background 150ms ease-out',
         }}
       >
-        {/* Header row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Avatar initial={initial} size={26} />
-          <span style={{ fontFamily: SANS, fontSize: 11, color: G.accentFull, fontWeight: 600 }}>@{thread.username}</span>
-          <div style={{ display: 'flex', gap: 4, marginLeft: 4, flexWrap: 'wrap' }}>
-            {thread.tags.slice(0, 2).map(tag => (
-              <span key={tag} style={{
-                fontFamily: MONO, fontSize: 8, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: TAG_COLORS[tag] ?? G.dim,
-                background: (TAG_COLORS[tag] ?? G.dim) + '18',
-                border: `1px solid ${(TAG_COLORS[tag] ?? G.dim) + '40'}`,
-                borderRadius: 2, padding: '2px 5px',
-              }}>{tag.replace('#', '')}</span>
-            ))}
-          </div>
+        {/* Top row: avatar · username · bettor badge · tag pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+          <Avatar initial={initial} size={36} />
+          <span style={{ fontFamily: SANS, fontSize: 12, color: G.accentFull, fontWeight: 700 }}>
+            @{thread.username}
+          </span>
+          {bettorType && <BettorTypeBadge type={bettorType} />}
+          {thread.tags.slice(0, 2).map(tag => (
+            <span key={tag} style={{
+              fontFamily: MONO, fontSize: 7, letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: TAG_COLORS[tag] ?? G.dim,
+              background: (TAG_COLORS[tag] ?? G.dim) + '15',
+              border: `1px solid ${(TAG_COLORS[tag] ?? G.dim) + '35'}`,
+              borderRadius: 2, padding: '1px 5px',
+            }}>{tag.replace('#', '')}</span>
+          ))}
         </div>
 
         {/* Title */}
         <div style={{
           fontFamily: SANS, fontSize: 13, fontWeight: 700,
-          color: G.white, lineHeight: 1.35,
+          color: G.white, lineHeight: 1.3, marginBottom: 4, marginLeft: 44,
         }}>
           {thread.title}
         </div>
 
-        {/* Excerpt */}
-        <div style={{ fontFamily: SANS, fontSize: 11, color: G.muted, lineHeight: 1.55 }}>
-          {excerpt(thread.content, 80)}
+        {/* Body preview — 2 lines max */}
+        <div style={{
+          fontFamily: SANS, fontSize: 11, color: G.muted, lineHeight: 1.55,
+          marginBottom: 8, marginLeft: 44,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        } as React.CSSProperties}>
+          {thread.content}
         </div>
 
-        {/* Reactions row */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {[['🔥', Math.max(1, thread.reply_count * 3)], ['🏆', Math.max(1, thread.reply_count)], ['📈', Math.max(1, thread.reply_count * 2)]].map(([emoji, count]) => (
-            <span key={String(emoji)} style={{ fontFamily: SANS, fontSize: 11, color: G.muted, display: 'flex', alignItems: 'center', gap: 3 }}>
-              {emoji} <span style={{ fontSize: 10 }}>{count}</span>
-            </span>
-          ))}
-          <div style={{ marginLeft: 'auto' }}>
-            <Sparkline />
-          </div>
-        </div>
+        {/* Bottom action row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 44, flexWrap: 'wrap' }}>
+          <button style={actionBtnSt} onClick={e => e.preventDefault()}>Reply</button>
 
-        {/* Footer */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingTop: 6, borderTop: `1px solid ${G.cardBorder}` }}>
-          <button style={{
-            fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
-            background: 'transparent', border: `1px solid ${G.cardBorder}`, borderRadius: 0,
-            color: G.muted, padding: '4px 10px', cursor: 'pointer',
-          }} onClick={e => e.preventDefault()}>Reply</button>
-          <button style={{
-            fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
-            background: G.accentFaint, border: `1px solid ${G.cardBorder}`, borderRadius: 0,
-            color: G.accentFull, padding: '4px 10px', cursor: 'pointer',
-          }} onClick={e => e.preventDefault()}>Vote</button>
+          {/* Like */}
+          <button
+            style={{ ...actionBtnSt, color: isLiked ? '#ef4444' : G.muted, cursor: canLike ? 'pointer' : 'default' }}
+            onClick={e => { e.preventDefault(); if (canLike) onLike() }}
+            title={canLike ? undefined : 'Sign in to like'}
+          >
+            <Heart size={10} fill={isLiked ? '#ef4444' : 'none'} color={isLiked ? '#ef4444' : G.muted} />
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </button>
+
+          <button
+            style={{ ...actionBtnSt, color: G.accentFull, background: G.accentFaint, border: `1px solid ${G.cardBorder}` }}
+            onClick={e => e.preventDefault()}
+          >
+            Vote
+          </button>
+
+          {/* Inline reactions */}
+          {(['🔥', '🏆', '📈'] as const).map((emoji, i) => {
+            const counts = [Math.max(1, thread.reply_count * 3), Math.max(1, thread.reply_count), Math.max(1, thread.reply_count * 2)]
+            return (
+              <span key={emoji} style={{ fontFamily: SANS, fontSize: 10, color: G.dim }}>
+                {emoji} {counts[i]}
+              </span>
+            )
+          })}
+
           <span style={{ fontFamily: MONO, fontSize: 9, color: G.dim, marginLeft: 'auto' }}>
             {thread.reply_count} replies · {timeAgo(thread.created_at)}
           </span>
@@ -758,17 +788,6 @@ function FavoriteCard({ fav }: { fav: TopFavorite | null }) {
 // ─── Right Sidebar ────────────────────────────────────────────────────────────
 
 function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
-  const [chatInput, setChatInput] = useState('')
-  const [chatMsgs, setChatMsgs] = useState(CHAT_MSGS)
-  const [chatOpen, setChatOpen] = useState(true)
-
-  const sendChat = () => {
-    if (!chatInput.trim()) return
-    setChatMsgs(prev => [...prev, { initial: 'Y', username: 'You', text: chatInput.trim() }])
-    setChatInput('')
-  }
-
-  // Pad to 4 cards with nulls for placeholder slots
   const cards: (TopFavorite | null)[] = [
     ...topFavorites.slice(0, 4),
     ...Array(Math.max(0, 4 - topFavorites.length)).fill(null),
@@ -814,51 +833,6 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
         </div>
       </div>
 
-      {/* Live Text Chat */}
-      <div style={{ background: '#090b0f', border: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${G.cardBorder}` }}>
-          <span style={{ fontFamily: OSWALD, fontSize: 12, fontWeight: 600, color: G.white, letterSpacing: '0.05em' }}>Text Chat</span>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setChatOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: G.dim, padding: 2 }}>
-              <Minus size={12} />
-            </button>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: G.dim, padding: 2 }}>
-              <X size={12} />
-            </button>
-          </div>
-        </div>
-        {chatOpen && (
-          <>
-            <div style={{ maxHeight: 180, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {chatMsgs.map((m, i) => (
-                <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                  <Avatar initial={m.initial} size={20} />
-                  <div style={{ minWidth: 0 }}>
-                    <span style={{ fontFamily: SANS, fontSize: 10, color: G.accentFull, fontWeight: 600 }}>{m.username} </span>
-                    <span style={{ fontFamily: SANS, fontSize: 10, color: G.white, lineHeight: 1.4 }}>{m.text}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', borderTop: `1px solid ${G.cardBorder}`, padding: '8px 10px', gap: 6 }}>
-              <input
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendChat()}
-                placeholder="Message..."
-                style={{
-                  flex: 1, background: G.elevated, border: `1px solid ${G.hairline}`,
-                  borderRadius: 0, padding: '6px 8px', color: G.white,
-                  fontFamily: SANS, fontSize: 10, outline: 'none',
-                }}
-              />
-              <button onClick={sendChat} style={{ background: G.accentFull, border: 'none', borderRadius: 0, padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                <Send size={11} color="#000" />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
     </div>
   )
 }
@@ -866,7 +840,7 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
 // ─── Main exported client component ──────────────────────────────────────────
 
 export default function CommunityClient({ topFavorites, fanFavorite }: { topFavorites: TopFavorite[]; fanFavorite: FanFavorite | null }) {
-  const { isPro, setIsPro } = useAuth()
+  const { isPro, setIsPro, user: authUser } = useAuth()
   const [user, setUser] = useState<CommunityUser | null>(null)
   const [threads, setThreads] = useState<Thread[]>([])
   const [sort, setSort] = useState<SortMode>('newest')
@@ -875,8 +849,19 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
   const [loading, setLoading] = useState(true)
   const loaded = useRef(false)
 
+  // Bettor types keyed by username
+  const [bettorTypes, setBettorTypes] = useState<Map<string, string>>(new Map())
+  // Like state: Set of liked thread IDs, Map of like counts
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
+  const [likeCounts, setLikeCounts] = useState<Map<string, number>>(new Map())
+
   useEffect(() => {
     setUser(getStoredUser())
+    // Restore liked posts from localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem('gambchop-liked-posts') ?? '[]') as string[]
+      setLikedPosts(new Set(stored))
+    } catch { /* ignore */ }
   }, [])
 
   useEffect(() => {
@@ -894,8 +879,42 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
   async function loadThreads() {
     setLoading(true)
     const data = await fetchThreads(sort, activeTag ?? undefined)
-    setThreads(data.length > 0 ? data : SEED_THREADS)
+    const fetched = data.length > 0 ? data : SEED_THREADS
+    setThreads(fetched)
     setLoading(false)
+
+    // Fetch bettor types for all post authors
+    const usernames = [...new Set(fetched.map(t => t.username))]
+    if (usernames.length) {
+      supabase
+        .from('profiles')
+        .select('username, bettor_type')
+        .in('username', usernames)
+        .then(({ data: pData }) => {
+          if (!pData) return
+          const map = new Map<string, string>()
+          for (const row of pData as { username: string | null; bettor_type: string | null }[]) {
+            if (row.username && row.bettor_type) map.set(row.username, row.bettor_type)
+          }
+          setBettorTypes(map)
+        })
+    }
+  }
+
+  function handleLike(threadId: string) {
+    setLikedPosts(prev => {
+      const next = new Set(prev)
+      if (next.has(threadId)) next.delete(threadId)
+      else next.add(threadId)
+      try { localStorage.setItem('gambchop-liked-posts', JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+    setLikeCounts(prev => {
+      const next = new Map(prev)
+      const current = next.get(threadId) ?? 0
+      next.set(threadId, likedPosts.has(threadId) ? Math.max(0, current - 1) : current + 1)
+      return next
+    })
   }
 
   const sorted = [...threads]
@@ -1024,11 +1043,18 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
               </div>
             </div>
           ) : (
-            <div
-              className="comm-post-grid"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}
-            >
-              {sorted.map(t => <PostCard key={t.id} thread={t} />)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {sorted.map(t => (
+                <PostCard
+                  key={t.id}
+                  thread={t}
+                  isLiked={likedPosts.has(t.id)}
+                  likeCount={likeCounts.get(t.id) ?? 0}
+                  bettorType={bettorTypes.get(t.username) ?? null}
+                  canLike={!!authUser}
+                  onLike={() => handleLike(t.id)}
+                />
+              ))}
             </div>
           )}
         </div>
