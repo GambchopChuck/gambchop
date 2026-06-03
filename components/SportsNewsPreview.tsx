@@ -43,6 +43,7 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
           grid-template-columns: 1fr 1fr;
           gap: 12px;
           margin-top: 12px;
+          min-height: 200px;
         }
         @media (max-width: 640px) {
           .snp-grid { grid-template-columns: 1fr; }
@@ -77,7 +78,7 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
         </Link>
       </div>
 
-      {/* ── Hero card ───────────────────────────────────────────────────────── */}
+      {/* ── Hero card — 320px full-width editorial ──────────────────────────── */}
       {hero && (
         <Link
           href={hero.article_url ?? '/news?tab=sports'}
@@ -87,11 +88,13 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
         >
           <div style={{
             position: 'relative', overflow: 'hidden',
-            background: '#0f0f14', border: '1px solid #1a1a24',
-            minHeight: 240, cursor: 'pointer',
+            minHeight: 320, cursor: 'pointer',
+            background: hero.image_url
+              ? '#0f0f14'
+              : `#0f0f14`,
+            border: '1px solid #1a1a24',
           }}>
-            {/* Background image */}
-            {hero.image_url && (
+            {hero.image_url ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -104,21 +107,20 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
                 />
                 <div style={{
                   position: 'absolute', inset: 0,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
                 }} />
               </>
+            ) : (
+              <div style={{ position: 'absolute', inset: 0, background: '#0a0f0a' }} />
             )}
-
-            {/* Content — pinned to bottom over gradient */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1,
-              padding: '16px 20px 18px',
-              display: 'flex', flexDirection: 'column', gap: 0,
+              padding: '20px 24px 22px',
             }}>
               <SportBadge sport={hero.sport} />
               <p style={{
-                fontSize: 14, fontWeight: 700, color: '#f4f4f5',
-                margin: '8px 0 6px', lineHeight: 1.3,
+                fontSize: 18, fontWeight: 700, color: '#f4f4f5',
+                margin: '10px 0 7px', lineHeight: 1.25,
                 display: '-webkit-box', WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
                 fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
@@ -136,42 +138,99 @@ export default function SportsNewsPreview({ articles }: { articles: Article[] })
         </Link>
       )}
 
-      {/* ── Two compact article cards ──────────────────────────────────────── */}
+      {/* ── Two image cards — 200px side by side ────────────────────────────── */}
       {cards.length > 0 && (
         <div className="snp-grid">
-          {cards.map(a => (
-            <Link
-              key={a.id}
-              href={a.article_url ?? '/news?tab=sports'}
-              target={a.article_url ? '_blank' : undefined}
-              rel="noopener noreferrer"
-              style={{ textDecoration: 'none', display: 'block' }}
-            >
-              <div style={{
-                background: '#0f0f14', border: '1px solid #1a1a24',
-                padding: '14px 16px', height: '100%', boxSizing: 'border-box',
-              }}>
-                <div style={{ marginBottom: 8 }}>
-                  <SportBadge sport={a.sport} />
-                </div>
-                <p style={{
-                  fontSize: 12, fontWeight: 600, color: '#f4f4f5',
-                  margin: '0 0 8px', lineHeight: 1.35,
-                  display: '-webkit-box', WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-                  fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
-                  letterSpacing: '0.02em',
+          {cards.map(a => {
+            const sc = a.sport ? (SPORT_COLORS[a.sport] ?? null) : null
+            return (
+              <Link
+                key={a.id}
+                href={a.article_url ?? '/news?tab=sports'}
+                target={a.article_url ? '_blank' : undefined}
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none', display: 'block' }}
+              >
+                <div style={{
+                  position: 'relative', overflow: 'hidden',
+                  minHeight: 200, cursor: 'pointer',
+                  border: '1px solid #1a1a24',
+                  background: a.image_url ? '#0f0f14' : (sc ? `${sc.bg}` : '#0f0f14'),
                 }}>
-                  {a.headline}
-                </p>
-                <div style={{ display: 'flex', gap: 5, fontSize: 9, color: '#ffffff', letterSpacing: '0.06em' }}>
-                  {a.source && <span>{a.source}</span>}
-                  {a.source && a.published_at && <span>·</span>}
-                  {a.published_at && <span>{timeAgo(a.published_at)}</span>}
+                  {a.image_url ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={a.image_url} alt=""
+                        style={{
+                          position: 'absolute', inset: 0,
+                          width: '100%', height: '100%',
+                          objectFit: 'cover', objectPosition: 'center top',
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)',
+                      }} />
+                      {/* Sport badge — top left */}
+                      <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 1 }}>
+                        <SportBadge sport={a.sport} />
+                      </div>
+                    </>
+                  ) : (
+                    /* No-image fallback — badge top left, headline centered */
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      display: 'flex', flexDirection: 'column',
+                      padding: '14px 16px',
+                    }}>
+                      <div style={{ marginBottom: 'auto' }}>
+                        <SportBadge sport={a.sport} />
+                      </div>
+                      <p style={{
+                        fontSize: 13, fontWeight: 700, color: '#f4f4f5',
+                        margin: 0, lineHeight: 1.3,
+                        display: '-webkit-box', WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+                        fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                        letterSpacing: '0.02em',
+                      }}>
+                        {a.headline}
+                      </p>
+                      <div style={{ display: 'flex', gap: 5, fontSize: 9, color: '#ffffff', letterSpacing: '0.06em', marginTop: 8 }}>
+                        {a.source && <span>{a.source}</span>}
+                        {a.source && a.published_at && <span>·</span>}
+                        {a.published_at && <span>{timeAgo(a.published_at)}</span>}
+                      </div>
+                    </div>
+                  )}
+                  {/* With-image: content pinned to bottom */}
+                  {a.image_url && (
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1,
+                      padding: '12px 16px 14px',
+                    }}>
+                      <p style={{
+                        fontSize: 13, fontWeight: 700, color: '#f4f4f5',
+                        margin: '0 0 6px', lineHeight: 1.3,
+                        display: '-webkit-box', WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+                        fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                        letterSpacing: '0.02em',
+                      }}>
+                        {a.headline}
+                      </p>
+                      <div style={{ display: 'flex', gap: 5, fontSize: 9, color: '#ffffff', letterSpacing: '0.06em' }}>
+                        {a.source && <span>{a.source}</span>}
+                        {a.source && a.published_at && <span>·</span>}
+                        {a.published_at && <span>{timeAgo(a.published_at)}</span>}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       )}
 
