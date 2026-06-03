@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronRight, Minus, X, Send } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import {
   Thread, SortMode, CommunityUser,
@@ -17,85 +17,162 @@ import {
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const T = {
-  canvas:    '#0A0A0B',
-  surface:   '#121215',
-  elevated:  '#18181C',
-  hairline:  '#1F1F23',
-  strong:    '#2A2A30',
-  pri:       '#F5F5F4',
-  sec:       '#A1A1AA',
-  muted:     '#71717A',
-  faint:     '#52525B',
-  accent:    '#C5F84A',
-  accentDim: '#8FB833',
+const G = {
+  bg:          '#0a0d12',
+  surface:     '#0f1318',
+  elevated:    '#141920',
+  hairline:    '#1a2030',
+  cardBg:      'rgba(57,255,154,0.06)',
+  cardBgHover: 'rgba(57,255,154,0.12)',
+  cardBorder:  'rgba(57,255,154,0.18)',
+  accentFull:  '#39ff9a',
+  accentFaint: 'rgba(57,255,154,0.08)',
+  accentMid:   'rgba(57,255,154,0.15)',
+  accentText:  'rgba(57,255,154,0.7)',
+  white:       '#ffffff',
+  muted:       'rgba(255,255,255,0.5)',
+  dim:         'rgba(255,255,255,0.25)',
 }
-const SERIF = 'var(--font-fraunces), Georgia, serif'
-const SANS  = 'var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif'
-const MONO  = 'var(--font-jetbrains), "JetBrains Mono", monospace'
+const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
+const SANS   = 'var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif'
+const MONO   = 'var(--font-jetbrains), "JetBrains Mono", monospace'
 
-// ─── Static sidebar data ──────────────────────────────────────────────────────
-
-const TRENDING_NOW = [
-  { label: 'Cubs bullpen collapses again — value on opponents?', tag: '#MLB' },
-  { label: 'NBA Finals Game 6 total analysis', tag: '#NBA' },
-  { label: 'NFL draft rookies ATS in year one', tag: '#NFL' },
-  { label: "Gauff's Wimbledon draw — outright odds deep dive", tag: '#WTA' },
-  { label: 'NHL Game 7 moneyline trends (home vs away)', tag: '#NHL' },
-]
+// ─── Static data ──────────────────────────────────────────────────────────────
 
 const TOP_CONTRIBUTORS = [
-  { username: 'SharpEdge99',  threads: 42 },
-  { username: 'LineMover77',  threads: 38 },
-  { username: 'OddsWatcher',  threads: 31 },
-  { username: 'ValueBetPro',  threads: 29 },
-  { username: 'GambchopGuru', threads: 25 },
+  { username: 'SharpEdge99',  points: 420 },
+  { username: 'LineMover77',  points: 385 },
+  { username: 'OddsWatcher',  points: 312 },
+  { username: 'ValueBetPro',  points: 290 },
+  { username: 'GambchopGuru', points: 251 },
 ]
+
+const GUIDELINES = [
+  'No hate speech, slurs, or discriminatory language',
+  'No harassment or personal attacks',
+  'No spam, self-promotion, or unsolicited links',
+  'No explicit content or graphic imagery',
+  'No unrelated or off-topic content',
+]
+
+const POLL = {
+  question: 'Who wins the NBA Finals MVP?',
+  options: [
+    { name: 'Jayson Tatum',   pct: 44 },
+    { name: 'Nikola Jokić',   pct: 31 },
+    { name: 'SGA',            pct: 18 },
+    { name: 'Luka Dončić',    pct: 7  },
+  ],
+  votes: 1842,
+  ts: '2 hrs ago',
+}
+
+const PROP_FINDERS = [
+  { initial: 'S', username: 'SharpEdge99' },
+  { initial: 'L', username: 'LineMover77' },
+  { initial: 'O', username: 'OddsWatcher' },
+  { initial: 'V', username: 'ValueBetPro' },
+]
+
+const CHAT_MSGS = [
+  { initial: 'S', username: 'SharpEdge99',  text: 'Overs hitting at 68% on night games this week 🔥' },
+  { initial: 'L', username: 'LineMover77',  text: 'Line moved 2.5 pts on the Cubs game, sharp action' },
+  { initial: 'O', username: 'OddsWatcher',  text: 'Props market is soft tonight, good spot' },
+  { initial: 'V', username: 'ValueBetPro',  text: 'Anyone tailing the Jays ML tonight?' },
+  { initial: 'G', username: 'GambchopGuru', text: 'Total on BOS/NYY set too high imo' },
+]
+
+const LEAGUE_CATS: { label: string; tag: string | null }[] = [
+  { label: 'ALL',   tag: null      },
+  { label: 'MLB',   tag: '#MLB'    },
+  { label: 'NFL',   tag: '#NFL'    },
+  { label: 'NBA',   tag: '#NBA'    },
+  { label: 'NHL',   tag: '#NHL'    },
+  { label: 'NCAAF', tag: '#NCAAF'  },
+  { label: 'NCAAB', tag: '#NCAAB'  },
+  { label: 'WNBA',  tag: '#WNBA'   },
+  { label: 'ATP',   tag: '#ATP'    },
+  { label: 'WTA',   tag: '#WTA'    },
+]
+
+// ─── Sparkline placeholder ────────────────────────────────────────────────────
+
+function Sparkline() {
+  const pts = [40, 55, 45, 65, 50, 72, 60, 80, 68, 85]
+  const w = 80, h = 28
+  const max = Math.max(...pts), min = Math.min(...pts)
+  const norm = (v: number) => h - ((v - min) / (max - min)) * h
+  const d = pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i / (pts.length - 1)) * w} ${norm(v)}`).join(' ')
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: 'visible' }}>
+      <path d={d} fill="none" stroke={G.accentFull} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.7} />
+    </svg>
+  )
+}
+
+// ─── Avatar circle ────────────────────────────────────────────────────────────
+
+function Avatar({ initial, size = 28 }: { initial: string; size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: G.accentFaint, border: `1px solid ${G.cardBorder}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: OSWALD, fontSize: size * 0.4, color: G.accentFull,
+      fontWeight: 700, flexShrink: 0, textTransform: 'uppercase',
+    }}>
+      {initial[0]}
+    </div>
+  )
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontFamily: OSWALD, fontSize: 11, fontWeight: 600,
+      color: G.accentFull, letterSpacing: '0.15em',
+      textTransform: 'uppercase', marginBottom: 14,
+    }}>
+      {children}
+    </div>
+  )
+}
 
 // ─── Pro Gate ─────────────────────────────────────────────────────────────────
 
 function ProGate() {
   const { openModal, setIsPro } = useAuth()
   return (
-    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, background: G.bg }}>
       <div style={{ maxWidth: 480, width: '100%' }}>
-        <div style={{ fontFamily: MONO, fontSize: 9, color: T.accent, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 16 }}>
+        <div style={{ fontFamily: OSWALD, fontSize: 11, color: G.accentFull, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 16 }}>
           Members Only
         </div>
-        <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 56, color: T.pri, margin: '0 0 20px', lineHeight: 1.05, fontWeight: 400 }}>
-          The Bettors&#39; Roundtable
+        <h1 style={{ fontFamily: OSWALD, fontSize: 56, color: G.white, margin: '0 0 20px', lineHeight: 1, fontWeight: 700, textTransform: 'uppercase' }}>
+          Community Board
         </h1>
-        <p style={{ fontFamily: SANS, fontSize: 14, color: T.muted, lineHeight: 1.8, margin: '0 0 32px' }}>
+        <p style={{ fontFamily: SANS, fontSize: 14, color: G.muted, lineHeight: 1.8, margin: '0 0 32px' }}>
           Join the Gambchop community. Discuss strategy, track line movements, share insights, and connect with serious bettors across every league.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 280 }}>
           <button onClick={() => openModal('pro')} style={{
-            background: T.accent, border: 'none', borderRadius: 6,
-            color: '#000', fontFamily: SANS, fontSize: 12, fontWeight: 700,
-            letterSpacing: '0.04em', cursor: 'pointer', padding: '13px 24px',
-            transition: 'all 200ms ease-out',
+            background: G.accentFull, border: 'none', borderRadius: 0,
+            color: '#000', fontFamily: OSWALD, fontSize: 13, fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', padding: '13px 24px',
           }}>
             Go Pro — Unlock Community
           </button>
           <button onClick={() => openModal('join')} style={{
-            background: 'transparent', border: `1px solid ${T.hairline}`, borderRadius: 6,
-            color: T.muted, fontFamily: SANS, fontSize: 12, fontWeight: 500,
-            letterSpacing: '0.02em', cursor: 'pointer', padding: '12px 24px',
-            transition: 'all 200ms ease-out',
+            background: 'transparent', border: `1px solid ${G.cardBorder}`, borderRadius: 0,
+            color: G.muted, fontFamily: SANS, fontSize: 12, fontWeight: 500,
+            cursor: 'pointer', padding: '12px 24px',
           }}>
             Join Free (Limited Access)
           </button>
         </div>
-        <div style={{ marginTop: 36, paddingTop: 28, borderTop: `1px solid ${T.hairline}` }}>
-          <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 16 }}>Pro Includes</div>
-          {['Full community board access', 'Create & reply to threads', 'Upvote · downvote · flag', 'All 9 betting chart metrics', 'Full season data'].map(f => (
-            <div key={f} style={{ fontFamily: SANS, fontSize: 13, color: T.sec, display: 'flex', gap: 12, marginBottom: 10, alignItems: 'center' }}>
-              <span style={{ width: 4, height: 4, background: T.accent, flexShrink: 0 }} />
-              {f}
-            </div>
-          ))}
-        </div>
-        <button onClick={() => setIsPro(true)} style={{ marginTop: 24, fontFamily: MONO, fontSize: 9, color: T.faint, background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'underline', padding: 0 }}>
+        <button onClick={() => setIsPro(true)} style={{ marginTop: 32, fontFamily: MONO, fontSize: 9, color: G.dim, background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'underline', padding: 0 }}>
           [Dev: Enable Pro Mode]
         </button>
       </div>
@@ -121,16 +198,15 @@ function UsernameSetup({ onSet }: { onSet: (u: CommunityUser) => void }) {
   }
 
   return (
-    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, background: G.bg }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
-        <div style={{ fontFamily: MONO, fontSize: 9, color: T.accent, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 12 }}>One-time setup</div>
-        <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 40, color: T.pri, margin: '0 0 28px', fontWeight: 400 }}>Pick Your Handle</h2>
+        <div style={{ fontFamily: OSWALD, fontSize: 11, color: G.accentFull, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>One-time setup</div>
+        <h2 style={{ fontFamily: OSWALD, fontSize: 40, color: G.white, margin: '0 0 28px', fontWeight: 700, textTransform: 'uppercase' }}>Pick Your Handle</h2>
         <input
           style={{
-            width: '100%', background: T.surface, border: `1px solid ${T.hairline}`,
-            borderRadius: 6, padding: '12px 14px', color: T.pri, fontFamily: SANS,
+            width: '100%', background: G.surface, border: `1px solid ${G.cardBorder}`,
+            borderRadius: 0, padding: '12px 14px', color: G.white, fontFamily: SANS,
             fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 8,
-            transition: 'border-color 200ms ease-out',
           }}
           placeholder="e.g. SharpBettor99"
           value={name}
@@ -139,13 +215,13 @@ function UsernameSetup({ onSet }: { onSet: (u: CommunityUser) => void }) {
           maxLength={20}
         />
         {err && <div style={{ fontFamily: SANS, fontSize: 11, color: '#ef4444', marginBottom: 8 }}>{err}</div>}
-        <div style={{ fontFamily: SANS, fontSize: 11, color: T.faint, marginBottom: 24, lineHeight: 1.6 }}>
+        <div style={{ fontFamily: SANS, fontSize: 11, color: G.dim, marginBottom: 24, lineHeight: 1.6 }}>
           Letters, numbers, underscores only. Cannot be changed.
         </div>
         <button onClick={submit} style={{
-          width: '100%', background: T.accent, border: 'none', borderRadius: 6,
-          color: '#000', fontFamily: SANS, fontSize: 12, fontWeight: 700,
-          letterSpacing: '0.04em', cursor: 'pointer', padding: '12px',
+          width: '100%', background: G.accentFull, border: 'none', borderRadius: 0,
+          color: '#000', fontFamily: OSWALD, fontSize: 13, fontWeight: 700,
+          letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', padding: '12px',
         }}>
           Set Username →
         </button>
@@ -209,8 +285,8 @@ function NewThreadModal({ user, onClose, onCreate }: {
   }
 
   const fieldStyle: React.CSSProperties = {
-    width: '100%', background: T.elevated, border: `1px solid ${T.hairline}`,
-    borderRadius: 6, padding: '11px 14px', color: T.pri, fontFamily: SANS,
+    width: '100%', background: G.elevated, border: `1px solid ${G.cardBorder}`,
+    borderRadius: 0, padding: '11px 14px', color: G.white, fontFamily: SANS,
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   }
 
@@ -220,33 +296,33 @@ function NewThreadModal({ user, onClose, onCreate }: {
       onClick={onClose}
     >
       <div
-        style={{ background: T.surface, border: `1px solid ${T.hairline}`, borderRadius: 10, padding: '36px 32px', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}
+        style={{ background: G.surface, border: `1px solid ${G.cardBorder}`, borderRadius: 0, padding: '36px 32px', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}
         onClick={e => e.stopPropagation()}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: G.muted, cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
 
-        <div style={{ fontFamily: MONO, fontSize: 9, color: T.accent, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
+        <div style={{ fontFamily: OSWALD, fontSize: 11, color: G.accentFull, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
           {remaining} thread{remaining !== 1 ? 's' : ''} remaining today
           {remaining === 0 && ` · Resets in ${hours}h`}
         </div>
-        <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 32, color: T.pri, margin: '0 0 24px', fontWeight: 400 }}>New Thread</h2>
+        <h2 style={{ fontFamily: OSWALD, fontSize: 32, color: G.white, margin: '0 0 24px', fontWeight: 700, textTransform: 'uppercase' }}>New Thread</h2>
 
         {!canCreateThread(user.userId) ? (
-          <div style={{ background: '#160a0a', border: `1px solid #ef444428`, borderRadius: 8, padding: 20, textAlign: 'center' }}>
+          <div style={{ background: '#160a0a', border: `1px solid #ef444428`, borderRadius: 0, padding: 20, textAlign: 'center' }}>
             <div style={{ fontSize: 16, marginBottom: 8 }}>⏳</div>
             <div style={{ fontFamily: SANS, fontSize: 13, color: '#ef4444', fontWeight: 700, marginBottom: 6 }}>Daily Thread Limit Reached</div>
-            <div style={{ fontFamily: SANS, fontSize: 12, color: T.muted }}>You&#39;ve created 3 threads today. Try again in <strong style={{ color: T.pri }}>{hours} hour{hours !== 1 ? 's' : ''}</strong>.</div>
+            <div style={{ fontFamily: SANS, fontSize: 12, color: G.muted }}>You&#39;ve created 3 threads today. Try again in <strong style={{ color: G.white }}>{hours} hour{hours !== 1 ? 's' : ''}</strong>.</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <label style={{ fontFamily: MONO, fontSize: 9, color: T.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Thread Title</label>
+              <label style={{ fontFamily: OSWALD, fontSize: 10, color: G.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Thread Title</label>
               <input style={fieldStyle} placeholder="What's your thread about?" value={title} onChange={e => { setTitle(e.target.value); setErr('') }} maxLength={120} />
-              <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, textAlign: 'right', marginTop: 4 }}>{title.length}/120</div>
+              <div style={{ fontFamily: MONO, fontSize: 9, color: G.dim, textAlign: 'right', marginTop: 4 }}>{title.length}/120</div>
             </div>
 
             <div>
-              <label style={{ fontFamily: MONO, fontSize: 9, color: T.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Content</label>
+              <label style={{ fontFamily: OSWALD, fontSize: 10, color: G.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Content</label>
               <textarea
                 style={{ ...fieldStyle, minHeight: 140, resize: 'vertical' } as React.CSSProperties}
                 placeholder="Share your analysis, question, or discussion topic..."
@@ -254,42 +330,42 @@ function NewThreadModal({ user, onClose, onCreate }: {
                 onChange={e => { setContent(e.target.value); setErr('') }}
                 maxLength={2000}
               />
-              <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, textAlign: 'right', marginTop: 4 }}>{content.length}/2000</div>
+              <div style={{ fontFamily: MONO, fontSize: 9, color: G.dim, textAlign: 'right', marginTop: 4 }}>{content.length}/2000</div>
             </div>
 
             <div>
-              <label style={{ fontFamily: MONO, fontSize: 9, color: T.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>Tags (up to 3)</label>
+              <label style={{ fontFamily: OSWALD, fontSize: 10, color: G.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>Tags (up to 3)</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {AVAILABLE_TAGS.map(tag => {
                   const active = selectedTags.includes(tag)
-                  const color = TAG_COLORS[tag] ?? T.faint
+                  const color = TAG_COLORS[tag] ?? G.dim
                   return (
                     <button key={tag} onClick={() => toggleTag(tag)} style={{
                       fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
                       background: active ? color + '22' : 'transparent',
-                      border: `1px solid ${active ? color : T.hairline}`,
-                      color: active ? color : T.muted,
-                      borderRadius: 4, padding: '4px 10px', cursor: 'pointer',
-                      fontWeight: active ? 700 : 500, transition: 'all 200ms ease-out',
+                      border: `1px solid ${active ? color : G.hairline}`,
+                      color: active ? color : G.muted,
+                      borderRadius: 3, padding: '4px 10px', cursor: 'pointer',
+                      fontWeight: active ? 700 : 500,
                     }}>{tag}</button>
                   )
                 })}
               </div>
             </div>
 
-            {err && <div style={{ fontFamily: SANS, fontSize: 11, color: '#ef4444', background: '#160a0a', border: `1px solid #ef444428`, borderRadius: 6, padding: '8px 12px' }}>{err}</div>}
+            {err && <div style={{ fontFamily: SANS, fontSize: 11, color: '#ef4444', background: '#160a0a', border: `1px solid #ef444428`, borderRadius: 0, padding: '8px 12px' }}>{err}</div>}
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
               <button onClick={onClose} style={{
-                background: 'transparent', border: `1px solid ${T.hairline}`, borderRadius: 6,
-                color: T.muted, fontFamily: SANS, fontSize: 12, letterSpacing: '0.02em',
+                background: 'transparent', border: `1px solid ${G.cardBorder}`, borderRadius: 0,
+                color: G.muted, fontFamily: SANS, fontSize: 12,
                 cursor: 'pointer', padding: '10px 18px',
               }}>Cancel</button>
               <button onClick={submit} disabled={submitting} style={{
-                background: T.accent, border: 'none', borderRadius: 6,
-                color: '#000', fontFamily: SANS, fontSize: 12, fontWeight: 700,
-                letterSpacing: '0.04em', cursor: 'pointer', padding: '10px 20px',
-                opacity: submitting ? 0.6 : 1, transition: 'opacity 200ms ease-out',
+                background: G.accentFull, border: 'none', borderRadius: 0,
+                color: '#000', fontFamily: OSWALD, fontSize: 12, fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer', padding: '10px 20px',
+                opacity: submitting ? 0.6 : 1,
               }}>
                 {submitting ? 'Posting…' : 'Post Thread →'}
               </button>
@@ -301,10 +377,11 @@ function NewThreadModal({ user, onClose, onCreate }: {
   )
 }
 
-// ─── Thread Card ──────────────────────────────────────────────────────────────
+// ─── Post Card ────────────────────────────────────────────────────────────────
 
-function ThreadCard({ thread, index = 0 }: { thread: Thread; index?: number }) {
+function PostCard({ thread }: { thread: Thread }) {
   const [hovered, setHovered] = useState(false)
+  const initial = thread.username[0]?.toUpperCase() ?? '?'
 
   return (
     <Link href={`/community/${thread.id}`} style={{ textDecoration: 'none', display: 'block' }}>
@@ -312,124 +389,280 @@ function ThreadCard({ thread, index = 0 }: { thread: Thread; index?: number }) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          display: 'grid',
-          gridTemplateColumns: '40px 1fr 80px 80px',
-          borderBottom: `1px solid ${T.hairline}`,
-          padding: '20px 0',
+          background: hovered ? G.cardBgHover : G.cardBg,
+          border: `1px solid ${G.cardBorder}`,
+          borderRadius: 0,
+          padding: '18px 18px 14px',
           cursor: 'pointer',
           transition: 'background 200ms ease-out',
-          background: hovered ? T.surface : 'transparent',
+          display: 'flex', flexDirection: 'column', gap: 10,
         }}
       >
-        {/* Index */}
-        <div style={{
-          fontFamily: MONO, fontSize: 11, color: hovered ? T.accent : T.faint,
-          paddingTop: 2, transition: 'color 200ms ease-out', letterSpacing: '0.05em',
-        }}>
-          {String(index + 1).padStart(2, '0')}
-        </div>
-
-        {/* Content */}
-        <div style={{ paddingRight: 24, minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-            {thread.tags.map(tag => (
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Avatar initial={initial} size={26} />
+          <span style={{ fontFamily: SANS, fontSize: 11, color: G.accentFull, fontWeight: 600 }}>@{thread.username}</span>
+          <div style={{ display: 'flex', gap: 4, marginLeft: 4, flexWrap: 'wrap' }}>
+            {thread.tags.slice(0, 2).map(tag => (
               <span key={tag} style={{
-                fontFamily: MONO, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: TAG_COLORS[tag] ?? T.faint,
-                border: `1px solid ${(TAG_COLORS[tag] ?? T.faint) + '40'}`,
-                borderRadius: 3, padding: '2px 6px',
-              }}>{tag}</span>
+                fontFamily: MONO, fontSize: 8, letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: TAG_COLORS[tag] ?? G.dim,
+                background: (TAG_COLORS[tag] ?? G.dim) + '18',
+                border: `1px solid ${(TAG_COLORS[tag] ?? G.dim) + '40'}`,
+                borderRadius: 2, padding: '2px 5px',
+              }}>{tag.replace('#', '')}</span>
             ))}
           </div>
-          <div style={{
-            fontFamily: SANS, fontSize: 15, fontWeight: 600,
-            color: hovered ? T.pri : T.sec, lineHeight: 1.3, marginBottom: 6,
-            transition: 'color 200ms ease-out',
-          }}>
-            {thread.title}
-          </div>
-          <div style={{ fontFamily: SANS, fontSize: 12, color: T.muted, lineHeight: 1.6, marginBottom: 8 }}>
-            {excerpt(thread.content)}
-          </div>
-          <div style={{ display: 'flex', gap: 14, fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.04em' }}>
-            <span>@{thread.username}</span>
-            <span>{timeAgo(thread.created_at)}</span>
-            <span>Active {timeAgo(thread.updated_at)}</span>
+        </div>
+
+        {/* Title */}
+        <div style={{
+          fontFamily: SANS, fontSize: 13, fontWeight: 700,
+          color: G.white, lineHeight: 1.35,
+        }}>
+          {thread.title}
+        </div>
+
+        {/* Excerpt */}
+        <div style={{ fontFamily: SANS, fontSize: 11, color: G.muted, lineHeight: 1.55 }}>
+          {excerpt(thread.content, 80)}
+        </div>
+
+        {/* Reactions row */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {[['🔥', Math.max(1, thread.reply_count * 3)], ['🏆', Math.max(1, thread.reply_count)], ['📈', Math.max(1, thread.reply_count * 2)]].map(([emoji, count]) => (
+            <span key={String(emoji)} style={{ fontFamily: SANS, fontSize: 11, color: G.muted, display: 'flex', alignItems: 'center', gap: 3 }}>
+              {emoji} <span style={{ fontSize: 10 }}>{count}</span>
+            </span>
+          ))}
+          <div style={{ marginLeft: 'auto' }}>
+            <Sparkline />
           </div>
         </div>
 
-        {/* Replies */}
-        <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 13, color: thread.reply_count > 0 ? T.sec : T.faint, paddingTop: 2 }}>
-          {thread.reply_count}
-        </div>
-
-        {/* Views (deterministic) */}
-        <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 13, color: T.muted, paddingTop: 2 }}>
-          {thread.reply_count * 50}
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingTop: 6, borderTop: `1px solid ${G.cardBorder}` }}>
+          <button style={{
+            fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+            background: 'transparent', border: `1px solid ${G.cardBorder}`, borderRadius: 0,
+            color: G.muted, padding: '4px 10px', cursor: 'pointer',
+          }} onClick={e => e.preventDefault()}>Reply</button>
+          <button style={{
+            fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+            background: G.accentFaint, border: `1px solid ${G.cardBorder}`, borderRadius: 0,
+            color: G.accentFull, padding: '4px 10px', cursor: 'pointer',
+          }} onClick={e => e.preventDefault()}>Vote</button>
+          <span style={{ fontFamily: MONO, fontSize: 9, color: G.dim, marginLeft: 'auto' }}>
+            {thread.reply_count} replies · {timeAgo(thread.created_at)}
+          </span>
         </div>
       </div>
     </Link>
   )
 }
 
-// ─── Guidelines ───────────────────────────────────────────────────────────────
+// ─── Left Sidebar ─────────────────────────────────────────────────────────────
 
-const GUIDELINES = [
-  ['🚫', 'No hate speech, slurs, or discriminatory language'],
-  ['🚫', 'No harassment or personal attacks'],
-  ['🚫', 'No spam, self-promotion, or unsolicited links'],
-  ['🚫', 'No explicit content or graphic imagery'],
-  ['🚫', 'No sharing of personal financial info or account details'],
-  ['📊', 'Keep discussions sports betting related'],
-  ['🤝', 'Respect differing opinions and strategies'],
-  ['⚖️', 'No discussion of illegal betting or unlicensed books'],
-  ['🚨', 'No guaranteed picks or pump-and-dump schemes'],
-  ['🔒', "No sharing of other users' personal information"],
-]
+function LeftSidebar({ user }: { user: CommunityUser }) {
+  const [openRules, setOpenRules] = useState<number[]>([])
 
-function Guidelines({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const toggleRule = (i: number) => {
+    setOpenRules(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])
+  }
+
   return (
-    <div style={{ marginBottom: 24 }}>
-      <button
-        onClick={onToggle}
-        style={{
-          width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-          padding: '0 0 12px', display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', fontFamily: 'inherit',
-          borderBottom: `1px solid ${T.hairline}`,
-        }}
-      >
-        <span style={{ fontFamily: MONO, fontSize: 9, color: T.accent, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>Community Guidelines</span>
-        <span style={{ color: T.faint, fontSize: 10, fontFamily: MONO }}>{open ? '▲' : '▼'}</span>
-      </button>
-      {open && (
-        <div style={{ paddingTop: 12 }}>
-          {GUIDELINES.map(([icon, rule]) => (
-            <div key={rule} style={{ display: 'flex', gap: 10, padding: '5px 0', fontSize: 11, fontFamily: SANS, color: T.muted, lineHeight: 1.5 }}>
-              <span style={{ flexShrink: 0 }}>{icon}</span>
-              <span>{rule}</span>
+    <div style={{
+      width: 280, flexShrink: 0,
+      borderRight: `1px solid ${G.cardBorder}`,
+      paddingRight: 28, paddingTop: 0,
+    }}>
+      {/* Breadcrumb + heading */}
+      <div style={{ fontFamily: OSWALD, fontSize: 10, color: G.accentText, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Gambchop → Community
+      </div>
+      <h1 style={{ fontFamily: OSWALD, fontSize: 36, fontWeight: 700, color: G.white, margin: '0 0 10px', textTransform: 'uppercase', lineHeight: 1 }}>
+        Community
+      </h1>
+      <p style={{ fontFamily: SANS, fontSize: 12, color: G.muted, lineHeight: 1.6, margin: '0 0 28px' }}>
+        The community board is where Gambchop members trade reads on what the charts are showing.
+      </p>
+
+      <div style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20, marginBottom: 24 }}>
+        <SectionHeader>Community Guidelines</SectionHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {GUIDELINES.map((rule, i) => (
+            <div key={i}>
+              <button
+                onClick={() => toggleRule(i)}
+                style={{
+                  width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '7px 0', fontFamily: 'inherit',
+                }}
+              >
+                <span style={{ fontFamily: SANS, fontSize: 11, color: G.muted, textAlign: 'left', flex: 1 }}>{rule}</span>
+                <ChevronRight
+                  size={12}
+                  color={G.dim}
+                  style={{ flexShrink: 0, marginLeft: 8, transform: openRules.includes(i) ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}
+                />
+              </button>
+              {openRules.includes(i) && (
+                <div style={{ fontFamily: SANS, fontSize: 11, color: G.dim, padding: '4px 0 8px', lineHeight: 1.6 }}>
+                  Violations may result in content removal or account suspension.
+                </div>
+              )}
+              {i < GUIDELINES.length - 1 && <div style={{ borderBottom: `1px solid ${G.hairline}` }} />}
             </div>
           ))}
         </div>
-      )}
+      </div>
+
+      {/* User Contributions */}
+      <div style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20 }}>
+        <SectionHeader>User Contributions</SectionHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {TOP_CONTRIBUTORS.map((c, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 10px',
+              background: i === 0 ? G.accentFaint : 'transparent',
+              border: i === 0 ? `1px solid ${G.cardBorder}` : '1px solid transparent',
+            }}>
+              <span style={{ fontFamily: OSWALD, fontSize: 11, color: i === 0 ? G.accentFull : G.dim, width: 16, textAlign: 'center' }}>
+                {i + 1}
+              </span>
+              <Avatar initial={c.username[0]} size={24} />
+              <span style={{ fontFamily: SANS, fontSize: 12, color: i === 0 ? G.white : G.muted, flex: 1 }}>
+                @{c.username}
+              </span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: i === 0 ? G.accentFull : G.dim }}>
+                {c.points}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 16, fontFamily: MONO, fontSize: 9, color: G.dim, letterSpacing: '0.08em' }}>
+          Logged in as <span style={{ color: G.accentText }}>@{user.username}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Right Sidebar ────────────────────────────────────────────────────────────
+
+function RightSidebar() {
+  const [chatInput, setChatInput] = useState('')
+  const [chatMsgs, setChatMsgs] = useState(CHAT_MSGS)
+  const [chatOpen, setChatOpen] = useState(true)
+
+  const sendChat = () => {
+    if (!chatInput.trim()) return
+    setChatMsgs(prev => [...prev, { initial: 'Y', username: 'You', text: chatInput.trim() }])
+    setChatInput('')
+  }
+
+  return (
+    <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* Live Poll */}
+      <div style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
+        <SectionHeader>Live Poll</SectionHeader>
+        <div style={{ fontFamily: SANS, fontSize: 12, color: G.white, fontWeight: 600, marginBottom: 12, lineHeight: 1.4 }}>
+          {POLL.question}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {POLL.options.map((opt, i) => (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontFamily: SANS, fontSize: 10, color: G.muted }}>{opt.name}</span>
+                <span style={{ fontFamily: MONO, fontSize: 10, color: G.accentFull }}>{opt.pct}%</span>
+              </div>
+              <div style={{ height: 4, background: G.hairline, borderRadius: 2 }}>
+                <div style={{ width: `${opt.pct}%`, height: '100%', background: i === 0 ? G.accentFull : G.accentText, borderRadius: 2 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 9, color: G.dim, marginTop: 10 }}>
+          {POLL.votes.toLocaleString()} votes · {POLL.ts}
+        </div>
+      </div>
+
+      {/* Featured Props Finder */}
+      <div style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
+        <SectionHeader>Featured Props Finder</SectionHeader>
+        <p style={{ fontFamily: SANS, fontSize: 10, color: G.muted, margin: '0 0 12px', lineHeight: 1.5 }}>
+          Drop your prop finds to those below.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {PROP_FINDERS.map((p, i) => (
+            <div key={i} style={{ background: G.elevated, border: `1px solid ${G.cardBorder}`, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
+              <Avatar initial={p.initial} size={22} />
+              <span style={{ fontFamily: SANS, fontSize: 9, color: G.muted, textAlign: 'center' }}>@{p.username.slice(0, 8)}</span>
+              <button style={{
+                fontFamily: OSWALD, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase',
+                background: G.accentFull, border: 'none', borderRadius: 0,
+                color: '#000', padding: '3px 6px', cursor: 'pointer', width: '100%', textAlign: 'center',
+              }}>
+                {i % 2 === 0 ? 'DROP FIND →' : 'PROP FIND →'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Live Text Chat */}
+      <div style={{ background: '#090b0f', border: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${G.cardBorder}` }}>
+          <span style={{ fontFamily: OSWALD, fontSize: 12, fontWeight: 600, color: G.white, letterSpacing: '0.05em' }}>Text Chat</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => setChatOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: G.dim, padding: 2 }}>
+              <Minus size={12} />
+            </button>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: G.dim, padding: 2 }}>
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+        {chatOpen && (
+          <>
+            <div style={{ maxHeight: 180, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {chatMsgs.map((m, i) => (
+                <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                  <Avatar initial={m.initial} size={20} />
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ fontFamily: SANS, fontSize: 10, color: G.accentFull, fontWeight: 600 }}>{m.username} </span>
+                    <span style={{ fontFamily: SANS, fontSize: 10, color: G.white, lineHeight: 1.4 }}>{m.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', borderTop: `1px solid ${G.cardBorder}`, padding: '8px 10px', gap: 6 }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Message..."
+                style={{
+                  flex: 1, background: G.elevated, border: `1px solid ${G.hairline}`,
+                  borderRadius: 0, padding: '6px 8px', color: G.white,
+                  fontFamily: SANS, fontSize: 10, outline: 'none',
+                }}
+              />
+              <button onClick={sendChat} style={{ background: G.accentFull, border: 'none', borderRadius: 0, padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <Send size={11} color="#000" />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-
-const LEAGUE_CATS: { label: string; tag: string | null; color: string }[] = [
-  { label: 'All',    tag: null,      color: T.accent              },
-  { label: 'MLB',    tag: '#MLB',    color: TAG_COLORS['#MLB']    },
-  { label: 'NFL',    tag: '#NFL',    color: TAG_COLORS['#NFL']    },
-  { label: 'NBA',    tag: '#NBA',    color: TAG_COLORS['#NBA']    },
-  { label: 'NHL',    tag: '#NHL',    color: TAG_COLORS['#NHL']    },
-  { label: 'NCAAF',  tag: '#NCAAF',  color: TAG_COLORS['#NCAAF']  },
-  { label: 'NCAAB',  tag: '#NCAAB',  color: TAG_COLORS['#NCAAB']  },
-  { label: 'WNBA',   tag: '#WNBA',   color: TAG_COLORS['#WNBA']   },
-  { label: 'ATP',    tag: '#ATP',    color: TAG_COLORS['#ATP']    },
-  { label: 'WTA',    tag: '#WTA',    color: '#f0abfc'             },
-]
 
 export default function CommunityPage() {
   const { isPro, setIsPro } = useAuth()
@@ -438,8 +671,6 @@ export default function CommunityPage() {
   const [sort, setSort] = useState<SortMode>('newest')
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [showNew, setShowNew] = useState(false)
-  const [showGuide, setShowGuide] = useState(true)
-  const [showFilter, setShowFilter] = useState(false)
   const [loading, setLoading] = useState(true)
   const loaded = useRef(false)
 
@@ -466,238 +697,138 @@ export default function CommunityPage() {
     setLoading(false)
   }
 
-  const sorted = [...threads].sort((a, b) => {
-    if (sort === 'newest')  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    if (sort === 'popular') return b.reply_count - a.reply_count
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  }).filter(t => !activeTag || t.tags.includes(activeTag))
+  const sorted = [...threads]
+    .sort((a, b) => {
+      if (sort === 'newest')  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (sort === 'popular') return b.reply_count - a.reply_count
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
+    .filter(t => !activeTag || t.tags.includes(activeTag))
 
   if (!isPro) return <ProGate />
-  if (!user) return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
-
-  const sortLabels: Record<SortMode, string> = { newest: 'Newest', popular: 'Most Active', trending: 'Trending' }
+  if (!user)  return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
 
   return (
-    <div style={{ minHeight: '100vh', fontFamily: SANS }}>
+    <div style={{ minHeight: '100vh', background: G.bg, fontFamily: SANS }}>
 
       <style>{`
-        .community-headline {
-          font-family: var(--font-oswald), sans-serif;
-          font-weight: 700;
-          font-size: 120px;
-          line-height: 0.9;
-          letter-spacing: -0.02em;
-          color: #F5F5F4;
-          margin: 0;
-          text-transform: uppercase;
+        .comm-scroll::-webkit-scrollbar { width: 4px; }
+        .comm-scroll::-webkit-scrollbar-track { background: transparent; }
+        .comm-scroll::-webkit-scrollbar-thumb { background: rgba(57,255,154,0.2); border-radius: 2px; }
+
+        @media (max-width: 1199px) {
+          .comm-right-sidebar { display: none !important; }
+          .comm-center { max-width: 100% !important; }
         }
-        @media (max-width: 1099px) { .community-headline { font-size: 80px; } }
-        @media (max-width: 767px)  { .community-headline { font-size: 56px; } }
+        @media (max-width: 767px) {
+          .comm-left-sidebar { display: none !important; }
+          .comm-layout { padding: 16px !important; }
+          .comm-post-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
-      {/* Hero */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '96px 48px 40px' }}>
-        <div style={{ fontFamily: MONO, fontSize: 10, color: T.accent, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 16 }}>
-          Gambchop — Community
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
-          <h1 className="community-headline">SPARK UP</h1>
-          <button onClick={() => setShowNew(true)} style={{
-            background: T.accent, border: 'none', borderRadius: 6,
-            color: '#000', fontFamily: SANS, fontSize: 12, fontWeight: 700,
-            letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer',
-            padding: '12px 20px', flexShrink: 0, transition: 'all 200ms ease-out',
-          }}>
-            + New Topic
-          </button>
-        </div>
-
-        {/* Summary paragraphs */}
-        <div style={{ marginTop: 32, marginBottom: 32, maxWidth: 620 }}>
-          <p style={{ fontFamily: SANS, fontSize: 17, fontWeight: 400, color: T.sec, lineHeight: 1.6, margin: 0 }}>
-            The community board is where Gambchop members trade reads on what the charts are showing — streaks worth watching, splits that don&apos;t add up, runners, and more. Bring your angle.
-          </p>
-          <p style={{ fontFamily: SANS, fontSize: 17, fontWeight: 400, color: T.sec, lineHeight: 1.6, margin: '16px 0 0' }}>
-            Posting and replying helps you see different approaches, perspectives, and energy towards a play.
-          </p>
+      {/* 3-column layout */}
+      <div
+        className="comm-layout"
+        style={{
+          maxWidth: 1320,
+          margin: '0 auto',
+          padding: '64px 32px 80px',
+          display: 'flex',
+          gap: 32,
+          alignItems: 'flex-start',
+        }}
+      >
+        {/* LEFT SIDEBAR */}
+        <div className="comm-left-sidebar">
+          <LeftSidebar user={user} />
         </div>
 
-        <p style={{ fontFamily: SANS, fontSize: 13, color: T.muted, marginTop: 0, marginBottom: 0 }}>
-          Logged in as <span style={{ color: T.sec }}>@{user.username}</span>
-          {' · '}
-          <span style={{ color: threadsRemaining(user.userId) > 0 ? T.sec : '#ef4444' }}>
-            {threadsRemaining(user.userId)} thread{threadsRemaining(user.userId) !== 1 ? 's' : ''} remaining today
-          </span>
-          {' · '}
-          <button onClick={() => setIsPro(false)} style={{ background: 'none', border: 'none', color: T.faint, cursor: 'pointer', fontFamily: SANS, fontSize: 13, textDecoration: 'underline', padding: 0 }}>
-            Leave (Demo)
-          </button>
-        </p>
-      </div>
+        {/* CENTER FEED */}
+        <div style={{ flex: 1, minWidth: 0 }}>
 
-      {/* Category pills */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px 32px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {LEAGUE_CATS.map(({ label, tag }) => {
-          const isActive = activeTag === tag
-          return (
-            <button
-              key={label}
-              onClick={() => setActiveTag(tag)}
-              style={{
-                fontFamily: SANS, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase',
-                fontWeight: isActive ? 600 : 400, color: isActive ? T.accent : T.muted,
-                background: 'transparent', border: `1px solid ${isActive ? T.accent : T.hairline}`,
-                borderRadius: 6, padding: '5px 14px', cursor: 'pointer',
-                transition: 'all 200ms ease-out',
-              }}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Two-column layout */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px 80px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 64, alignItems: 'flex-start' }}>
-
-        {/* Left: thread list */}
-        <div style={{ minWidth: 0, borderRight: `1px solid ${T.hairline}`, paddingRight: 48 }}>
-
-          {/* Sub-tabs + Filter row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, marginBottom: 20, borderBottom: `1px solid ${T.hairline}` }}>
-            <div style={{ display: 'flex', gap: 28 }}>
-              {(['newest', 'popular', 'trending'] as SortMode[]).map(s => {
-                const isActive = sort === s
+          {/* Tab bar + New Topic button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {LEAGUE_CATS.map(({ label, tag }) => {
+                const isActive = activeTag === tag
                 return (
-                  <button key={s} onClick={() => setSort(s)} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', fontFamily: SANS,
-                    fontSize: 13, fontWeight: isActive ? 600 : 400,
-                    color: isActive ? T.pri : T.muted, letterSpacing: '0.02em', padding: 0,
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    transition: 'color 200ms ease-out',
-                  }}>
-                    {isActive && <span style={{ width: 4, height: 4, background: T.accent, flexShrink: 0, display: 'inline-block' }} />}
-                    {sortLabels[s]}
+                  <button
+                    key={label}
+                    onClick={() => setActiveTag(tag)}
+                    style={{
+                      fontFamily: OSWALD, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+                      fontWeight: 600,
+                      color: isActive ? '#000' : G.muted,
+                      background: isActive ? G.accentFull : 'transparent',
+                      border: `1px solid ${isActive ? G.accentFull : G.cardBorder}`,
+                      borderRadius: 2, padding: '5px 12px', cursor: 'pointer',
+                      transition: 'all 150ms ease-out',
+                    }}
+                  >
+                    {label}
                   </button>
                 )
               })}
             </div>
             <button
-              onClick={() => setShowFilter(v => !v)}
+              onClick={() => setShowNew(true)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, background: 'none',
-                border: `1px solid ${showFilter ? T.accent : T.hairline}`, borderRadius: 6,
-                color: showFilter ? T.accent : T.muted, fontFamily: SANS,
-                fontSize: 11, letterSpacing: '0.04em', cursor: 'pointer', padding: '6px 12px',
-                transition: 'all 200ms ease-out',
+                fontFamily: OSWALD, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase',
+                fontWeight: 700, background: G.accentFull, border: 'none', borderRadius: 0,
+                color: '#000', padding: '8px 16px', cursor: 'pointer', flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
-              Filter <ChevronDown size={12} />
+              + NEW TOPIC
             </button>
           </div>
 
-          {/* Tag filter panel */}
-          {showFilter && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
-              {AVAILABLE_TAGS.map(tag => (
-                <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)} style={{
-                  fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
-                  background: activeTag === tag ? (TAG_COLORS[tag] ?? T.faint) + '22' : 'transparent',
-                  border: `1px solid ${activeTag === tag ? (TAG_COLORS[tag] ?? T.faint) : T.hairline}`,
-                  color: activeTag === tag ? (TAG_COLORS[tag] ?? T.faint) : T.muted,
-                  borderRadius: 4, padding: '4px 10px', cursor: 'pointer',
-                  fontWeight: activeTag === tag ? 700 : 400, transition: 'all 200ms ease-out',
-                }}>{tag}</button>
-              ))}
-            </div>
-          )}
-
-          {/* Active tag badge */}
-          {activeTag && (
-            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Filtered by:</span>
-              <button onClick={() => setActiveTag(null)} style={{
-                fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
-                background: (TAG_COLORS[activeTag] ?? T.faint) + '18',
-                border: `1px solid ${(TAG_COLORS[activeTag] ?? T.faint) + '44'}`,
-                color: TAG_COLORS[activeTag] ?? T.faint,
-                borderRadius: 4, padding: '3px 8px', cursor: 'pointer',
-              }}>
-                {activeTag} ×
-              </button>
-            </div>
-          )}
-
-          {/* Guidelines */}
-          <Guidelines open={showGuide} onToggle={() => setShowGuide(v => !v)} />
-
-          {/* Column headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 80px', paddingBottom: 8, borderBottom: `1px solid ${T.hairline}` }}>
-            <div />
-            <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Topic</div>
-            <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'center' }}>Replies</div>
-            <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'center' }}>Views</div>
+          {/* Sort tabs */}
+          <div style={{ display: 'flex', gap: 20, marginBottom: 20, paddingBottom: 12, borderBottom: `1px solid ${G.cardBorder}` }}>
+            {(['newest', 'popular', 'trending'] as SortMode[]).map(s => {
+              const labels: Record<SortMode, string> = { newest: 'Newest', popular: 'Most Active', trending: 'Trending' }
+              const isActive = sort === s
+              return (
+                <button key={s} onClick={() => setSort(s)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', fontFamily: SANS,
+                  fontSize: 12, fontWeight: isActive ? 700 : 400,
+                  color: isActive ? G.accentFull : G.muted,
+                  padding: 0, letterSpacing: '0.02em',
+                  borderBottom: isActive ? `2px solid ${G.accentFull}` : '2px solid transparent',
+                  paddingBottom: 4,
+                }}>
+                  {labels[s]}
+                </button>
+              )
+            })}
           </div>
 
-          {/* Threads */}
+          {/* Post grid */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', fontFamily: MONO, color: T.faint, fontSize: 11, letterSpacing: '0.1em' }}>
+            <div style={{ textAlign: 'center', padding: '60px 0', fontFamily: MONO, color: G.dim, fontSize: 11, letterSpacing: '0.1em' }}>
               Loading threads…
             </div>
           ) : sorted.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
-              <div style={{ fontFamily: SANS, fontSize: 13, color: T.muted }}>
+              <div style={{ fontFamily: SANS, fontSize: 13, color: G.muted }}>
                 No threads yet{activeTag ? ` for ${activeTag}` : ''}. Be the first to post!
               </div>
             </div>
           ) : (
-            <div>
-              {sorted.map((t, i) => <ThreadCard key={t.id} thread={t} index={i} />)}
+            <div
+              className="comm-post-grid"
+              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}
+            >
+              {sorted.map(t => <PostCard key={t.id} thread={t} />)}
             </div>
           )}
         </div>
 
-        {/* Right: sidebar */}
-        <div style={{ paddingTop: 8 }}>
-
-          {/* Trending Now */}
-          <div style={{ borderLeft: `2px solid ${T.hairline}`, paddingLeft: 24, marginBottom: 48 }}>
-            <h3 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: T.pri, margin: '0 0 24px', fontWeight: 400, lineHeight: 1.2 }}>
-              Trending Now
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {TRENDING_NOW.map((item, i) => (
-                <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                  <span style={{ fontFamily: MONO, fontSize: 10, color: T.faint, paddingTop: 1, flexShrink: 0, letterSpacing: '0.05em' }}>
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <div>
-                    <div style={{ fontFamily: SANS, fontSize: 12, color: T.sec, lineHeight: 1.5 }}>{item.label}</div>
-                    <div style={{ fontFamily: MONO, fontSize: 9, color: T.faint, marginTop: 4, letterSpacing: '0.05em' }}>{item.tag}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top Contributors */}
-          <div style={{ borderLeft: `2px solid ${T.hairline}`, paddingLeft: 24 }}>
-            <h3 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: T.pri, margin: '0 0 24px', fontWeight: 400, lineHeight: 1.2 }}>
-              Top Contributors
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {TOP_CONTRIBUTORS.map((c, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: T.faint, letterSpacing: '0.05em' }}>{String(i + 1).padStart(2, '0')}</span>
-                    <span style={{ fontFamily: SANS, fontSize: 13, color: T.sec }}>@{c.username}</span>
-                  </div>
-                  <span style={{ fontFamily: MONO, fontSize: 11, color: T.accent }}>{c.threads}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* RIGHT SIDEBAR */}
+        <div className="comm-right-sidebar">
+          <RightSidebar />
         </div>
       </div>
 
