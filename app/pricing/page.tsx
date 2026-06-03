@@ -125,7 +125,7 @@ function FreeCard({ onJoin }: { onJoin: () => void }) {
 
   return (
     <div style={{
-      background: CARD,
+      background: 'rgba(96, 165, 250, 0.12)',
       border: `1px solid ${BLUE}`,
       borderRadius: 16,
       padding: '32px 28px',
@@ -148,36 +148,38 @@ function FreeCard({ onJoin }: { onJoin: () => void }) {
         </p>
       </div>
 
-      <div style={{ flex: 1, marginBottom: 28 }}>
+      <div style={{ flex: 1 }}>
         {FREE_FEATURES.map(f => <FeatureRow key={f.label} {...f} checkColor={BLUE} />)}
       </div>
 
-      {isMember ? (
-        <div style={{
-          width: '100%', padding: '13px', borderRadius: 8, textAlign: 'center',
-          background: 'transparent', border: `1px solid ${BORDER}`,
-          fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: '0.1em',
-          textTransform: 'uppercase', boxSizing: 'border-box',
-        }}>
-          Current Plan
-        </div>
-      ) : (
-        <button
-          onClick={onJoin}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          style={{
-            width: '100%', padding: '13px', borderRadius: 8,
-            border: `1px solid ${BLUE}`,
-            background: hovered ? 'rgba(96, 165, 250, 0.08)' : 'transparent',
-            color: BLUE, fontSize: 11, fontWeight: 700,
-            letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
-            fontFamily: 'inherit', transition: 'background 150ms ease-out',
-          }}
-        >
-          Get Started Free
-        </button>
-      )}
+      <div style={{ marginTop: 'auto', paddingTop: 28 }}>
+        {isMember ? (
+          <div style={{
+            width: '100%', padding: '13px', borderRadius: 8, textAlign: 'center',
+            background: 'transparent', border: `1px solid ${BORDER}`,
+            fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: '0.1em',
+            textTransform: 'uppercase', boxSizing: 'border-box',
+          }}>
+            Current Plan
+          </div>
+        ) : (
+          <button
+            onClick={onJoin}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+              width: '100%', padding: '13px', borderRadius: 8,
+              border: `1px solid ${BLUE}`,
+              background: hovered ? 'rgba(96, 165, 250, 0.08)' : 'transparent',
+              color: BLUE, fontSize: 11, fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+              fontFamily: 'inherit', transition: 'background 150ms ease-out',
+            }}
+          >
+            Get Started Free
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -203,7 +205,7 @@ function ProCard({
 
   return (
     <div style={{
-      background: CARD,
+      background: 'rgba(57, 255, 154, 0.10)',
       border: `1.5px solid ${GREEN}`,
       borderRadius: 16, padding: '32px 28px',
       display: 'flex', flexDirection: 'column',
@@ -241,42 +243,43 @@ function ProCard({
         </p>
       </div>
 
-      <div style={{ flex: 1, marginBottom: 28 }}>
+      <div style={{ flex: 1 }}>
         {PRO_FEATURES.map(f => <ProFeatureRow key={f.label} {...f} />)}
       </div>
 
-      {isPro ? (
-        <div style={{
-          width: '100%', padding: '13px', borderRadius: 8, textAlign: 'center',
-          background: `${GREEN}18`, border: `1px solid ${GREEN}55`,
-          fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: '0.1em',
-          textTransform: 'uppercase', boxSizing: 'border-box',
-        }}>
-          ⚡ Active Plan
-        </div>
-      ) : (
-        <button
-          onClick={onUpgrade}
-          disabled={loading}
-          onMouseEnter={() => setBtnHovered(true)}
-          onMouseLeave={() => setBtnHovered(false)}
-          style={{
-            width: '100%', padding: '14px', borderRadius: 8, border: 'none',
-            background: btnHovered && !loading ? '#16A34A' : GREEN,
-            color: '#0A0A0B', fontSize: 11, fontWeight: 900,
-            letterSpacing: '0.12em', textTransform: 'uppercase',
-            cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-            transition: 'background 150ms ease-out',
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading ? 'Redirecting…' : billing === 'annual' ? 'Start Annual — 3-Day Trial' : 'Start Monthly — 3-Day Trial'}
-        </button>
-      )}
-
-      <p style={{ fontSize: 9, color: MUTED, textAlign: 'center', marginTop: 12, marginBottom: 0, letterSpacing: '0.08em' }}>
-        Cancel anytime · Card required at checkout
-      </p>
+      <div style={{ marginTop: 'auto', paddingTop: 28 }}>
+        {isPro ? (
+          <div style={{
+            width: '100%', padding: '13px', borderRadius: 8, textAlign: 'center',
+            background: `${GREEN}18`, border: `1px solid ${GREEN}55`,
+            fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: '0.1em',
+            textTransform: 'uppercase', boxSizing: 'border-box',
+          }}>
+            ⚡ Active Plan
+          </div>
+        ) : (
+          <button
+            onClick={onUpgrade}
+            disabled={loading}
+            onMouseEnter={() => setBtnHovered(true)}
+            onMouseLeave={() => setBtnHovered(false)}
+            style={{
+              width: '100%', padding: '14px', borderRadius: 8, border: 'none',
+              background: btnHovered && !loading ? '#16A34A' : GREEN,
+              color: '#0A0A0B', fontSize: 11, fontWeight: 900,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              transition: 'background 150ms ease-out',
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? 'Redirecting…' : billing === 'annual' ? 'Start Annual — 3-Day Trial' : 'Start Monthly — 3-Day Trial'}
+          </button>
+        )}
+        <p style={{ fontSize: 9, color: MUTED, textAlign: 'center', marginTop: 12, marginBottom: 0, letterSpacing: '0.08em' }}>
+          Cancel anytime · Card required at checkout
+        </p>
+      </div>
     </div>
   )
 }
@@ -304,10 +307,10 @@ function ComparisonTable() {
             <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, width: '40%' }}>
               Feature
             </th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}` }}>
+            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, width: '30%' }}>
               Free
             </th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: GREEN, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, background: `${GREEN}08` }}>
+            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 9, color: GREEN, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${BORDER}`, background: `${GREEN}08`, width: '30%' }}>
               ⚡ Pro
             </th>
           </tr>
@@ -476,7 +479,7 @@ function PricingContent() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: 20,
           marginBottom: 72,
-          alignItems: 'start',
+          alignItems: 'stretch',
         }}>
           <FreeCard onJoin={() => openModal('join')} />
           <ProCard billing={billing} onUpgrade={() => handleUpgrade(billing)} loading={checkingOut} />
