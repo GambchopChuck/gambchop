@@ -87,12 +87,16 @@ const LEAGUE_CATS: { label: string; tag: string | null }[] = [
 ]
 
 // ─── Bettor type badge ────────────────────────────────────────────────────────
+// community_threads.user_id stores localStorage-generated IDs ('user-abc123'),
+// not Supabase auth UUIDs, so joining to profiles.id is not possible.
+// Bettor types are fetched separately by username after threads load (see
+// loadThreads in the main component).
 
-const BETTOR_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  straight:    { label: 'STRAIGHT BETTOR', color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
-  parlayer:    { label: 'PARLAYER',         color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-  microbettor: { label: 'MICROBETTOR',      color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
-  'margin-mac':{ label: 'MARGIN MAC',       color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
+const BETTOR_TYPE_CONFIG: Record<string, { label: string; bg: string; border: string; color: string }> = {
+  straight:    { label: 'STRAIGHT',   bg: 'rgba(57,255,154,0.15)',  border: '#39ff9a', color: '#39ff9a' },
+  parlayer:    { label: 'PARLAYER',   bg: 'rgba(0,255,255,0.15)',   border: '#00ffff', color: '#00ffff' },
+  microbettor: { label: 'MICRO',      bg: 'rgba(251,191,36,0.15)',  border: '#fbbf24', color: '#fbbf24' },
+  'margin-mac':{ label: 'MARGIN MAC', bg: 'rgba(139,92,246,0.15)',  border: '#8b5cf6', color: '#8b5cf6' },
 }
 
 function BettorTypeBadge({ type }: { type: string }) {
@@ -102,7 +106,7 @@ function BettorTypeBadge({ type }: { type: string }) {
     <span style={{
       fontFamily: MONO, fontSize: 7, letterSpacing: '0.06em', textTransform: 'uppercase',
       color: cfg.color, background: cfg.bg,
-      border: `1px solid ${cfg.color}30`,
+      border: `1px solid ${cfg.border}`,
       borderRadius: 2, padding: '1px 5px', flexShrink: 0,
     }}>
       {cfg.label}
