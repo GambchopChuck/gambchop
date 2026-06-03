@@ -46,6 +46,10 @@ const C_WHITE  = '#f4f4f5'
 const C_VIOLET = '#8b5cf6'
 const C_BROWN  = '#b45309'
 const C_EMPTY  = '#131318'
+const C_AMBER  = '#fbbf24'
+
+const SIZZLER_COUNT = 4
+const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 
 function streakLabel(kind: StreakKind, type: string, count: number): string {
   if (kind === 'over_under') return `${type}${count}`
@@ -280,6 +284,37 @@ export default function StreakBoardPage() {
     }
   }, [streakRows, leagueFilter, sortMode])
 
+  // Sizzlers: exactly-4 streaks, excluding any already in the main board
+  const sizzlerRows = useMemo((): StreakRow[] => {
+    const boardKeys = new Set(streakRows.map(r => `${r.leagueId}-${r.teamName}-${r.kind}`))
+    const rows: StreakRow[] = []
+    for (const [leagueId, teams] of leagueDataMap) {
+      for (const team of teams) {
+        for (const kind of ['moneyline', 'spread', 'over_under'] as StreakKind[]) {
+          const key = `${leagueId}-${team.teamName}-${kind}`
+          if (boardKeys.has(key)) continue
+          const s = computeStreak(team.games, kind)
+          if (!s || s.count !== SIZZLER_COUNT) continue
+          rows.push({
+            leagueId, kind,
+            teamName:    team.teamName,
+            teamSlug:    slugify(team.teamName),
+            streakType:  s.type,
+            streakCount: s.count,
+            games:       team.games.slice(-5),
+          })
+        }
+      }
+    }
+    return rows
+  }, [leagueDataMap, streakRows])
+
+  const displaySizzlers = useMemo(() =>
+    leagueFilter === 'all'
+      ? sizzlerRows
+      : sizzlerRows.filter(r => r.leagueId === leagueFilter),
+  [sizzlerRows, leagueFilter])
+
   const selectSt: React.CSSProperties = {
     background: '#0f0f14', border: '1px solid #1a1a24', borderRadius: 6,
     color: '#ffffff', fontSize: 10, padding: '7px 10px',
@@ -381,6 +416,45 @@ export default function StreakBoardPage() {
           </div>
         )}
       </div>
+
+      {/* ── Sizzlers ─────────────────────────────────────────────────────── */}
+      {!loading && (
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 0' }}>
+
+          {/* Divider + header */}
+          <div style={{ borderTop: '1px solid #1a1a24', marginTop: 32, paddingTop: 28, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: C_AMBER, boxShadow: `0 0 8px ${C_AMBER}` }} />
+              <h2 style={{ fontFamily: OSWALD, fontSize: 22, fontWeight: 900, color: '#f4f4f5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+                Sizzlers
+              </h2>
+            </div>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', margin: 0 }}>
+              Betting rows with 4 consecutive same-result outcomes — building toward a streak.
+            </p>
+          </div>
+
+          {/* Sizzler rows */}
+          {displaySizzlers.length === 0 ? (
+            <div style={{ padding: '40px 0 60px', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+              No Sizzlers right now — check back after today&apos;s games.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 80 }}>
+              {displaySizzlers.map(row => (
+                <StreakRowCard
+                  key={`sizzler-${row.leagueId}-${row.teamName}-${row.kind}`}
+                  row={row}
+                  meta={LEAGUE_MAP[row.leagueId]}
+                  sc={C_AMBER}
+                  sl={String(row.streakCount)}
+                  onNavigate={() => router.push(`/leagues/${row.leagueId}/${row.teamSlug}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
