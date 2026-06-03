@@ -31,12 +31,18 @@ const OSWALD = 'var(--font-oswald), "Oswald", sans-serif'
 // ─── League filter config ─────────────────────────────────────────────────────
 
 const LEAGUE_FILTERS = [
-  { key: 'overall', label: 'Overall', color: T.green, active: true  },
-  { key: 'mlb',     label: 'MLB',     color: T.green, active: true  },
-  { key: 'nba',     label: 'NBA',     color: '#f97316', active: false },
-  { key: 'nfl',     label: 'NFL',     color: '#6366f1', active: false },
-  { key: 'nhl',     label: 'NHL',     color: '#38bdf8', active: false },
-  { key: 'wnba',    label: 'WNBA',    color: '#f472b6', active: false },
+  { key: 'overall', label: 'Overall',         color: T.green,    active: true  },
+  { key: 'mlb',     label: 'MLB',             color: T.green,    active: true  },
+  { key: 'nba',     label: 'NBA',             color: '#f59e0b',  active: false },
+  { key: 'nfl',     label: 'NFL',             color: '#f97316',  active: false },
+  { key: 'nhl',     label: 'NHL',             color: '#38bdf8',  active: false },
+  { key: 'wnba',    label: 'WNBA',            color: '#f472b6',  active: false },
+  { key: 'ncaaf',   label: 'NCAAF',           color: '#a855f7',  active: false },
+  { key: 'ncaab',   label: 'NCAAB',           color: '#6366f1',  active: false },
+  { key: 'ncaawb',  label: 'NCAAWB',          color: '#ec4899',  active: false },
+  { key: 'ncaabl',  label: 'College Baseball', color: '#84cc16', active: false },
+  { key: 'atp',     label: 'ATP',             color: '#eab308',  active: false },
+  { key: 'wta',     label: 'WTA',             color: '#f0abfc',  active: false },
 ] as const
 
 type LeagueKey = typeof LEAGUE_FILTERS[number]['key']
