@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useEffect } from 'react'
+import { useMemo, useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
@@ -24,6 +24,14 @@ const LEAGUE_TABS = [
   { key: 'nhl',  label: 'NHL',  active: false },
   { key: 'wnba', label: 'WNBA', active: false },
 ] as const
+
+const LEAGUE_BACKGROUNDS: Record<string, string> = {
+  mlb:  '/images/leagues/mlb-bg.jpg',
+  nba:  '/images/leagues/nba.jpg',
+  nfl:  '/images/leagues/nfl-bg.jpg',
+  nhl:  '/images/leagues/nhl-bg.jpg',
+  wnba: '/images/leagues/wnba-bg.jpg',
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -337,6 +345,7 @@ function MatchupCard({ game, isPro }: { game: ScheduleGame; isPro: boolean }) {
 export default function ScheduleClient({ games, error, topMatchups = [] }: Props) {
   const { isPro } = useAuth()
   const pathname  = usePathname()
+  const [activeLeague, setActiveLeague] = useState<string>('mlb')
 
   const SUB_TABS = [
     { key: 'schedule',     label: 'SCHEDULE',        href: '/schedule'            },
@@ -356,8 +365,35 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
     return Array.from(map.entries()).sort(([a], [b]) => a < b ? -1 : 1)
   }, [games])
 
+  const bgImage = LEAGUE_BACKGROUNDS[activeLeague] ?? LEAGUE_BACKGROUNDS.mlb
+
   return (
-    <div style={{ paddingLeft: 64, minHeight: '100vh' }}>
+    <div style={{ paddingLeft: 64, minHeight: '100vh', position: 'relative' }}>
+      <style>{`
+        @keyframes scheduleBgFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
+
+      {/* League background — fades in on each league switch via key re-mount */}
+      <div
+        key={activeLeague}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: 'cover', backgroundPosition: 'center',
+          animation: 'scheduleBgFadeIn 0.5s ease-in-out',
+        }}
+      />
+      {/* Dark overlay so cards stay readable */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+        background: 'rgba(0,0,0,0.75)',
+      }} />
+
+      {/* All page content sits above background */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
       {/* ── Sticky header (sub-nav + league filter) ───────────────────────── */}
       <div style={{
@@ -402,35 +438,38 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
           display: 'flex', alignItems: 'center', gap: 4, height: 48,
         }}>
-          {LEAGUE_TABS.map(tab => (
-            <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                disabled={!tab.active}
-                style={{
-                  background:    tab.active ? ACCENT : 'transparent',
-                  color:         tab.active ? '#000' : '#ffffff',
-                  border:        tab.active ? 'none' : '1px solid transparent',
-                  borderRadius:  6, padding: '5px 14px',
-                  fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', cursor: tab.active ? 'pointer' : 'default',
-                  fontFamily: MONO, transition: 'all 0.15s',
-                  boxShadow: tab.active ? `0 0 12px ${ACCENT}55` : 'none',
-                }}
-              >
-                {tab.label}
-              </button>
-              {!tab.active && (
-                <span style={{
-                  fontSize: 7, fontWeight: 700, color: '#ffffff',
-                  letterSpacing: '0.12em', textTransform: 'uppercase',
-                  fontFamily: MONO, background: '#1a1a24',
-                  padding: '1px 5px', borderRadius: 2,
-                }}>
-                  SOON
-                </span>
-              )}
-            </div>
-          ))}
+          {LEAGUE_TABS.map(tab => {
+            const isSelected = activeLeague === tab.key
+            return (
+              <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  onClick={() => setActiveLeague(tab.key)}
+                  style={{
+                    background:    isSelected ? ACCENT : 'transparent',
+                    color:         isSelected ? '#000' : '#ffffff',
+                    border:        isSelected ? 'none' : '1px solid transparent',
+                    borderRadius:  6, padding: '5px 14px',
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', cursor: 'pointer',
+                    fontFamily: MONO, transition: 'all 0.15s',
+                    boxShadow: isSelected ? `0 0 12px ${ACCENT}55` : 'none',
+                  }}
+                >
+                  {tab.label}
+                </button>
+                {!tab.active && (
+                  <span style={{
+                    fontSize: 7, fontWeight: 700, color: '#ffffff',
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    fontFamily: MONO, background: '#1a1a24',
+                    padding: '1px 5px', borderRadius: 2,
+                  }}>
+                    SOON
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -558,6 +597,7 @@ export default function ScheduleClient({ games, error, topMatchups = [] }: Props
           </div>
         )}
       </div>
+      </div>{/* /zIndex:1 content wrapper */}
     </div>
   )
 }
