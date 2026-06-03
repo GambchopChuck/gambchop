@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Minus, X, Send } from 'lucide-react'
+import { ChevronRight, Minus, X, Send, Flame } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import {
   Thread, SortMode, CommunityUser,
@@ -16,7 +16,8 @@ import {
 } from '@/lib/community'
 import { BET_TYPE_LABELS } from '@/lib/favorites'
 import { TEAM_ROUTES } from '@/lib/teamRoutes'
-import type { TopFavorite } from './page'
+import { TEAM_COLORS } from '@/lib/teamColors'
+import type { TopFavorite, FanFavorite } from './page'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -545,6 +546,141 @@ function LeftSidebar({ user }: { user: CommunityUser }) {
   )
 }
 
+// ─── Fan Favorite of the Day card ────────────────────────────────────────────
+
+function FanFavoriteCard({ fav }: { fav: FanFavorite }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const colors  = TEAM_COLORS[fav.team_name]
+  const chartUrl = TEAM_ROUTES[fav.team_name]
+  const betLabel = (BET_TYPE_LABELS[fav.bet_type as keyof typeof BET_TYPE_LABELS] ?? fav.bet_type).toUpperCase()
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('team-glow-active', entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={cardRef}
+      className="team-glow-border"
+      style={{
+        background: G.cardBg,
+        border: `1px solid ${G.cardBorder}`,
+        padding: '16px 20px',
+        marginBottom: 16,
+        '--team-primary':   colors?.primary   ?? G.accentFull,
+        '--team-secondary': colors?.secondary ?? G.white,
+      } as React.CSSProperties}
+    >
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <Flame size={14} color="#fbbf24" />
+        <span style={{
+          fontFamily: OSWALD, fontSize: 10, fontWeight: 600,
+          color: G.accentFull, letterSpacing: '0.2em', textTransform: 'uppercase',
+        }}>
+          Fan Favorite of the Day
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
+        {/* Left: team info */}
+        <div style={{ flex: 1, minWidth: 180 }}>
+          {/* League badge */}
+          <div style={{
+            display: 'inline-block',
+            fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: G.accentFull, background: G.accentFaint,
+            border: `1px solid ${G.cardBorder}`, borderRadius: 2,
+            padding: '2px 7px', marginBottom: 8,
+          }}>
+            {fav.league_name}
+          </div>
+
+          {/* Team name */}
+          <div style={{
+            fontFamily: OSWALD, fontSize: 22, fontWeight: 700,
+            color: G.white, textTransform: 'uppercase', lineHeight: 1.1, marginBottom: 6,
+          }}>
+            {fav.team_name}
+          </div>
+
+          {/* Bet type */}
+          <div style={{
+            fontFamily: OSWALD, fontSize: 11, letterSpacing: '0.15em',
+            color: G.accentFull, marginBottom: 6,
+          }}>
+            {betLabel}
+          </div>
+
+          {/* Member count */}
+          <div style={{ fontFamily: SANS, fontSize: 11, color: G.muted }}>
+            Favorited by {fav.today_count} member{fav.today_count !== 1 ? 's' : ''} today
+          </div>
+        </div>
+
+        {/* Right: chart strip + button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, flexShrink: 0 }}>
+          {fav.chart_svg ? (
+            <div
+              dangerouslySetInnerHTML={{ __html: fav.chart_svg }}
+              style={{ lineHeight: 0 }}
+              title={`${fav.team_name} last 10 ${betLabel} outcomes`}
+            />
+          ) : (
+            <div style={{ fontFamily: MONO, fontSize: 9, color: G.dim, letterSpacing: '0.1em' }}>
+              No chart data yet
+            </div>
+          )}
+
+          {chartUrl ? (
+            <Link href={chartUrl} style={{ textDecoration: 'none' }}>
+              <button style={{
+                fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
+                fontWeight: 700, background: G.accentFull, border: 'none', borderRadius: 0,
+                color: '#000', padding: '7px 14px', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                View Chart →
+              </button>
+            </Link>
+          ) : (
+            <div style={{
+              fontFamily: OSWALD, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
+              background: G.hairline, color: G.dim, padding: '7px 14px',
+            }}>
+              View Chart →
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Fan Favorite empty state ─────────────────────────────────────────────────
+
+function FanFavoriteEmpty() {
+  return (
+    <div style={{
+      border: `1px dashed ${G.cardBorder}`,
+      padding: '16px 20px',
+      marginBottom: 16,
+      display: 'flex', alignItems: 'center', gap: 10,
+    }}>
+      <Flame size={14} color="#fbbf2466" />
+      <span style={{ fontFamily: SANS, fontSize: 11, color: G.dim, lineHeight: 1.5 }}>
+        No fan favorite yet today — start favoriting chart rows to cast your vote.
+      </span>
+    </div>
+  )
+}
+
 // ─── Top Member Favorites card ────────────────────────────────────────────────
 
 function FavoriteCard({ fav }: { fav: TopFavorite | null }) {
@@ -729,7 +865,7 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
 
 // ─── Main exported client component ──────────────────────────────────────────
 
-export default function CommunityClient({ topFavorites }: { topFavorites: TopFavorite[] }) {
+export default function CommunityClient({ topFavorites, fanFavorite }: { topFavorites: TopFavorite[]; fanFavorite: FanFavorite | null }) {
   const { isPro, setIsPro } = useAuth()
   const [user, setUser] = useState<CommunityUser | null>(null)
   const [threads, setThreads] = useState<Thread[]>([])
@@ -867,6 +1003,13 @@ export default function CommunityClient({ topFavorites }: { topFavorites: TopFav
               )
             })}
           </div>
+
+          {/* Fan Favorite of the Day */}
+          {fanFavorite ? (
+            <FanFavoriteCard fav={fanFavorite} />
+          ) : (
+            <FanFavoriteEmpty />
+          )}
 
           {/* Post grid */}
           {loading ? (
