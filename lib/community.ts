@@ -16,6 +16,7 @@ export interface Thread {
   tags: string[]
   status: 'approved' | 'pending' | 'removed'
   reply_count: number
+  bettor_type?: string | null
   created_at: string
   updated_at: string
 }

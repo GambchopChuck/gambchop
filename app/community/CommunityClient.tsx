@@ -73,6 +73,21 @@ const POLL = {
 }
 
 
+const BETTOR_FILTER_OPTS: { label: string; value: string | null }[] = [
+  { label: 'ALL TYPES',       value: null          },
+  { label: 'STRAIGHT BETTOR', value: 'straight'    },
+  { label: 'PARLAYER',        value: 'parlayer'    },
+  { label: 'MICROBETTOR',     value: 'microbettor' },
+  { label: 'MARGIN MAC',      value: 'margin-mac'  },
+]
+
+const BETTOR_SIDEBAR_ITEMS = [
+  { id: 'straight',    icon: '🎯', name: 'Straight Bettor', desc: 'Moneyline only. Full confidence, every time.'                   },
+  { id: 'parlayer',    icon: '🃏', name: 'Parlayer',         desc: 'Multiple legs, maximum conviction.'                             },
+  { id: 'microbettor', icon: '🌱', name: 'Microbettor',      desc: 'Patient, precise, riding streaks from a micropot.'              },
+  { id: 'margin-mac',  icon: '🎫', name: 'Margin Mac',       desc: 'Super parlays. Lotto approach. All it takes is one.'            },
+]
+
 const LEAGUE_CATS: { label: string; tag: string | null }[] = [
   { label: 'ALL',   tag: null      },
   { label: 'MLB',   tag: '#MLB'    },
@@ -261,14 +276,16 @@ function UsernameSetup({ onSet }: { onSet: (u: CommunityUser) => void }) {
 
 // ─── New Thread Modal ─────────────────────────────────────────────────────────
 
-function NewThreadModal({ user, onClose, onCreate }: {
+function NewThreadModal({ user, onClose, onCreate, defaultBettorType }: {
   user: CommunityUser
   onClose: () => void
   onCreate: (t: Thread) => void
+  defaultBettorType?: string | null
 }) {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedBettorType, setSelectedBettorType] = useState<string | null>(defaultBettorType ?? null)
   const [err, setErr] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const remaining = threadsRemaining(user.userId)
@@ -295,6 +312,7 @@ function NewThreadModal({ user, onClose, onCreate }: {
       content: filterContent(content.trim()),
       tags: selectedTags,
       status: 'approved' as const,
+      bettor_type: selectedBettorType ?? undefined,
     }
 
     const saved = await createThread(threadData)
@@ -377,6 +395,29 @@ function NewThreadModal({ user, onClose, onCreate }: {
                       borderRadius: 3, padding: '4px 10px', cursor: 'pointer',
                       fontWeight: active ? 700 : 500,
                     }}>{tag}</button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Bettor type tag (optional) */}
+            <div>
+              <label style={{ fontFamily: OSWALD, fontSize: 10, color: G.muted, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                Your Bettor Type Tag <span style={{ color: G.dim, fontSize: 8 }}>(optional)</span>
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {BETTOR_SIDEBAR_ITEMS.map(bt => {
+                  const cfg = BETTOR_TYPE_CONFIG[bt.id]
+                  const active = selectedBettorType === bt.id
+                  return (
+                    <button key={bt.id} onClick={() => setSelectedBettorType(active ? null : bt.id)} style={{
+                      fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      background: active ? cfg.bg : 'transparent',
+                      border: `1px solid ${active ? cfg.border : G.hairline}`,
+                      color: active ? cfg.color : G.muted,
+                      borderRadius: 3, padding: '4px 10px', cursor: 'pointer',
+                      fontWeight: active ? 700 : 500,
+                    }}>{bt.icon} {cfg.label}</button>
                   )
                 })}
               </div>
@@ -512,10 +553,26 @@ function PostCard({ thread, isLiked, likeCount, bettorType, canLike, onLike }: {
 
 function LeftSidebar({ user }: { user: CommunityUser }) {
   const [openRules, setOpenRules] = useState<number[]>([])
+  const [bettorCounts, setBettorCounts] = useState<Map<string, number>>(new Map())
 
   const toggleRule = (i: number) => {
     setOpenRules(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])
   }
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('bettor_type')
+      .not('bettor_type', 'is', null)
+      .then(({ data }) => {
+        if (!data) return
+        const counts = new Map<string, number>()
+        for (const row of data as { bettor_type: string | null }[]) {
+          if (row.bettor_type) counts.set(row.bettor_type, (counts.get(row.bettor_type) ?? 0) + 1)
+        }
+        setBettorCounts(counts)
+      })
+  }, [])
 
   return (
     <div style={{
@@ -590,6 +647,34 @@ function LeftSidebar({ user }: { user: CommunityUser }) {
         </div>
         <div style={{ marginTop: 16, fontFamily: MONO, fontSize: 9, color: G.dim, letterSpacing: '0.08em' }}>
           Logged in as <span style={{ color: G.accentText }}>@{user.username}</span>
+        </div>
+      </div>
+
+      {/* Bettor Types card */}
+      <div style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20, marginTop: 20 }}>
+        <SectionHeader>Bettor Types</SectionHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {BETTOR_SIDEBAR_ITEMS.map(bt => {
+            const cfg = BETTOR_TYPE_CONFIG[bt.id]
+            const count = bettorCounts.get(bt.id) ?? 0
+            return (
+              <div key={bt.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.2 }}>{bt.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: G.white }}>{bt.name}</span>
+                    <span style={{
+                      fontFamily: MONO, fontSize: 7, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
+                      borderRadius: 2, padding: '1px 4px',
+                    }}>{cfg.label}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 8, color: G.dim }}>{count} members</span>
+                  </div>
+                  <div style={{ fontFamily: SANS, fontSize: 10, color: G.muted, lineHeight: 1.5 }}>{bt.desc}</div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -874,6 +959,8 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
   const [bettorTypes, setBettorTypes] = useState<Map<string, string>>(
     () => new Map(Object.entries(SEED_BETTOR_TYPES))
   )
+  const [activeBettorFilter, setActiveBettorFilter] = useState<string | null>(null)
+  const [authBettorType, setAuthBettorType] = useState<string | null>(null)
   // Like state: Set of liked thread IDs, Map of like counts
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likeCounts, setLikeCounts] = useState<Map<string, number>>(new Map())
@@ -899,8 +986,8 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
     loadThreads()
   }, [sort, activeTag]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch the logged-in auth user's own bettor_type by UUID so their posts
-  // always show the badge regardless of username matching.
+  // Fetch the logged-in auth user's own bettor_type by UUID — stores it for
+  // badge display on their posts and pre-fills the new thread modal.
   useEffect(() => {
     if (!authUser || !user) return
     supabase
@@ -909,8 +996,10 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
       .eq('id', authUser.id)
       .single()
       .then(({ data }) => {
-        if (data?.bettor_type) {
-          setBettorTypes(prev => new Map(prev).set(user.username, data.bettor_type as string))
+        const bt = data?.bettor_type as string | null | undefined
+        if (bt) {
+          setAuthBettorType(bt)
+          setBettorTypes(prev => new Map(prev).set(user.username, bt))
         }
       })
   }, [authUser?.id, user?.username]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -965,6 +1054,11 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })
     .filter(t => !activeTag || t.tags.includes(activeTag))
+    .filter(t => {
+      if (!activeBettorFilter) return true
+      const bt = t.bettor_type ?? bettorTypes.get(t.username)
+      return bt === activeBettorFilter
+    })
 
   if (!isPro) return <ProGate />
   if (!user)  return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
@@ -1008,7 +1102,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
         <div style={{ flex: 1, minWidth: 0 }}>
 
           {/* Tab bar + New Topic button */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {LEAGUE_CATS.map(({ label, tag }) => {
                 const isActive = activeTag === tag
@@ -1042,6 +1136,34 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
             >
               + NEW TOPIC
             </button>
+          </div>
+
+          {/* Bettor type filter row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: MONO, fontSize: 8, color: G.muted, letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0 }}>
+              Bettor Type:
+            </span>
+            {BETTOR_FILTER_OPTS.map(opt => {
+              const isActive = activeBettorFilter === opt.value
+              const cfg = opt.value ? BETTOR_TYPE_CONFIG[opt.value] : null
+              return (
+                <button
+                  key={opt.label}
+                  onClick={() => setActiveBettorFilter(opt.value)}
+                  style={{
+                    fontFamily: OSWALD, fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    fontWeight: 600,
+                    color: isActive ? (cfg ? cfg.color : '#000') : G.muted,
+                    background: isActive ? (cfg ? cfg.bg : G.accentFull) : 'transparent',
+                    border: `1px solid ${isActive ? (cfg ? cfg.border : G.accentFull) : G.cardBorder}`,
+                    borderRadius: 2, padding: '3px 9px', cursor: 'pointer',
+                    transition: 'all 150ms ease-out',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
           </div>
 
           {/* Sort tabs */}
@@ -1091,7 +1213,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
                   thread={t}
                   isLiked={likedPosts.has(t.id)}
                   likeCount={likeCounts.get(t.id) ?? 0}
-                  bettorType={bettorTypes.get(t.username) ?? null}
+                  bettorType={t.bettor_type ?? bettorTypes.get(t.username) ?? null}
                   canLike={!!authUser}
                   onLike={() => handleLike(t.id)}
                 />
@@ -1111,6 +1233,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
           user={user}
           onClose={() => setShowNew(false)}
           onCreate={t => setThreads(prev => [t, ...prev])}
+          defaultBettorType={authBettorType}
         />
       )}
     </div>
