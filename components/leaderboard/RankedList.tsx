@@ -79,7 +79,7 @@ interface RowItemProps {
 }
 
 function RowItem({ row, countUnit, rangeLabel, isLast }: RowItemProps) {
-  const rankStr = String(row.rank).padStart(2, '0')
+  const rankStr = String(row.rank)
   const isZero  = row.count === 0
   const rowRef  = useRef<HTMLDivElement>(null)
   const colors  = TEAM_COLORS[row.team]
