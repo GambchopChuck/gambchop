@@ -313,13 +313,15 @@ function HeroCard({ article }: { article: NewsArticle }) {
 
           <div style={{ marginTop: 'auto' }}>
             {sc && (
-              <span style={{
-                display: 'inline-block', background: sc.bg, color: sc.text,
-                border: `1px solid ${sc.border}`, fontSize: 10, fontWeight: 700,
-                letterSpacing: '0.18em', textTransform: 'uppercase',
-                padding: '3px 10px', borderRadius: 4, marginBottom: 14,
-                fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
-              }}>
+              <span
+                className={`sport-badge-${(article.sport ?? '').toLowerCase()}`}
+                style={{
+                  display: 'inline-block', fontSize: 10, fontWeight: 700,
+                  letterSpacing: '0.18em', textTransform: 'uppercase',
+                  padding: '3px 10px', borderRadius: 4, marginBottom: 14,
+                  fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                }}
+              >
                 {article.sport}
               </span>
             )}
@@ -377,13 +379,15 @@ function ArticleRow({ article }: { article: NewsArticle }) {
       >
         <div style={{ paddingTop: 2, flexShrink: 0, width: 52 }}>
           {sc && (
-            <span style={{
-              display: 'inline-block', background: sc.bg, color: sc.text,
-              border: `1px solid ${sc.border}`, fontSize: 9, fontWeight: 700,
-              letterSpacing: '0.15em', textTransform: 'uppercase',
-              padding: '2px 8px', borderRadius: 3,
-              fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
-            }}>
+            <span
+              className={`sport-badge-${(article.sport ?? '').toLowerCase()}`}
+              style={{
+                display: 'inline-block', fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.15em', textTransform: 'uppercase',
+                padding: '2px 8px', borderRadius: 3,
+                fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
+              }}
+            >
               {article.sport}
             </span>
           )}
@@ -442,13 +446,15 @@ function StreakArticleRow({ article }: { article: StreakArticle }) {
     >
       {/* Type badge */}
       <div style={{ paddingTop: 2, flexShrink: 0, width: 64 }}>
-        <span style={{
-          display: 'inline-block',
-          background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`,
-          fontSize: 7, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-          padding: '3px 6px', borderRadius: 3,
-          fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
-        }}>
+        <span
+          className={`article-badge-${article.article_type ?? 'streak'}`}
+          style={{
+            display: 'inline-block',
+            fontSize: 7, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+            padding: '3px 6px', borderRadius: 3,
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif', whiteSpace: 'nowrap',
+          }}
+        >
           {badge.label}
         </span>
       </div>
@@ -632,13 +638,15 @@ function TrendingWidget({ trending }: { trending: NewsArticle[] }) {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 {sc && (
-                  <span style={{
-                    display: 'inline-block', background: sc.bg, color: sc.text,
-                    border: `1px solid ${sc.border}`, fontSize: 8, fontWeight: 700,
-                    letterSpacing: '0.18em', textTransform: 'uppercase',
-                    padding: '2px 6px', borderRadius: 3, marginBottom: 5,
-                    fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
-                  }}>
+                  <span
+                    className={`sport-badge-${(article.sport ?? '').toLowerCase()}`}
+                    style={{
+                      display: 'inline-block', fontSize: 8, fontWeight: 700,
+                      letterSpacing: '0.18em', textTransform: 'uppercase',
+                      padding: '2px 6px', borderRadius: 3, marginBottom: 5,
+                      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                    }}
+                  >
                     {article.sport}
                   </span>
                 )}

@@ -15,17 +15,18 @@ type Article = {
 
 function SportBadge({ sport }: { sport: string | null }) {
   if (!sport) return null
-  const sc = SPORT_COLORS[sport]
-  if (!sc) return null
+  if (!SPORT_COLORS[sport]) return null
   return (
-    <span style={{
-      display: 'inline-block',
-      background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`,
-      fontSize: 8, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase',
-      padding: '2px 7px',
-      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
-      flexShrink: 0,
-    }}>
+    <span
+      className={`sport-badge-${sport.toLowerCase()}`}
+      style={{
+        display: 'inline-block',
+        fontSize: 8, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase',
+        padding: '2px 7px',
+        fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+        flexShrink: 0,
+      }}
+    >
       {sport}
     </span>
   )

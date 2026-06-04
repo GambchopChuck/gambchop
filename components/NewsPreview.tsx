@@ -135,16 +135,17 @@ export default async function NewsPreview() {
                     {/* Sport badge */}
                     <div style={{ flexShrink: 0, paddingTop: 2, width: 40 }}>
                       {sc && (
-                        <span style={{
-                          display: 'inline-block',
-                          background: sc.bg, color: sc.text,
-                          border: `1px solid ${sc.border}`,
-                          fontSize: 8, fontWeight: 700,
-                          letterSpacing: '0.13em', textTransform: 'uppercase',
-                          padding: '2px 5px', borderRadius: 3,
-                          fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
-                          whiteSpace: 'nowrap',
-                        }}>
+                        <span
+                          className={`sport-badge-${(a.sport ?? '').toLowerCase()}`}
+                          style={{
+                            display: 'inline-block',
+                            fontSize: 8, fontWeight: 700,
+                            letterSpacing: '0.13em', textTransform: 'uppercase',
+                            padding: '2px 5px', borderRadius: 3,
+                            fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {a.sport}
                         </span>
                       )}
@@ -213,16 +214,17 @@ export default async function NewsPreview() {
                 >
                   {/* Type badge */}
                   <div style={{ flexShrink: 0, paddingTop: 2, width: 56 }}>
-                    <span style={{
-                      display: 'inline-block',
-                      background: badge.bg, color: badge.color,
-                      border: `1px solid ${badge.border}`,
-                      fontSize: 7, fontWeight: 700,
-                      letterSpacing: '0.12em', textTransform: 'uppercase',
-                      padding: '2px 5px', borderRadius: 3,
-                      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
-                      whiteSpace: 'nowrap',
-                    }}>
+                    <span
+                      className={`article-badge-${a.article_type ?? 'streak'}`}
+                      style={{
+                        display: 'inline-block',
+                        fontSize: 7, fontWeight: 700,
+                        letterSpacing: '0.12em', textTransform: 'uppercase',
+                        padding: '2px 5px', borderRadius: 3,
+                        fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {badge.label}
                     </span>
                   </div>

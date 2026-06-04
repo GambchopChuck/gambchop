@@ -191,3 +191,18 @@ body {
 .comm-cta-glow:hover {
   box-shadow: 0 0 14px 3px rgba(0,255,255,0.5), 0 0 28px 8px rgba(0,255,255,0.25);
 }
+
+/* ── Sport badge pills — filled background + glow ────────────────────────── */
+.sport-badge-mlb  { background: #4ade80; color: #000; box-shadow: 0 0 8px 2px rgba(74,222,128,0.7),   0 0 16px 4px rgba(74,222,128,0.3); }
+.sport-badge-nba  { background: #fb923c; color: #000; box-shadow: 0 0 8px 2px rgba(251,146,60,0.7),   0 0 16px 4px rgba(251,146,60,0.3); }
+.sport-badge-nfl  { background: #818cf8; color: #000; box-shadow: 0 0 8px 2px rgba(129,140,248,0.7),  0 0 16px 4px rgba(129,140,248,0.3); }
+.sport-badge-nhl  { background: #38bdf8; color: #000; box-shadow: 0 0 8px 2px rgba(56,189,248,0.7),   0 0 16px 4px rgba(56,189,248,0.3); }
+.sport-badge-wnba { background: #f472b6; color: #000; box-shadow: 0 0 8px 2px rgba(244,114,182,0.7),  0 0 16px 4px rgba(244,114,182,0.3); }
+.sport-badge-atp  { background: #facc15; color: #000; box-shadow: 0 0 8px 2px rgba(250,204,21,0.7),   0 0 16px 4px rgba(250,204,21,0.3); }
+.sport-badge-wta  { background: #c084fc; color: #000; box-shadow: 0 0 8px 2px rgba(192,132,252,0.7),  0 0 16px 4px rgba(192,132,252,0.3); }
+
+/* ── Article type badges — filled background + glow ─────────────────────── */
+.article-badge-streak   { background: #4ade80; color: #000; box-shadow: 0 0 8px 2px rgba(74,222,128,0.7),  0 0 16px 4px rgba(74,222,128,0.3); }
+.article-badge-record   { background: #38bdf8; color: #000; box-shadow: 0 0 8px 2px rgba(56,189,248,0.7),  0 0 16px 4px rgba(56,189,248,0.3); }
+.article-badge-reversal { background: #fbbf24; color: #000; box-shadow: 0 0 8px 2px rgba(251,191,36,0.7),  0 0 16px 4px rgba(251,191,36,0.3); }
+.article-badge-leader   { background: #a855f7; color: #000; box-shadow: 0 0 8px 2px rgba(168,85,247,0.7),  0 0 16px 4px rgba(168,85,247,0.3); }
