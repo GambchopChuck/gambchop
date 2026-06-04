@@ -35,6 +35,14 @@
     {
       "path": "/api/cron/top-matchups",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-prop-lines",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-prop-results",
+      "schedule": "0 6 * * *"
     }
   ]
 }
