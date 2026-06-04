@@ -27,6 +27,21 @@ const BORDER = '#1a1a24'
 const TEXT   = '#f4f4f5'
 const MUTED  = '#52525b'
 
+// Offset each section in the rainbow cycle so they are never in sync
+const SECTION_DELAYS: Record<string, string> = {
+  mlb:    '0s',
+  nfl:    '-1s',
+  nba:    '-2s',
+  nhl:    '-3s',
+  wnba:   '-4s',
+  ncaaf:  '-5s',
+  ncaab:  '-0.5s',
+  ncaawb: '-1.5s',
+  ncaabl: '-2.5s',
+  atp:    '-3.5s',
+  wta:    '-4.5s',
+}
+
 // ─── Team Card ────────────────────────────────────────────────────────────────
 
 function TeamCard({ name, leagueId, accent }: {
@@ -84,20 +99,37 @@ function TeamCard({ name, leagueId, accent }: {
 
 // ─── League Section ───────────────────────────────────────────────────────────
 
-function LeagueSection({ id, name, full, emoji, accent, entities, entityType }: {
+function LeagueSection({ id, name, full, emoji, accent, entities, entityType, animationDelay }: {
   id: string; name: string; full: string; emoji: string
   accent: string; entities: string[]; entityType: string
+  animationDelay: string
 }) {
-  const bgImage = LEAGUE_BACKGROUNDS[id] ?? '/images/hero-bg.png'
+  const bgImage    = LEAGUE_BACKGROUNDS[id] ?? '/images/hero-bg.png'
+  const sectionRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => entry.target.classList.toggle('league-section-border', entry.isIntersecting),
+      { threshold: 0.05 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
-    <section style={{
-      position: 'relative', overflow: 'hidden',
-      marginBottom: 48,
-      backgroundImage: `url(${bgImage})`,
-      backgroundSize: 'cover', backgroundPosition: 'center',
-      backgroundAttachment: 'local',
-    }}>
+    <section
+      ref={sectionRef}
+      style={{
+        position: 'relative', overflow: 'hidden',
+        marginBottom: 48,
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        backgroundAttachment: 'local',
+        animationDelay,
+      }}
+    >
       {/* Dark overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 0 }} />
 
@@ -211,6 +243,7 @@ export default function TeamsPage() {
             accent={l.accent}
             entities={l.entities}
             entityType={l.entityType}
+            animationDelay={SECTION_DELAYS[l.id] ?? '0s'}
           />
         ))}
       </div>

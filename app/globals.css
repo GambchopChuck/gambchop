@@ -192,6 +192,22 @@ body {
   box-shadow: 0 0 14px 3px rgba(0,255,255,0.5), 0 0 28px 8px rgba(0,255,255,0.25);
 }
 
+/* ── Teams page: rotating rainbow border per league section ──────────────── */
+@keyframes sectionRainbowRotate {
+  0%   { border-color: #39ff9a; box-shadow: 0 0 12px 3px rgba(57,255,154,0.4);  }
+  16%  { border-color: #00d4ff; box-shadow: 0 0 12px 3px rgba(0,212,255,0.4);   }
+  33%  { border-color: #a855f7; box-shadow: 0 0 12px 3px rgba(168,85,247,0.4);  }
+  50%  { border-color: #f472b6; box-shadow: 0 0 12px 3px rgba(244,114,182,0.4); }
+  66%  { border-color: #fbbf24; box-shadow: 0 0 12px 3px rgba(251,191,36,0.4);  }
+  83%  { border-color: #fb923c; box-shadow: 0 0 12px 3px rgba(251,146,60,0.4);  }
+  100% { border-color: #39ff9a; box-shadow: 0 0 12px 3px rgba(57,255,154,0.4);  }
+}
+.league-section-border {
+  border: 1px solid #39ff9a;
+  animation: sectionRainbowRotate 6s linear infinite;
+  will-change: border-color, box-shadow;
+}
+
 /* ── Sport badge pills — filled background + glow ────────────────────────── */
 .sport-badge-mlb  { background: #4ade80; color: #000; box-shadow: 0 0 8px 2px rgba(74,222,128,0.7),   0 0 16px 4px rgba(74,222,128,0.3); }
 .sport-badge-nba  { background: #fb923c; color: #000; box-shadow: 0 0 8px 2px rgba(251,146,60,0.7),   0 0 16px 4px rgba(251,146,60,0.3); }
