@@ -14,7 +14,7 @@ const T = {
 
 export default function LeaguesPage() {
   return (
-    <main style={{ position: 'relative', minHeight: '100vh', background: '#0A0A0B', overflow: 'hidden' }}>
+    <main style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
 
       {/* Radiant ambient background */}
       <div
