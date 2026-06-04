@@ -60,17 +60,6 @@ const GUIDELINES = [
   'No unrelated or off-topic content',
 ]
 
-const POLL = {
-  question: 'Who wins the NBA Finals MVP?',
-  options: [
-    { name: 'Jayson Tatum',   pct: 44 },
-    { name: 'Nikola Jokić',   pct: 31 },
-    { name: 'SGA',            pct: 18 },
-    { name: 'Luka Dončić',    pct: 7  },
-  ],
-  votes: 1842,
-  ts: '2 hrs ago',
-}
 
 
 const BETTOR_FILTER_OPTS: { label: string; value: string | null }[] = [
@@ -569,26 +558,10 @@ function PostCard({ thread, isLiked, likeCount, bettorType, canLike, onLike }: {
 
 function LeftSidebar({ user }: { user: CommunityUser }) {
   const [openRules, setOpenRules] = useState<number[]>([])
-  const [bettorCounts, setBettorCounts] = useState<Map<string, number>>(new Map())
 
   const toggleRule = (i: number) => {
     setOpenRules(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])
   }
-
-  useEffect(() => {
-    supabase
-      .from('profiles')
-      .select('bettor_type')
-      .not('bettor_type', 'is', null)
-      .then(({ data }) => {
-        if (!data) return
-        const counts = new Map<string, number>()
-        for (const row of data as { bettor_type: string | null }[]) {
-          if (row.bettor_type) counts.set(row.bettor_type, (counts.get(row.bettor_type) ?? 0) + 1)
-        }
-        setBettorCounts(counts)
-      })
-  }, [])
 
   return (
     <div style={{
@@ -666,33 +639,6 @@ function LeftSidebar({ user }: { user: CommunityUser }) {
         </div>
       </div>
 
-      {/* Bettor Types card */}
-      <div className="comm-card-glow-static" style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20, marginTop: 20, paddingBottom: 16 }}>
-        <SectionHeader>Bettor Types</SectionHeader>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {BETTOR_SIDEBAR_ITEMS.map(bt => {
-            const cfg = BETTOR_TYPE_CONFIG[bt.id]
-            const count = bettorCounts.get(bt.id) ?? 0
-            return (
-              <div key={bt.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.2 }}>{bt.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: G.white }}>{bt.name}</span>
-                    <span style={{
-                      fontFamily: MONO, fontSize: 7, letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
-                      borderRadius: 2, padding: '1px 4px',
-                    }}>{cfg.label}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 8, color: G.dim }}>{count} members</span>
-                  </div>
-                  <div style={{ fontFamily: SANS, fontSize: 10, color: G.muted, lineHeight: 1.5 }}>{bt.desc}</div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
     </div>
   )
 }
@@ -909,6 +855,23 @@ function FavoriteCard({ fav }: { fav: TopFavorite | null }) {
 // ─── Right Sidebar ────────────────────────────────────────────────────────────
 
 function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
+  const [bettorCounts, setBettorCounts] = useState<Map<string, number>>(new Map())
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('bettor_type')
+      .not('bettor_type', 'is', null)
+      .then(({ data }) => {
+        if (!data) return
+        const counts = new Map<string, number>()
+        for (const row of data as { bettor_type: string | null }[]) {
+          if (row.bettor_type) counts.set(row.bettor_type, (counts.get(row.bettor_type) ?? 0) + 1)
+        }
+        setBettorCounts(counts)
+      })
+  }, [])
+
   const cards: (TopFavorite | null)[] = [
     ...topFavorites.slice(0, 4),
     ...Array(Math.max(0, 4 - topFavorites.length)).fill(null),
@@ -917,27 +880,31 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
   return (
     <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-      {/* Live Poll */}
+      {/* Bettor Types */}
       <div className="comm-card-glow-static" style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
-        <SectionHeader>Live Poll</SectionHeader>
-        <div style={{ fontFamily: SANS, fontSize: 12, color: G.white, fontWeight: 600, marginBottom: 12, lineHeight: 1.4 }}>
-          {POLL.question}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {POLL.options.map((opt, i) => (
-            <div key={i}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontFamily: SANS, fontSize: 10, color: G.muted }}>{opt.name}</span>
-                <span style={{ fontFamily: MONO, fontSize: 10, color: G.accentFull }}>{opt.pct}%</span>
+        <SectionHeader>Bettor Types</SectionHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {BETTOR_SIDEBAR_ITEMS.map(bt => {
+            const cfg = BETTOR_TYPE_CONFIG[bt.id]
+            const count = bettorCounts.get(bt.id) ?? 0
+            return (
+              <div key={bt.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.2 }}>{bt.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: G.white }}>{bt.name}</span>
+                    <span style={{
+                      fontFamily: MONO, fontSize: 7, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`,
+                      borderRadius: 2, padding: '1px 4px',
+                    }}>{cfg.label}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 8, color: G.dim }}>{count} members</span>
+                  </div>
+                  <div style={{ fontFamily: SANS, fontSize: 10, color: G.muted, lineHeight: 1.5 }}>{bt.desc}</div>
+                </div>
               </div>
-              <div style={{ height: 4, background: G.hairline, borderRadius: 2 }}>
-                <div style={{ width: `${opt.pct}%`, height: '100%', background: i === 0 ? G.accentFull : G.accentText, borderRadius: 2 }} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ fontFamily: MONO, fontSize: 9, color: G.dim, marginTop: 10 }}>
-          {POLL.votes.toLocaleString()} votes · {POLL.ts}
+            )
+          })}
         </div>
       </div>
 
