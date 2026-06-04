@@ -34,6 +34,9 @@ const SPORT_KEYWORDS: Record<string, RegExp> = {
 // at least one of the six sports by their primary identifier.
 const ANY_SPORT_RE = /\b(MLB|baseball|NBA|basketball|NFL|football|NHL|hockey|WNBA|ATP|WTA|tennis)\b/i
 
+// Sources known to produce non-English content despite language=en param.
+const BLOCKED_SOURCES = ['prtimes.jp', 'nikkan-gendai.com']
+
 type NewsApiArticle = {
   source: { id: string | null; name: string }
   author: string | null
@@ -129,9 +132,14 @@ async function fetchAndStore(apiKey: string, sport: string, q: string): Promise<
 
     // Drop any article whose headline+description doesn't mention the expected sport
     // AND doesn't pass the cross-sport sanity check.
+    // Also drop articles from known non-English sources.
     const matched = articles.filter(a => {
       const text = `${a.title} ${a.description ?? ''}`
-      return (SPORT_KEYWORDS[sport]?.test(text) ?? false) && ANY_SPORT_RE.test(text)
+      if (!(SPORT_KEYWORDS[sport]?.test(text) ?? false) || !ANY_SPORT_RE.test(text)) return false
+      const sourceId  = (a.source.id  ?? '').toLowerCase()
+      const sourceUrl = a.url.toLowerCase()
+      if (BLOCKED_SOURCES.some(s => sourceId.includes(s) || sourceUrl.includes(s))) return false
+      return true
     })
 
     const skipped = articles.length - matched.length

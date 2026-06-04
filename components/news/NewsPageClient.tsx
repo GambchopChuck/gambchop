@@ -24,6 +24,13 @@ const ARTICLE_TYPE_BADGE: Record<string, { bg: string; color: string; border: st
 }
 const DEFAULT_BADGE = ARTICLE_TYPE_BADGE.streak
 
+// Exclude articles whose headline contains non-Latin scripts (Japanese, Chinese,
+// Korean, Arabic, etc.) — guards against language=en NewsAPI bypasses.
+function isEnglishArticle(headline: string): boolean {
+  const nonLatinPattern = /[　-鿿가-힯؀-ۿ]/
+  return !nonLatinPattern.test(headline)
+}
+
 type PrimaryTab = 'sports' | 'chart'
 
 interface Props {
@@ -45,7 +52,10 @@ export default function NewsPageClient({ articles, streakArticles }: Props) {
   }, [searchParams])
 
   const filteredNews = useMemo(
-    () => leagueTab === 'ALL' ? articles : articles.filter(a => a.sport === leagueTab),
+    () => {
+      const english = articles.filter(a => isEnglishArticle(a.headline))
+      return leagueTab === 'ALL' ? english : english.filter(a => a.sport === leagueTab)
+    },
     [articles, leagueTab],
   )
 
