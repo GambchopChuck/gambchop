@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { NewsArticle, StreakArticle, OutcomeCell, SportTag } from '@/lib/news'
-import { SPORT_TAGS, SPORT_COLORS, timeAgo } from '@/lib/news'
+import { SPORT_TAGS, SPORT_COLORS, timeAgo, isEnglishArticle } from '@/lib/news'
 import { TEAM_ROUTES, linkifyTeamNames } from '@/lib/teamRoutes'
 
 const ACCENT = '#39ff9a'
@@ -23,13 +23,6 @@ const ARTICLE_TYPE_BADGE: Record<string, { bg: string; color: string; border: st
   leader:   { bg: '#150a1a', color: '#a855f7', border: '#a855f733', label: 'LEADER'   },
 }
 const DEFAULT_BADGE = ARTICLE_TYPE_BADGE.streak
-
-// Exclude articles whose headline contains non-Latin scripts (Japanese, Chinese,
-// Korean, Arabic, etc.) — guards against language=en NewsAPI bypasses.
-function isEnglishArticle(headline: string): boolean {
-  const nonLatinPattern = /[　-鿿가-힯؀-ۿ]/
-  return !nonLatinPattern.test(headline)
-}
 
 type PrimaryTab = 'sports' | 'chart'
 

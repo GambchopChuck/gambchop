@@ -11,6 +11,7 @@ import OurMission from '@/components/OurMission'
 import HomepagePricingSection from '@/components/HomepagePricingSection'
 import SportsNewsPreview from '@/components/SportsNewsPreview'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { isEnglishArticle } from '@/lib/news'
 import { rowToTopMatchup } from '@/lib/topMatchups'
 import type { TopMatchupData } from '@/lib/topMatchups'
 import { X, ShoppingBag } from 'lucide-react'
@@ -44,8 +45,8 @@ export default async function HomePage() {
       .from('news_articles')
       .select('id, headline, source, sport, published_at, article_url, image_url')
       .order('published_at', { ascending: false })
-      .limit(3)
-    sportsArticles = data ?? []
+      .limit(20)
+    sportsArticles = (data ?? []).filter(a => isEnglishArticle(a.headline)).slice(0, 3)
   } catch {
     // Degrade gracefully
   }

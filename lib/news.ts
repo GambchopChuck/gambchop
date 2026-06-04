@@ -40,6 +40,11 @@ export const SPORT_COLORS: Record<string, { bg: string; text: string; border: st
   ATP:  { bg: '#1a1000', text: '#fbbf24', border: '#fbbf2433' },
 }
 
+// Rejects headlines containing non-Latin scripts (Japanese, Chinese, Korean, Arabic).
+export function isEnglishArticle(headline: string): boolean {
+  return !/[　-鿿가-힯؀-ۿ]/.test(headline)
+}
+
 export function timeAgo(dateStr: string | null): string {
   if (!dateStr) return ''
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
