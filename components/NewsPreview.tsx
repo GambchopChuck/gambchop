@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { SPORT_COLORS, timeAgo } from '@/lib/news'
+import { SPORT_COLORS, timeAgo, isEnglishArticle } from '@/lib/news'
 
 const ACCENT = '#39ff9a'
 
@@ -17,7 +17,7 @@ export default async function NewsPreview() {
       .from('news_articles')
       .select('id, headline, source, sport, published_at, article_url')
       .order('published_at', { ascending: false })
-      .limit(4),
+      .limit(20),
     supabaseAdmin
       .from('streak_articles')
       .select('id, team_name, article_type, chart_svg, headline, generated_at')
@@ -25,7 +25,7 @@ export default async function NewsPreview() {
       .limit(4),
   ])
 
-  const newsArticles   = newsResult.data   ?? []
+  const newsArticles   = (newsResult.data ?? []).filter(a => isEnglishArticle(a.headline)).slice(0, 4)
   const streakArticles = streakResult.data ?? []
 
   return (
