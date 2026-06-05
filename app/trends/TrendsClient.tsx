@@ -8,7 +8,6 @@ import {
   fetchAllPlayerGameStats,
   fetchMLBTeamAverages,
   computeSeasonAvg,
-  computeTrendDirection,
   type TeamGameRow,
   type PlayerGameRow,
   type PlayerEntry,
@@ -183,40 +182,62 @@ interface TooltipData {
 }
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
-const SPARK_W = 600
 const SPARK_H = 32
-const SPARK_LAST_N = 15
+const SPARK_PAD = 4
 
-function Sparkline({ values, seasonAvg, direction }: {
-  values:    number[]
-  seasonAvg: number
-  direction: 'up' | 'down' | 'flat'
+function Sparkline({ values, seasonAvg, lowerIsBetter }: {
+  values:        number[]
+  seasonAvg:     number
+  lowerIsBetter: boolean
 }) {
-  if (!values.length) return <div style={{ height: SPARK_H }} />
+  if (values.length < 2) return <div style={{ height: SPARK_H }} />
 
-  const lineColor = direction === 'up' ? CLR_ABOVE : direction === 'down' ? CLR_BELOW : MUTED
+  // FIX 2: Color from last 5 data points, 5% threshold, inverted for lowerIsBetter stats
+  const last5  = values.slice(-5)
+  let lineColor = MUTED  // flat / gray
+  if (last5.length >= 2) {
+    const half  = Math.ceil(last5.length / 2)
+    const early = last5.slice(0, half)
+    const late  = last5.slice(half)
+    const avgE  = early.reduce((a, b) => a + b, 0) / early.length
+    const avgL  = late.reduce((a, b) => a + b, 0) / late.length
+    const pct   = avgE === 0 ? 0 : ((avgL - avgE) / Math.abs(avgE)) * 100
+    if (Math.abs(pct) >= 5) {
+      // For batting (lowerIsBetter=false): values going UP = improving = green
+      // For pitching (lowerIsBetter=true): values going DOWN = improving = green
+      const improving = lowerIsBetter ? pct < 0 : pct > 0
+      lineColor = improving ? CLR_ABOVE : CLR_BELOW
+    }
+  }
+
   const all    = [...values, seasonAvg]
   const minV   = Math.min(...all)
   const maxV   = Math.max(...all)
   const rangeV = maxV - minV || 1
-  const pad    = 4
 
-  const px = (i: number) =>
-    values.length > 1 ? (i / (values.length - 1)) * (SPARK_W - pad * 2) + pad : SPARK_W / 2
-  const py = (v: number) =>
-    SPARK_H - pad - ((v - minV) / rangeV) * (SPARK_H - pad * 2)
-  const avgY  = py(seasonAvg)
-  const pathD = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')
+  // FIX 1 + FIX 5: viewBox sized to actual game count so last point = last cell.
+  // Each game column is 34px (32px cell + 2px margin). Point at center of each column.
+  const SPARK_W = Math.max(values.length * 34, 2)
+  const px      = (i: number) => SPARK_PAD + (i / (values.length - 1)) * (SPARK_W - SPARK_PAD * 2)
+  const py      = (v: number) => SPARK_H - SPARK_PAD - ((v - minV) / rangeV) * (SPARK_H - SPARK_PAD * 2)
+  const avgY    = py(seasonAvg)
+  const pathD   = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')
 
   return (
-    <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none"
-      style={{ width: '100%', height: SPARK_H, display: 'block', overflow: 'visible' }} aria-hidden>
-      <line x1={0} y1={avgY} x2={SPARK_W} y2={avgY} stroke="#2a2a34" strokeDasharray="6,4" strokeWidth={1} />
-      {values.length > 1 && (
-        <path d={pathD} fill="none" stroke={lineColor} strokeWidth={1.5}
-          strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
-      )}
-      {values.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={2} fill={lineColor} />)}
+    <svg
+      viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+      preserveAspectRatio="none"
+      style={{ width: '100%', height: SPARK_H, display: 'block', overflow: 'hidden' }}
+      aria-hidden
+    >
+      {/* FIX 3: White dashed season-average rule */}
+      <line x1={0} y1={avgY} x2={SPARK_W} y2={avgY}
+        stroke="rgba(255,255,255,0.5)" strokeDasharray="6,4" strokeWidth={1} />
+      <path d={pathD} fill="none" stroke={lineColor} strokeWidth={1.5}
+        strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
+      {values.map((v, i) => (
+        <circle key={i} cx={px(i)} cy={py(v)} r={2} fill={lineColor} />
+      ))}
     </svg>
   )
 }
@@ -265,8 +286,8 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
 
   const lockBefore  = isPro ? 0 : Math.max(0, rows.length - FREE_CELLS)
   const validValues = rawValues.filter((v): v is number => v !== null)
-  const sparkVals   = validValues.slice(-SPARK_LAST_N)
-  const direction   = computeTrendDirection(validValues, cfg.lowerIsBetter)
+  // FIX 1: use ALL game values for sparkline (same span as the cells above it)
+  const sparkVals   = validValues
 
   const cells: (TrendCell | null)[] = rows.map(row => {
     const actual = cfg.getValue(row)
@@ -279,7 +300,7 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
   if (!cells.some(Boolean)) return null
 
   return (
-    <div>
+    <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
         {/* Sticky label */}
         <div style={{
@@ -308,9 +329,9 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
           })}
         </div>
       </div>
-      {/* Sparkline */}
+      {/* Sparkline — FIX 2/3/5: lowerIsBetter-aware color, white avg line, clipped */}
       <div style={{ paddingLeft: LABEL_W, paddingRight: 12, background: '#09090e', borderBottom: `1px solid ${BORDER}` }}>
-        <Sparkline values={sparkVals} seasonAvg={seasonAvg} direction={direction} />
+        <Sparkline values={sparkVals} seasonAvg={seasonAvg} lowerIsBetter={cfg.lowerIsBetter} />
       </div>
     </div>
   )
