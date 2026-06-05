@@ -1046,6 +1046,27 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
       })
   }, [authUser?.id, user?.username]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Inject portal keyframes — exact copy from ChopperClient
+  useEffect(() => {
+    const styleId = 'chopper-portal-keyframes'
+    if (document.getElementById(styleId)) return
+    const style = document.createElement('style')
+    style.id = styleId
+    style.innerHTML = `
+      @keyframes chopperPortalWarp {
+        0%   { background-position: 0% 50%, 100% 50%, 50% 50%; }
+        50%  { background-position: 100% 50%, 0% 50%, 50% 50%; }
+        100% { background-position: 0% 50%, 100% 50%, 50% 50%; }
+      }
+      @keyframes chopperSpeedLines {
+        0%   { transform: translateX(0%); opacity: 0.35; }
+        50%  { opacity: 0.55; }
+        100% { transform: translateX(-50%); opacity: 0.35; }
+      }
+    `
+    document.head.appendChild(style)
+  }, [])
+
   async function loadThreads() {
     setLoading(true)
     const data = await fetchThreads(sort, activeTag ?? undefined)
@@ -1106,7 +1127,46 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
   if (!user)  return <UsernameSetup onSet={u => { setUser(u); saveUser(u) }} />
 
   return (
-    <div style={{ minHeight: '100vh', background: G.bg, fontFamily: SANS }}>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', fontFamily: SANS, position: 'relative', overflow: 'hidden' }}>
+
+      {/* ── Animated warp layer — chopperPortalWarp (same keyframe as Chopper page) ── */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: `
+          radial-gradient(ellipse 80% 50% at center, rgba(0,255,255,0.05) 0%, transparent 70%),
+          linear-gradient(90deg, rgba(0,255,255,0.07) 0%, rgba(139,92,246,0.09) 50%, rgba(0,255,255,0.07) 100%),
+          linear-gradient(270deg, rgba(139,92,246,0.06) 0%, rgba(0,255,255,0.08) 50%, rgba(139,92,246,0.06) 100%)
+        `,
+        backgroundSize: '100% 100%, 200% 100%, 200% 100%',
+        backgroundPosition: '50% 50%, 0% 50%, 100% 50%',
+        animation: 'chopperPortalWarp 14s ease-in-out infinite',
+        willChange: 'background-position',
+      }} />
+
+      {/* ── Speed lines — chopperSpeedLines (same keyframe as Chopper page) ── */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: `repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          transparent 40px,
+          rgba(0,255,255,0.02) 40px,
+          rgba(0,255,255,0.02) 42px,
+          transparent 42px,
+          transparent 120px,
+          rgba(0,255,255,0.03) 120px,
+          rgba(0,255,255,0.03) 124px,
+          transparent 124px,
+          transparent 220px
+        )`,
+        backgroundSize: '600px 100%',
+        animation: 'chopperSpeedLines 4s linear infinite',
+        mixBlendMode: 'overlay',
+        willChange: 'transform',
+      }} />
+
+      {/* ── All community content sits above the background ── */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
       <style>{`
         .comm-scroll::-webkit-scrollbar { width: 4px; }
@@ -1282,6 +1342,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
           defaultBettorType={authBettorType}
         />
       )}
+      </div>{/* end z-index content wrapper */}
     </div>
   )
 }
