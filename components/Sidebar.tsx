@@ -11,6 +11,8 @@ const LINKS = [
   { href: '/community',    label: 'Community' },
   { href: '/favorites',    label: 'Favorites' },
   { href: '/compare',      label: 'Compare'   },
+  { href: '/stats',        label: 'Stats'     },
+  { href: '/props',        label: 'Props'     },
   { href: '/news',         label: 'News'      },
   { href: '/pricing',      label: 'Pricing'   },
   { href: '/faq',          label: 'FAQ'       },

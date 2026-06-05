@@ -1,199 +1,345 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
-import {
-  fetchTeamOutcomesByMonth,
-  fetchTeamSeasonOutcomes,
-} from '@/lib/chart-data'
-import type { TeamChartData, GameEntry } from '@/lib/leagues-data'
-import { LEAGUE_SEASONS } from '@/lib/leagues-data'
-import GambchopChart from '@/components/GambchopChart'
-import type { StatRowConfig } from '@/components/GambchopChart'
-import ChartLegend from '@/components/ChartLegend'
+import type { TeamBatRow, TeamPitRow, PlayerBatRow, PlayerPitRow } from './page'
+import { TEAM_COLORS } from '@/lib/teamColors'
+import { TEAM_ROUTES } from '@/lib/teamRoutes'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const ACCENT  = '#39ff9a'
 const MONO    = 'var(--font-jetbrains), "JetBrains Mono", monospace'
 const OSWALD  = 'var(--font-oswald), "Oswald", sans-serif'
+const CARD    = '#0f0f14'
 const BORDER  = '#1a1a24'
 const MUTED   = '#52525b'
 const TEXT    = '#f4f4f5'
+const ROW_ALT = '#0d0d14'
 
-// ─── League tabs ──────────────────────────────────────────────────────────────
-const LEAGUE_TABS = [
-  { key: 'mlb',  label: 'MLB',  active: true  },
-  { key: 'nba',  label: 'NBA',  active: false },
-  { key: 'nhl',  label: 'NHL',  active: false },
-  { key: 'nfl',  label: 'NFL',  active: false },
-  { key: 'wnba', label: 'WNBA', active: false },
-] as const
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+type MainTab = 'team' | 'player'
+type SubTab  = 'batting' | 'pitching'
 
-// ─── MLB team list ────────────────────────────────────────────────────────────
-const MLB_TEAMS = [
-  'Arizona Diamondbacks', 'Atlanta Braves', 'Baltimore Orioles', 'Boston Red Sox',
-  'Chicago Cubs', 'Chicago White Sox', 'Cincinnati Reds', 'Cleveland Guardians',
-  'Colorado Rockies', 'Detroit Tigers', 'Houston Astros', 'Kansas City Royals',
-  'Los Angeles Angels', 'Los Angeles Dodgers', 'Miami Marlins', 'Milwaukee Brewers',
-  'Minnesota Twins', 'New York Mets', 'New York Yankees', 'Oakland Athletics',
-  'Philadelphia Phillies', 'Pittsburgh Pirates', 'San Diego Padres', 'San Francisco Giants',
-  'Seattle Mariners', 'St. Louis Cardinals', 'Tampa Bay Rays', 'Texas Rangers',
-  'Toronto Blue Jays', 'Washington Nationals',
+// ─── Sort helpers ─────────────────────────────────────────────────────────────
+type SortDir = 'asc' | 'desc'
+
+function parseStat(v: string | number): number {
+  if (typeof v === 'number') return v
+  const n = parseFloat(v)
+  return isNaN(n) ? -Infinity : n
+}
+
+function sortRows<T>(rows: T[], col: string, dir: SortDir): T[] {
+  return [...rows].sort((a, b) => {
+    const av = parseStat((a as Record<string, unknown>)[col] as string | number)
+    const bv = parseStat((b as Record<string, unknown>)[col] as string | number)
+    if (av === -Infinity && bv === -Infinity) return 0
+    if (av === -Infinity) return 1
+    if (bv === -Infinity) return -1
+    return dir === 'asc' ? av - bv : bv - av
+  })
+}
+
+// ─── Column configs ───────────────────────────────────────────────────────────
+
+type ColDef<T> = { key: keyof T & string; label: string; title?: string; defaultDir?: SortDir }
+
+const TEAM_BAT_COLS: ColDef<TeamBatRow>[] = [
+  { key: 'gp',  label: 'GP',  title: 'Games Played' },
+  { key: 'ab',  label: 'AB',  title: 'At Bats' },
+  { key: 'r',   label: 'R',   title: 'Runs' },
+  { key: 'h',   label: 'H',   title: 'Hits' },
+  { key: 'd',   label: '2B',  title: 'Doubles' },
+  { key: 't',   label: '3B',  title: 'Triples' },
+  { key: 'hr',  label: 'HR',  title: 'Home Runs' },
+  { key: 'rbi', label: 'RBI', title: 'Runs Batted In' },
+  { key: 'tb',  label: 'TB',  title: 'Total Bases' },
+  { key: 'bb',  label: 'BB',  title: 'Walks' },
+  { key: 'so',  label: 'SO',  title: 'Strikeouts', defaultDir: 'asc' },
+  { key: 'sb',  label: 'SB',  title: 'Stolen Bases' },
+  { key: 'avg', label: 'AVG', title: 'Batting Average' },
+  { key: 'obp', label: 'OBP', title: 'On Base Percentage' },
+  { key: 'slg', label: 'SLG', title: 'Slugging Percentage' },
+  { key: 'ops', label: 'OPS', title: 'OBP + SLG' },
 ]
 
-// ─── Team stat line defaults ───────────────────────────────────────────────────
-const TEAM_STAT_DEFAULTS: Record<string, { label: string; defaultLine: number }> = {
-  home_runs:  { label: 'HR',          defaultLine: 1.5 },
-  strikeouts: { label: 'STRIKEOUTS',  defaultLine: 7.5 },
-  hits:       { label: 'HITS',        defaultLine: 8.5 },
-  runs:       { label: 'RUNS',        defaultLine: 4.5 },
-  walks:      { label: 'WALKS',       defaultLine: 3.5 },
-}
+const TEAM_PIT_COLS: ColDef<TeamPitRow>[] = [
+  { key: 'gp',   label: 'GP',   title: 'Games Played' },
+  { key: 'w',    label: 'W',    title: 'Wins' },
+  { key: 'l',    label: 'L',    title: 'Losses', defaultDir: 'asc' },
+  { key: 'era',  label: 'ERA',  title: 'Earned Run Average', defaultDir: 'asc' },
+  { key: 'sv',   label: 'SV',   title: 'Saves' },
+  { key: 'cg',   label: 'CG',   title: 'Complete Games' },
+  { key: 'sho',  label: 'SHO',  title: 'Shutouts' },
+  { key: 'qs',   label: 'QS',   title: 'Quality Starts' },
+  { key: 'ip',   label: 'IP',   title: 'Innings Pitched' },
+  { key: 'h',    label: 'H',    title: 'Hits Allowed', defaultDir: 'asc' },
+  { key: 'er',   label: 'ER',   title: 'Earned Runs', defaultDir: 'asc' },
+  { key: 'hr',   label: 'HR',   title: 'Home Runs Allowed', defaultDir: 'asc' },
+  { key: 'bb',   label: 'BB',   title: 'Walks Allowed', defaultDir: 'asc' },
+  { key: 'so',   label: 'SO',   title: 'Strikeouts' },
+  { key: 'oba',  label: 'OBA',  title: 'Opponent Batting Average', defaultDir: 'asc' },
+  { key: 'whip', label: 'WHIP', title: 'Walks + Hits Per Inning Pitched', defaultDir: 'asc' },
+]
 
-// ─── Player stat line defaults ────────────────────────────────────────────────
-const PLAYER_STAT_DEFAULTS: Record<string, { label: string; defaultLine: number; playerType: 'batter' | 'pitcher' }> = {
-  hits:       { label: 'HITS',       defaultLine: 0.5, playerType: 'batter'  },
-  home_runs:  { label: 'HR',         defaultLine: 0.5, playerType: 'batter'  },
-  rbis:       { label: 'RBIs',       defaultLine: 0.5, playerType: 'batter'  },
-  walks:      { label: 'WALKS',      defaultLine: 0.5, playerType: 'batter'  },
-  strikeouts: { label: 'STRIKEOUTS', defaultLine: 4.5, playerType: 'pitcher' },
-}
+// ─── Glossary ─────────────────────────────────────────────────────────────────
+const GLOSSARY_BAT = [
+  { abbr: 'GP',  def: 'Games Played' },
+  { abbr: 'AB',  def: 'At Bats' },
+  { abbr: 'R',   def: 'Runs Scored' },
+  { abbr: 'H',   def: 'Hits' },
+  { abbr: '2B',  def: 'Doubles' },
+  { abbr: '3B',  def: 'Triples' },
+  { abbr: 'HR',  def: 'Home Runs' },
+  { abbr: 'RBI', def: 'Runs Batted In' },
+  { abbr: 'TB',  def: 'Total Bases' },
+  { abbr: 'BB',  def: 'Walks (Base on Balls)' },
+  { abbr: 'SO',  def: 'Strikeouts' },
+  { abbr: 'SB',  def: 'Stolen Bases' },
+  { abbr: 'AVG', def: 'Batting Average — Hits ÷ At Bats' },
+  { abbr: 'OBP', def: 'On Base Percentage — how often a batter reaches base' },
+  { abbr: 'SLG', def: 'Slugging Percentage — Total Bases ÷ At Bats' },
+  { abbr: 'OPS', def: 'On Base Plus Slugging — OBP + SLG' },
+]
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-}
+const GLOSSARY_PIT = [
+  { abbr: 'ERA',  def: 'Earned Run Average — (Earned Runs × 9) ÷ Innings Pitched' },
+  { abbr: 'SV',   def: 'Saves' },
+  { abbr: 'CG',   def: 'Complete Games — pitcher finishes the entire game' },
+  { abbr: 'SHO',  def: 'Shutouts — complete game with no runs allowed' },
+  { abbr: 'QS',   def: 'Quality Starts — at least 6 innings, 3 or fewer earned runs' },
+  { abbr: 'IP',   def: 'Innings Pitched' },
+  { abbr: 'ER',   def: 'Earned Runs — runs scored without the aid of an error' },
+  { abbr: 'OBA',  def: 'Opponent Batting Average — Hits Allowed ÷ Batters Faced' },
+  { abbr: 'WHIP', def: 'Walks + Hits Per Inning Pitched — (BB + H) ÷ IP' },
+]
 
-function makeAbbr(name: string) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)
-}
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-function fmtDate(iso: string) {
-  const [, m, d] = iso.split('-').map(Number)
-  return `${m}/${d}`
-}
-
-function monthRange(year: number, month: number) {
-  const mm  = String(month).padStart(2, '0')
-  const end = new Date(year, month, 0).getDate()
-  return { firstDay: `${year}-${mm}-01`, lastDay: `${year}-${mm}-${String(end).padStart(2,'0')}` }
-}
-
-type TabType  = 'team' | 'player'
-type StatLines = Record<string, number>
-type DayDataMap = Map<number, number | null>
-
-// ─── Player search ────────────────────────────────────────────────────────────
-type PlayerResult = { player_name: string; team_name: string }
-
-function PlayerSearch({ teamFilter, initialName, onSelect }: {
-  teamFilter:   string
-  initialName?: string
-  onSelect:     (name: string, team: string) => void
+function TabPill({ active, onClick, children }: {
+  active: boolean; onClick: () => void; children: React.ReactNode
 }) {
-  const [query,   setQuery]   = useState(initialName ?? '')
-  const [results, setResults] = useState<PlayerResult[]>([])
-  const [open,    setOpen]    = useState(false)
-  const [busy,    setBusy]    = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const wrapRef  = useRef<HTMLDivElement>(null)
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background:    active ? ACCENT : 'transparent',
+        color:         active ? '#000' : '#ffffff',
+        border:        active ? 'none' : `1px solid ${BORDER}`,
+        borderRadius:  6, padding: '5px 16px',
+        fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+        textTransform: 'uppercase', cursor: 'pointer',
+        fontFamily: MONO, transition: 'all 0.15s',
+        boxShadow: active ? `0 0 12px ${ACCENT}55` : 'none',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
 
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [])
+function SortArrow({ dir }: { dir: SortDir }) {
+  return <span style={{ marginLeft: 4, fontSize: 9 }}>{dir === 'asc' ? '↑' : '↓'}</span>
+}
 
-  async function doSearch(q: string) {
-    if (q.length < 2) { setResults([]); setOpen(false); return }
-    setBusy(true)
-    let qb = supabase
-      .from('player_game_stats')
-      .select('player_name, team_name')
-      .ilike('player_name', `%${q}%`)
-      .eq('league', 'MLB')
-      .limit(24)
-      .order('player_name', { ascending: true })
-    if (teamFilter) qb = qb.eq('team_name', teamFilter)
-    const { data } = await qb
-    const seen = new Set<string>()
-    const unique = ((data ?? []) as PlayerResult[]).filter(r => {
-      const k = `${r.player_name}::${r.team_name}`
-      if (seen.has(k)) return false
-      seen.add(k)
-      return true
-    })
-    setResults(unique.slice(0, 8))
-    setOpen(unique.length > 0)
-    setBusy(false)
+function TeamColorDot({ team }: { team: string }) {
+  const color = TEAM_COLORS[team]?.primary ?? BORDER
+  return (
+    <span style={{
+      display: 'inline-block', width: 10, height: 10, borderRadius: 2,
+      background: color, marginRight: 8, flexShrink: 0, verticalAlign: 'middle',
+    }} />
+  )
+}
+
+// ─── Generic sortable table ───────────────────────────────────────────────────
+
+function StatsTable<T>({
+  rows,
+  cols,
+  getLabel,
+  getLink,
+  sortCol,
+  sortDir,
+  onSort,
+  showTeam = false,
+}: {
+  rows:      T[]
+  cols:      ColDef<T>[]
+  getLabel:  (row: T) => string
+  getLink:   (row: T) => string | null
+  sortCol:   string
+  sortDir:   SortDir
+  onSort:    (col: string) => void
+  showTeam?: boolean
+}) {
+  const sorted = useMemo(() => sortRows(rows, sortCol, sortDir), [rows, sortCol, sortDir])
+
+  const thStyle: React.CSSProperties = {
+    padding: '8px 10px', textAlign: 'right', fontSize: 9, fontWeight: 700,
+    color: MUTED, letterSpacing: '0.14em', textTransform: 'uppercase',
+    fontFamily: MONO, cursor: 'pointer', whiteSpace: 'nowrap',
+    userSelect: 'none', transition: 'color 0.1s',
+    position: 'sticky', top: 0, background: '#0a0a0f', zIndex: 2,
+    borderBottom: `1px solid ${BORDER}`,
   }
-
-  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const q = e.target.value
-    setQuery(q)
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => doSearch(q), 280)
-  }
-
-  function pick(name: string, team: string) {
-    setQuery(name)
-    setOpen(false)
-    onSelect(name, team)
+  const tdStyle: React.CSSProperties = {
+    padding: '7px 10px', textAlign: 'right', fontSize: 12,
+    fontFamily: MONO, color: TEXT, whiteSpace: 'nowrap',
+    borderBottom: `1px solid ${BORDER}`,
   }
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', flex: '1 1 260px', minWidth: 200 }}>
-      <div style={{ position: 'relative' }}>
-        <input
-          value={query}
-          onChange={handleInput}
-          onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Search player name..."
-          style={{
-            width: '100%', height: 44, background: '#0a0a0f',
-            border: `1px solid ${BORDER}`, borderRadius: 6, outline: 'none',
-            padding: '0 40px 0 14px', color: TEXT, fontSize: 13,
-            fontFamily: MONO, boxSizing: 'border-box',
-          }}
-        />
-        {busy && (
-          <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>
-            <div style={{ width: 12, height: 12, border: `2px solid ${ACCENT}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'statsspin 0.6s linear infinite' }} />
-          </div>
-        )}
-      </div>
-      {open && results.length > 0 && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-          background: '#0f0f14', border: `1px solid ${BORDER}`,
-          borderTop: 'none', borderRadius: '0 0 6px 6px',
-          overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-        }}>
-          {results.map(r => (
-            <button
-              key={`${r.player_name}::${r.team_name}`}
-              onClick={() => pick(r.player_name, r.team_name)}
+    <div style={{ overflowX: 'auto', borderRadius: 8, border: `1px solid ${BORDER}` }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+        <thead>
+          <tr>
+            {/* Sticky name column header */}
+            <th
               style={{
-                width: '100%', padding: '10px 14px', background: 'transparent',
-                border: 'none', borderBottom: `1px solid ${BORDER}`,
-                cursor: 'pointer', textAlign: 'left',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                transition: 'background 0.1s',
+                ...thStyle, textAlign: 'left',
+                position: 'sticky', left: 0, zIndex: 3,
+                minWidth: showTeam ? 220 : 200,
+                paddingLeft: 16,
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#1a1a24')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontSize: 13, color: TEXT, fontFamily: MONO }}>{r.player_name}</span>
-              <span style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.06em', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {r.team_name}
-              </span>
-            </button>
-          ))}
+              {showTeam ? 'PLAYER' : 'TEAM'}
+            </th>
+            {showTeam && (
+              <th style={{ ...thStyle, textAlign: 'left', minWidth: 140 }}>TEAM</th>
+            )}
+            {cols.map(col => (
+              <th
+                key={String(col.key)}
+                title={col.title}
+                onClick={() => onSort(String(col.key))}
+                style={{
+                  ...thStyle,
+                  color: sortCol === col.key ? ACCENT : MUTED,
+                }}
+                onMouseEnter={e => { if (sortCol !== col.key) (e.currentTarget as HTMLElement).style.color = TEXT }}
+                onMouseLeave={e => { if (sortCol !== col.key) (e.currentTarget as HTMLElement).style.color = MUTED }}
+              >
+                {col.label}
+                {sortCol === col.key && <SortArrow dir={sortDir} />}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row, i) => {
+            const label = getLabel(row)
+            const href  = getLink(row)
+            const isPlayer = 'player' in (row as object)
+            const teamName = isPlayer ? (row as { team: string }).team : label
+            return (
+              <tr
+                key={i}
+                style={{ background: i % 2 === 0 ? CARD : ROW_ALT }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#12121c')}
+                onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? CARD : ROW_ALT)}
+              >
+                {/* Sticky name cell */}
+                <td style={{
+                  ...tdStyle, textAlign: 'left', paddingLeft: 16,
+                  position: 'sticky', left: 0, zIndex: 1,
+                  background: i % 2 === 0 ? CARD : ROW_ALT,
+                  fontWeight: 600, maxWidth: showTeam ? 220 : 200,
+                }}>
+                  <span style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                    {!isPlayer && <TeamColorDot team={label} />}
+                    {href ? (
+                      <Link href={href} style={{ color: TEXT, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = ACCENT)}
+                        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = TEXT)}
+                      >
+                        {label}
+                      </Link>
+                    ) : (
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                    )}
+                  </span>
+                </td>
+                {/* Team column for player rows */}
+                {showTeam && (
+                  <td style={{ ...tdStyle, textAlign: 'left', fontSize: 11, color: MUTED }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <TeamColorDot team={teamName} />
+                      {teamName}
+                    </span>
+                  </td>
+                )}
+                {cols.map(col => (
+                  <td key={String(col.key)} style={{
+                    ...tdStyle,
+                    color: sortCol === col.key ? ACCENT : TEXT,
+                    fontWeight: sortCol === col.key ? 700 : 400,
+                  }}>
+                    {String(row[col.key])}
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
+          {sorted.length === 0 && (
+            <tr>
+              <td colSpan={cols.length + (showTeam ? 2 : 1)} style={{ ...tdStyle, textAlign: 'center', color: MUTED, padding: '40px 0' }}>
+                No data available — stats update every 3 hours during the season.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Glossary accordion ───────────────────────────────────────────────────────
+
+function Glossary() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ marginTop: 48, border: `1px solid ${BORDER}`, borderRadius: 8, overflow: 'hidden' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', padding: '14px 20px',
+          background: CARD, border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontFamily: MONO, fontSize: 11, fontWeight: 700,
+          color: TEXT, letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}
+      >
+        <span>📖 Stat Glossary</span>
+        <span style={{ color: MUTED, fontSize: 14 }}>{open ? '−' : '+'}</span>
+      </button>
+
+      {open && (
+        <div style={{ background: '#0a0a0f', padding: '20px 24px', borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0 40px' }}>
+            <div>
+              <div style={{ fontSize: 9, color: ACCENT, fontFamily: MONO, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>
+                BATTING
+              </div>
+              {GLOSSARY_BAT.map(({ abbr, def }) => (
+                <div key={abbr} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: ACCENT, fontFamily: MONO, minWidth: 40 }}>{abbr}</span>
+                  <span style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{def}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: ACCENT, fontFamily: MONO, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>
+                PITCHING
+              </div>
+              {GLOSSARY_PIT.map(({ abbr, def }) => (
+                <div key={abbr} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: ACCENT, fontFamily: MONO, minWidth: 44 }}>{abbr}</span>
+                  <span style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>{def}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -201,363 +347,84 @@ function PlayerSearch({ teamFilter, initialName, onSelect }: {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function StatsClient() {
-  const { isPro, memberTier, openModal, setIsMember } = useAuth()
-  const router       = useRouter()
-  const searchParams = useSearchParams()
 
-  const today = new Date()
+interface Props {
+  teamBat:   TeamBatRow[]
+  teamPit:   TeamPitRow[]
+  playerBat: PlayerBatRow[]
+  playerPit: PlayerPitRow[]
+  season:    number
+}
 
-  // ── Tab / league
-  const [activeTab,    setActiveTab]    = useState<TabType>('team')
-  const [activeLeague, setActiveLeague] = useState('mlb')
+export default function StatsClient({ teamBat, teamPit, playerBat, playerPit, season }: Props) {
+  const [mainTab, setMainTab]     = useState<MainTab>('team')
+  const [subTab,  setSubTab]      = useState<SubTab>('batting')
 
-  // ── Month navigation (shared between tabs)
-  const [viewYear,  setViewYear]  = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1)
+  // Sort state — separate for each table (stored as plain strings)
+  const [tbSortCol, setTbSortCol] = useState('avg')
+  const [tbSortDir, setTbSortDir] = useState<SortDir>('desc')
+  const [tpSortCol, setTpSortCol] = useState('era')
+  const [tpSortDir, setTpSortDir] = useState<SortDir>('asc')
+  const [pbSortCol, setPbSortCol] = useState('avg')
+  const [pbSortDir, setPbSortDir] = useState<SortDir>('desc')
+  const [ppSortCol, setPpSortCol] = useState('era')
+  const [ppSortDir, setPpSortDir] = useState<SortDir>('asc')
 
-  const seasonWindow  = LEAGUE_SEASONS['mlb']
-  const seasonStartYM = seasonWindow ? seasonWindow.startYear * 12 + seasonWindow.startMonth : 0
-  const todayYM       = today.getFullYear() * 12 + (today.getMonth() + 1)
-  const viewYM        = viewYear * 12 + viewMonth
-  const canPrevMonth  = viewYM > seasonStartYM
-  const canNextMonth  = viewYM < todayYM
-
-  function handlePrevMonth() {
-    if (!canPrevMonth) return
-    setViewMonth(m => { if (m === 1) { setViewYear(y => y - 1); return 12 } return m - 1 })
-  }
-  function handleNextMonth() {
-    if (!canNextMonth) return
-    setViewMonth(m => { if (m === 12) { setViewYear(y => y + 1); return 1 } return m + 1 })
-  }
-
-  // ── Team tab state
-  const [selectedTeam,   setSelectedTeam]   = useState('')
-  const [teamLoading,    setTeamLoading]     = useState(false)
-  const [chartData,      setChartData]       = useState<TeamChartData[]>([])
-  const [seasonChartData,setSeasonChartData] = useState<TeamChartData[]>([])
-  const [lastUpdated,    setLastUpdated]     = useState<string | null>(null)
-
-  // Stat lines for team tab (mutable per-row)
-  const [teamStatLines, setTeamStatLines] = useState<StatLines>(() =>
-    Object.fromEntries(Object.entries(TEAM_STAT_DEFAULTS).map(([k, v]) => [k, v.defaultLine]))
-  )
-  // Raw day data for team stats, indexed by field key
-  const [teamDayData, setTeamDayData] = useState<Record<string, DayDataMap>>({})
-
-  // ── Player tab state
-  const [playerName,    setPlayerName]    = useState('')
-  const [playerTeamName,setPlayerTeamName]= useState('')
-  const [teamFilter,    setTeamFilter]    = useState('')
-  const [playerLoading, setPlayerLoading] = useState(false)
-  const [playerChartData, setPlayerChartData] = useState<TeamChartData[]>([])
-
-  // Stat lines for player tab
-  const [playerStatLines, setPlayerStatLines] = useState<StatLines>(() =>
-    Object.fromEntries(Object.entries(PLAYER_STAT_DEFAULTS).map(([k, v]) => [k, v.defaultLine]))
-  )
-  const [playerDayData, setPlayerDayData] = useState<Record<string, DayDataMap>>({})
-
-  // ── Toast
-  const [toast, setToast] = useState<string | null>(null)
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 4000) }
-
-  // ── Restore from URL on mount
-  useEffect(() => {
-    const tab  = searchParams.get('tab') as TabType | null
-    const team = searchParams.get('team')
-    const player = searchParams.get('player')
-    if (tab === 'player') setActiveTab('player')
-    if (team)   { const n = MLB_TEAMS.find(t => slugify(t) === team); if (n) setSelectedTeam(n) }
-    if (player) setPlayerName(decodeURIComponent(player))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── Fetch team stat data (team_game_stats for current month)
-  async function fetchTeamStatData(teamName: string, year: number, month: number) {
-    const { firstDay, lastDay } = monthRange(year, month)
-    const { data } = await supabase
-      .from('team_game_stats')
-      .select('game_date, hits, home_runs, runs, strikeouts, walks')
-      .eq('team_name', teamName)
-      .eq('league', 'MLB')
-      .gte('game_date', firstDay)
-      .lte('game_date', lastDay)
-
-    const fields = Object.keys(TEAM_STAT_DEFAULTS)
-    const result: Record<string, DayDataMap> = Object.fromEntries(fields.map(k => [k, new Map()]))
-    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
-      const day = parseInt((row.game_date as string).split('-')[2], 10)
-      for (const field of fields) {
-        result[field].set(day, (row[field] as number | null) ?? null)
+  function makeSort<T>(
+    col: string, setCol: (c: string) => void,
+    dir: SortDir, setDir: (d: SortDir) => void,
+    colDefs: ColDef<T>[],
+  ) {
+    return (newCol: string) => {
+      if (newCol === col) {
+        setDir(dir === 'asc' ? 'desc' : 'asc')
+      } else {
+        setCol(newCol)
+        const def = colDefs.find(c => c.key === newCol)
+        setDir(def?.defaultDir ?? 'desc')
       }
     }
-    return result
   }
 
-  // ── Load full team data (betting + stats)
-  async function loadTeamData(teamName: string, year: number, month: number) {
-    if (!teamName) return
-    setTeamLoading(true)
-    const ts = slugify(teamName)
-    const [monthGames, seasonGames, statData] = await Promise.all([
-      fetchTeamOutcomesByMonth('mlb', ts, year, month),
-      fetchTeamSeasonOutcomes('mlb', ts),
-      fetchTeamStatData(teamName, year, month),
-    ])
-    setChartData([{ teamName, abbreviation: makeAbbr(teamName), games: monthGames }])
-    setSeasonChartData([{ teamName, abbreviation: makeAbbr(teamName), games: seasonGames }])
-    setTeamDayData(statData)
-    setTeamLoading(false)
+  const handleTbSort = makeSort(tbSortCol, setTbSortCol, tbSortDir, setTbSortDir, TEAM_BAT_COLS)
+  const handleTpSort = makeSort(tpSortCol, setTpSortCol, tpSortDir, setTpSortDir, TEAM_PIT_COLS)
+  const handlePbSort = makeSort(pbSortCol, setPbSortCol, pbSortDir, setPbSortDir, TEAM_BAT_COLS as ColDef<PlayerBatRow>[])
+  const handlePpSort = makeSort(ppSortCol, setPpSortCol, ppSortDir, setPpSortDir, TEAM_PIT_COLS as ColDef<PlayerPitRow>[])
 
-    // Push URL
-    const p = new URLSearchParams({ tab: 'team', team: slugify(teamName) })
-    router.replace(`/stats?${p.toString()}`, { scroll: false })
-  }
+  const playerBatCols = TEAM_BAT_COLS as unknown as ColDef<PlayerBatRow>[]
+  const playerPitCols = TEAM_PIT_COLS as unknown as ColDef<PlayerPitRow>[]
 
-  // Re-fetch when month changes (team already selected)
-  useEffect(() => {
-    if (selectedTeam) loadTeamData(selectedTeam, viewYear, viewMonth)
-  }, [viewYear, viewMonth]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch when team is selected
-  useEffect(() => {
-    if (selectedTeam) loadTeamData(selectedTeam, viewYear, viewMonth)
-  }, [selectedTeam]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch last-updated timestamp
-  useEffect(() => {
-    supabase
-      .from('ingestion_runs')
-      .select('completed_at')
-      .eq('status', 'success')
-      .not('completed_at', 'is', null)
-      .order('completed_at', { ascending: false })
-      .limit(1)
-      .single()
-      .then(({ data }) => { if (data?.completed_at) setLastUpdated(data.completed_at as string) })
-  }, [])
-
-  // ── Build team stat row configs (recomputed whenever lines or dayData change)
-  const teamStatRowConfigs: StatRowConfig[] = useMemo(() =>
-    Object.entries(TEAM_STAT_DEFAULTS).map(([field, { label }]) => ({
-      key:     field,
-      label,
-      line:    teamStatLines[field] ?? TEAM_STAT_DEFAULTS[field].defaultLine,
-      dayData: teamDayData[field] ?? new Map(),
-      onLineChange: (v: number) =>
-        setTeamStatLines(prev => ({ ...prev, [field]: v })),
-    })),
-  [teamStatLines, teamDayData])
-
-  // ── Fetch player stat data
-  async function fetchPlayerStatData(pName: string, year: number, month: number) {
-    const { firstDay, lastDay } = monthRange(year, month)
-
-    // Fetch batter and pitcher rows in parallel
-    const [batterRes, pitcherRes] = await Promise.all([
-      supabase
-        .from('player_game_stats')
-        .select('game_date, hits, home_runs, rbis, walks')
-        .eq('player_name', pName)
-        .eq('player_type', 'batter')
-        .eq('league', 'MLB')
-        .gte('game_date', firstDay)
-        .lte('game_date', lastDay),
-      supabase
-        .from('player_game_stats')
-        .select('game_date, strikeouts')
-        .eq('player_name', pName)
-        .eq('player_type', 'pitcher')
-        .eq('league', 'MLB')
-        .gte('game_date', firstDay)
-        .lte('game_date', lastDay),
-    ])
-
-    const dayData: Record<string, DayDataMap> = {
-      hits:       new Map(),
-      home_runs:  new Map(),
-      rbis:       new Map(),
-      walks:      new Map(),
-      strikeouts: new Map(),
-    }
-
-    const allDates = new Set<string>()
-
-    for (const row of (batterRes.data ?? []) as Array<Record<string, unknown>>) {
-      const date = row.game_date as string
-      allDates.add(date)
-      const day = parseInt(date.split('-')[2], 10)
-      dayData.hits.set(day,      (row.hits      as number | null) ?? null)
-      dayData.home_runs.set(day, (row.home_runs as number | null) ?? null)
-      dayData.rbis.set(day,      (row.rbis      as number | null) ?? null)
-      dayData.walks.set(day,     (row.walks     as number | null) ?? null)
-    }
-    for (const row of (pitcherRes.data ?? []) as Array<Record<string, unknown>>) {
-      const date = row.game_date as string
-      allDates.add(date)
-      const day = parseInt(date.split('-')[2], 10)
-      dayData.strikeouts.set(day, (row.strikeouts as number | null) ?? null)
-    }
-
-    return { dayData, allDates: Array.from(allDates).sort() }
-  }
-
-  // ── Load player chart
-  async function loadPlayerData(pName: string, year: number, month: number) {
-    if (!pName) return
-    setPlayerLoading(true)
-    const { dayData, allDates } = await fetchPlayerStatData(pName, year, month)
-    setPlayerDayData(dayData)
-
-    // Synthetic GameEntry[] — gives the chart its calendar structure
-    const synthGames: GameEntry[] = allDates.map(date => ({
-      rawDate:          date,
-      rawTime:          date + 'T00:00:00',
-      date:             fmtDate(date),
-      opponent:         '',
-      isHome:           false,
-      isFavorite:       false,
-      isSpreadFavorite: false,
-      isDivisionGame:   false,
-      restDays:         0,
-      moneylineResult:  null,
-      spreadResult:     null,
-      ouResult:         null,
-    }))
-
-    setPlayerChartData([{
-      teamName:     pName,
-      abbreviation: makeAbbr(pName),
-      games:        synthGames,
-    }])
-    setPlayerLoading(false)
-  }
-
-  // Re-fetch player when month changes
-  useEffect(() => {
-    if (playerName) loadPlayerData(playerName, viewYear, viewMonth)
-  }, [viewYear, viewMonth]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Build player stat row configs
-  const playerStatRowConfigs: StatRowConfig[] = useMemo(() =>
-    Object.entries(PLAYER_STAT_DEFAULTS).map(([field, { label }]) => ({
-      key:     field,
-      label,
-      line:    playerStatLines[field] ?? PLAYER_STAT_DEFAULTS[field].defaultLine,
-      dayData: playerDayData[field] ?? new Map(),
-      onLineChange: (v: number) =>
-        setPlayerStatLines(prev => ({ ...prev, [field]: v })),
-    })),
-  [playerStatLines, playerDayData])
-
-  // ── Shared select style
-  const selectStyle: React.CSSProperties = {
-    height: 44, background: '#0a0a0f',
-    border: `1px solid ${BORDER}`, borderRadius: 6, outline: 'none',
-    padding: '0 12px', color: TEXT, fontSize: 13, fontFamily: MONO,
-    cursor: 'pointer', appearance: 'none' as const,
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div style={{
       paddingLeft: 64, minHeight: '100vh',
-      background: `radial-gradient(ellipse at 50% -10%, rgba(57,255,154,0.07) 0%, transparent 55%), #08080d`,
+      background: `radial-gradient(ellipse at 50% -10%, rgba(57,255,154,0.06) 0%, transparent 55%), #08080d`,
     }}>
-      <style>{`
-        @keyframes statsspin { to { transform: rotate(360deg); } }
-        @keyframes statsfadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-      `}</style>
-
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
-          background: '#0f0f14', border: `1px solid ${ACCENT}44`,
-          borderRadius: 8, padding: '12px 18px', maxWidth: 360,
-          fontFamily: MONO, fontSize: 11, color: TEXT,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-          animation: 'statsfadein 0.2s ease',
-        }}>
-          {toast}
-        </div>
-      )}
-
       {/* ── Sticky header ──────────────────────────────────────────────────── */}
       <div style={{
         position: 'sticky', top: 64, zIndex: 30,
         background: 'rgba(8,8,13,0.97)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${BORDER}`,
       }}>
-        {/* League filter */}
+        {/* Main tabs */}
         <div style={{
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
-          display: 'flex', alignItems: 'center', gap: 6, height: 48,
+          display: 'flex', alignItems: 'center', gap: 4, height: 52,
           borderBottom: '1px solid #12121a',
         }}>
-          {LEAGUE_TABS.map(tab => {
-            const on = activeLeague === tab.key
-            return (
-              <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <button
-                  onClick={() => tab.active && setActiveLeague(tab.key)}
-                  style={{
-                    background:    on ? ACCENT : 'transparent',
-                    color:         on ? '#000' : '#ffffff',
-                    border:        on ? 'none' : '1px solid transparent',
-                    borderRadius:  6, padding: '5px 14px',
-                    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-                    textTransform: 'uppercase', cursor: tab.active ? 'pointer' : 'default',
-                    fontFamily: MONO, transition: 'all 0.15s',
-                    boxShadow: on ? `0 0 12px ${ACCENT}55` : 'none',
-                    opacity: tab.active ? 1 : 0.5,
-                  }}
-                >
-                  {tab.label}
-                </button>
-                {!tab.active && (
-                  <span style={{
-                    fontSize: 7, fontWeight: 700, color: '#fff',
-                    letterSpacing: '0.12em', textTransform: 'uppercase',
-                    fontFamily: MONO, background: '#1a1a24',
-                    padding: '1px 5px', borderRadius: 2,
-                  }}>
-                    SOON
-                  </span>
-                )}
-              </div>
-            )
-          })}
+          <TabPill active={mainTab === 'team'}   onClick={() => setMainTab('team')}>   Team Stats   </TabPill>
+          <TabPill active={mainTab === 'player'} onClick={() => setMainTab('player')}> Player Stats </TabPill>
         </div>
 
-        {/* Primary tabs */}
+        {/* Sub-category pills */}
         <div style={{
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
           display: 'flex', alignItems: 'center', gap: 4, height: 44,
         }}>
-          {(['team', 'player'] as const).map(tab => {
-            const on = activeTab === tab
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  background:    on ? ACCENT : 'transparent',
-                  color:         on ? '#000' : '#ffffff',
-                  border:        on ? 'none' : '1px solid transparent',
-                  borderRadius:  6, padding: '5px 16px',
-                  fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', cursor: 'pointer',
-                  fontFamily: MONO, transition: 'all 0.15s',
-                  boxShadow: on ? `0 0 12px ${ACCENT}55` : 'none',
-                }}
-              >
-                {tab === 'team' ? 'TEAM STATS' : 'PLAYER STATS'}
-              </button>
-            )
-          })}
+          <TabPill active={subTab === 'batting'}  onClick={() => setSubTab('batting')}>  Batting  </TabPill>
+          <TabPill active={subTab === 'pitching'} onClick={() => setSubTab('pitching')}> Pitching </TabPill>
+          <span style={{ marginLeft: 'auto', fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            {season} Season · Click column to sort
+          </span>
         </div>
       </div>
 
@@ -567,7 +434,7 @@ export default function StatsClient() {
           fontSize: 10, color: MUTED, letterSpacing: '0.26em',
           textTransform: 'uppercase', margin: '0 0 6px', fontFamily: MONO,
         }}>
-          Team and player stat lines — set your line, see the history.
+          {season} MLB {mainTab === 'team' ? 'Team' : 'Player'} Statistics
         </p>
         <h1 style={{
           fontSize: 34, fontWeight: 700, color: TEXT,
@@ -578,218 +445,60 @@ export default function StatsClient() {
         </h1>
       </div>
 
-      {/* ── Content ────────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 8px 80px' }}>
+      {/* ── Tables ─────────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 24px 80px' }}>
 
-        {/* ──── TEAM STATS ────────────────────────────────────────────────── */}
-        {activeTab === 'team' && (
-          <div>
-            {/* Team selector */}
-            <div style={{ padding: '0 16px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <label style={{
-                fontSize: 9, color: ACCENT, fontFamily: MONO,
-                letterSpacing: '0.2em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-              }}>
-                SELECT TEAM
-              </label>
-              <select
-                value={selectedTeam}
-                onChange={e => setSelectedTeam(e.target.value)}
-                style={{ ...selectStyle, flex: '1 1 260px', maxWidth: 380, color: selectedTeam ? TEXT : MUTED }}
-              >
-                <option value="">Choose a team...</option>
-                {MLB_TEAMS.map(t => (
-                  <option key={t} value={t} style={{ background: '#0f0f14', color: TEXT }}>{t}</option>
-                ))}
-              </select>
-              {teamLoading && (
-                <span style={{ fontSize: 10, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  Loading…
-                </span>
-              )}
-            </div>
-
-            {/* Empty state */}
-            {!selectedTeam && (
-              <div style={{
-                padding: '80px 24px', textAlign: 'center',
-                color: MUTED, fontFamily: MONO,
-                fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-              }}>
-                Select a team to view their extended chart with stat line rows
-              </div>
-            )}
-
-            {/* Chart */}
-            {selectedTeam && !teamLoading && (
-              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <ChartLegend />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <GambchopChart
-                    data={chartData}
-                    seasonData={seasonChartData}
-                    viewYear={viewYear}
-                    viewMonth={viewMonth}
-                    onPrevMonth={handlePrevMonth}
-                    onNextMonth={handleNextMonth}
-                    canPrevMonth={canPrevMonth}
-                    canNextMonth={canNextMonth}
-                    memberTier={memberTier}
-                    accent={ACCENT}
-                    onJoin={() => { setIsMember(true); openModal('join') }}
-                    onUpgrade={() => openModal('pro')}
-                    lastUpdated={lastUpdated}
-                    statRowConfigs={teamStatRowConfigs}
-                  />
-
-                  {/* Save as custom chart — Pro only */}
-                  {isPro && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 4px 0' }}>
-                      <button
-                        onClick={() => showToast('Custom chart saving coming soon — this will let you name and share this chart.')}
-                        style={{
-                          background: 'transparent', border: `1px solid ${BORDER}`,
-                          borderRadius: 4, padding: '6px 14px', cursor: 'pointer',
-                          fontSize: 9, fontWeight: 700, color: TEXT, fontFamily: MONO,
-                          letterSpacing: '0.1em', textTransform: 'uppercase',
-                          transition: 'border-color 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = ACCENT)}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
-                      >
-                        SAVE AS CUSTOM CHART →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+        {mainTab === 'team' && subTab === 'batting' && (
+          <StatsTable
+            rows={teamBat}
+            cols={TEAM_BAT_COLS}
+            getLabel={r => (r as TeamBatRow).team}
+            getLink={r  => TEAM_ROUTES[(r as TeamBatRow).team] ?? null}
+            sortCol={tbSortCol}
+            sortDir={tbSortDir}
+            onSort={handleTbSort}
+          />
         )}
 
-        {/* ──── PLAYER STATS ──────────────────────────────────────────────── */}
-        {activeTab === 'player' && (
-          <div>
-            {/* Player search controls */}
-            <div style={{ padding: '0 16px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {/* Optional team filter */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label style={{
-                  fontSize: 9, color: ACCENT, fontFamily: MONO,
-                  letterSpacing: '0.2em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-                }}>
-                  FILTER TEAM
-                </label>
-                <select
-                  value={teamFilter}
-                  onChange={e => setTeamFilter(e.target.value)}
-                  style={{ ...selectStyle, width: 200, color: teamFilter ? TEXT : MUTED, fontSize: 11 }}
-                >
-                  <option value="">All teams</option>
-                  {MLB_TEAMS.map(t => (
-                    <option key={t} value={t} style={{ background: '#0f0f14', color: TEXT }}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Player search */}
-              <label style={{
-                fontSize: 9, color: ACCENT, fontFamily: MONO,
-                letterSpacing: '0.2em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-              }}>
-                PLAYER
-              </label>
-              <PlayerSearch
-                teamFilter={teamFilter}
-                initialName={playerName || undefined}
-                onSelect={(name, team) => {
-                  setPlayerName(name)
-                  setPlayerTeamName(team)
-                  loadPlayerData(name, viewYear, viewMonth)
-                  const p = new URLSearchParams({ tab: 'player', player: encodeURIComponent(name) })
-                  router.replace(`/stats?${p.toString()}`, { scroll: false })
-                }}
-              />
-              {playerName && (
-                <span style={{ fontSize: 11, color: ACCENT, fontFamily: MONO }}>
-                  ✓ {playerName}
-                  {playerTeamName && <span style={{ color: MUTED }}> · {playerTeamName}</span>}
-                </span>
-              )}
-              {playerLoading && (
-                <span style={{ fontSize: 10, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  Loading…
-                </span>
-              )}
-            </div>
-
-            {/* Empty state */}
-            {!playerName && (
-              <div style={{
-                padding: '80px 24px', textAlign: 'center',
-                color: MUTED, fontFamily: MONO,
-                fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-              }}>
-                Search for a player to view their stat line chart
-              </div>
-            )}
-
-            {/* Player chart — betting rows hidden, stat rows only */}
-            {playerName && !playerLoading && playerChartData.length > 0 && (
-              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <ChartLegend />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <GambchopChart
-                    data={playerChartData}
-                    viewYear={viewYear}
-                    viewMonth={viewMonth}
-                    onPrevMonth={handlePrevMonth}
-                    onNextMonth={handleNextMonth}
-                    canPrevMonth={canPrevMonth}
-                    canNextMonth={canNextMonth}
-                    memberTier={memberTier}
-                    accent={ACCENT}
-                    onJoin={() => { setIsMember(true); openModal('join') }}
-                    onUpgrade={() => openModal('pro')}
-                    statRowConfigs={playerStatRowConfigs}
-                    hideBettingRows
-                  />
-
-                  {isPro && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 4px 0' }}>
-                      <button
-                        onClick={() => showToast('Custom chart saving coming soon — this will let you name and share this chart.')}
-                        style={{
-                          background: 'transparent', border: `1px solid ${BORDER}`,
-                          borderRadius: 4, padding: '6px 14px', cursor: 'pointer',
-                          fontSize: 9, fontWeight: 700, color: TEXT, fontFamily: MONO,
-                          letterSpacing: '0.1em', textTransform: 'uppercase',
-                          transition: 'border-color 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = ACCENT)}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
-                      >
-                        SAVE AS CUSTOM CHART →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* No data state */}
-            {playerName && !playerLoading && playerChartData.length > 0 && playerChartData[0].games.length === 0 && (
-              <div style={{
-                padding: '60px 24px', textAlign: 'center',
-                color: MUTED, fontFamily: MONO,
-                fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-              }}>
-                No data available yet — check back after today&apos;s games are processed
-              </div>
-            )}
-          </div>
+        {mainTab === 'team' && subTab === 'pitching' && (
+          <StatsTable
+            rows={teamPit}
+            cols={TEAM_PIT_COLS}
+            getLabel={r => (r as TeamPitRow).team}
+            getLink={r  => TEAM_ROUTES[(r as TeamPitRow).team] ?? null}
+            sortCol={tpSortCol}
+            sortDir={tpSortDir}
+            onSort={handleTpSort}
+          />
         )}
 
+        {mainTab === 'player' && subTab === 'batting' && (
+          <StatsTable
+            rows={playerBat}
+            cols={playerBatCols}
+            getLabel={r => (r as PlayerBatRow).player}
+            getLink={() => null}
+            sortCol={pbSortCol}
+            sortDir={pbSortDir}
+            onSort={handlePbSort}
+            showTeam
+          />
+        )}
+
+        {mainTab === 'player' && subTab === 'pitching' && (
+          <StatsTable
+            rows={playerPit}
+            cols={playerPitCols}
+            getLabel={r => (r as PlayerPitRow).player}
+            getLink={() => null}
+            sortCol={ppSortCol}
+            sortDir={ppSortDir}
+            onSort={handlePpSort}
+            showTeam
+          />
+        )}
+
+        <Glossary />
       </div>
     </div>
   )
