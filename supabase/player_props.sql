@@ -1,10 +1,7 @@
 -- ─── Raw game stats tables (MLB Stats API ingestion) ───────────────────────────
 -- Run in Supabase SQL Editor.
 --
--- Migration notes:
---   drop table if exists player_prop_lines;
---   alter table player_prop_results rename to player_game_stats;
---   -- then run the alter/add column statements below
+-- Safe to re-run: uses IF NOT EXISTS / IF EXISTS guards throughout.
 
 -- Drop the prop lines table — no longer used (threshold comparison is UI-side)
 drop table if exists player_prop_lines;
@@ -19,7 +16,7 @@ create table if not exists player_game_stats (
   team_name       text        not null,
   game_date       date        not null,
   league          text        not null default 'MLB',
-  player_type     text        not null default 'batter',  -- 'batter' | 'pitcher'
+  player_type     text        not null default 'batter',
   hits            integer,
   home_runs       integer,
   rbis            integer,
@@ -36,29 +33,20 @@ create index if not exists player_game_stats_player_idx on player_game_stats(pla
 create index if not exists player_game_stats_team_idx   on player_game_stats(team_name, game_date desc);
 
 alter table player_game_stats enable row level security;
+
+drop policy if exists "Public read player_game_stats" on player_game_stats;
 create policy "Public read player_game_stats" on player_game_stats for select using (true);
 
 -- ─── team_game_stats ──────────────────────────────────────────────────────────
--- One row per team per game date. Extended with league, home/away, and opponent.
+-- Table already exists — add new columns if they aren't there yet.
 
-create table if not exists team_game_stats (
-  id           uuid        primary key default gen_random_uuid(),
-  team_name    text        not null,
-  game_date    date        not null,
-  league       text        not null default 'MLB',
-  home_or_away text,                               -- 'home' | 'away'
-  opponent     text,
-  hits         integer,
-  home_runs    integer,
-  runs         integer,
-  strikeouts   integer,
-  walks        integer,
-  at_bats      integer,
-  created_at   timestamptz default now(),
-  unique(team_name, game_date)
-);
+alter table team_game_stats add column if not exists league       text default 'MLB';
+alter table team_game_stats add column if not exists home_or_away text;
+alter table team_game_stats add column if not exists opponent     text;
 
 create index if not exists team_game_stats_team_idx on team_game_stats(team_name, game_date desc);
 
 alter table team_game_stats enable row level security;
+
+drop policy if exists "Public read team_game_stats" on team_game_stats;
 create policy "Public read team_game_stats" on team_game_stats for select using (true);
