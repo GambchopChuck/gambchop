@@ -27,6 +27,21 @@ const C = {
   empty:  '#131318',
 }
 
+// Stat row–specific colors (distinct from betting O/U brown/violet)
+const STAT_OVER  = '#A855F7'  // purple
+const STAT_UNDER = '#7DD3FC'  // baby blue
+const STAT_PUSH  = '#FACC15'  // yellow
+
+// ─── Stat row config (exported so StatsClient can build configs) ───────────────
+
+export interface StatRowConfig {
+  key:          string
+  label:        string
+  line:         number
+  dayData:      Map<number, number | null>  // day-of-month → actual stat value
+  onLineChange: (newLine: number) => void
+}
+
 // ─── Record helpers ───────────────────────────────────────────────────────────
 
 interface WL { w: number; l: number }
@@ -51,6 +66,33 @@ function RecordBadge({ r }: { r: WL }) {
 function OUBadge({ o, u }: { o: number; u: number }) {
   const color = o > u ? C.violet : o < u ? C.brown : '#ffffff'
   return <span style={{ color, fontSize: 10, fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>&nbsp;({o}-{u})</span>
+}
+
+// ─── Stat value cell ──────────────────────────────────────────────────────────
+
+function StatValueCell({ actual, line, label, dateStr }: {
+  actual:  number | null
+  line:    number
+  label:   string
+  dateStr: string
+}) {
+  if (actual === null) return <div style={{ height: 34 }} />
+  const result = actual > line ? 'over' : actual < line ? 'under' : 'push'
+  const s = {
+    over:  { bg: STAT_OVER,  glow: `0 0 12px ${STAT_OVER}88`,  label: 'O' },
+    under: { bg: STAT_UNDER, glow: `0 0 12px ${STAT_UNDER}66`, label: 'U' },
+    push:  { bg: STAT_PUSH,  glow: 'none',                      label: 'P' },
+  }[result]
+  const tooltip = `${dateStr} · ${actual} ${label.toLowerCase()} · Line: ${line} · ${result.toUpperCase()}`
+  return (
+    <div
+      className="cell"
+      style={{ background: s.bg, color: '#000', boxShadow: s.glow, fontWeight: 800, fontSize: 11, cursor: 'default' }}
+      title={tooltip}
+    >
+      {s.label}
+    </div>
+  )
 }
 
 // ─── Calendar cells ───────────────────────────────────────────────────────────
@@ -137,10 +179,11 @@ const ROWS: RowMeta[] = [
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 const LEGEND = [
-  { bg: C.green, label: 'Win / Cover' }, { bg: C.red, label: 'Loss / Miss' }, { bg: C.white, label: 'Push' },
-  { bg: C.gold, label: 'ML Fav' }, { bg: C.orange, label: 'ML Dog' }, { bg: C.royal, label: 'Sp Fav' },
-  { bg: C.purple, label: 'Sp Dog' }, { bg: C.teal, label: 'Home' }, { bg: C.silver, label: 'Away' },
-  { bg: C.violet, label: 'Over' }, { bg: C.brown, label: 'Under' },
+  { bg: C.green,   label: 'Win / Cover' }, { bg: C.red, label: 'Loss / Miss' }, { bg: C.white, label: 'Push' },
+  { bg: C.gold,    label: 'ML Fav'      }, { bg: C.orange, label: 'ML Dog' },   { bg: C.royal, label: 'Sp Fav' },
+  { bg: C.purple,  label: 'Sp Dog'      }, { bg: C.teal, label: 'Home' },        { bg: C.silver, label: 'Away' },
+  { bg: C.violet,  label: 'Bet Over'   }, { bg: C.brown, label: 'Bet Under' },
+  { bg: STAT_OVER, label: 'Stat Over'  }, { bg: STAT_UNDER, label: 'Stat Under' }, { bg: STAT_PUSH, label: 'Stat Push' },
 ]
 
 function formatUpdatedAgo(iso: string | null | undefined): string | null {
@@ -309,6 +352,9 @@ interface Props {
   starredBetTypes?:  Set<string>
   onStarClick?:      (betType: string, teamName: string) => void
   lastUpdated?:      string | null
+  // ── Stat rows ────────────────────────────────────────────────────────────────
+  statRowConfigs?: StatRowConfig[]   // extra O/U/P stat rows appended below betting rows
+  hideBettingRows?: boolean          // when true, suppress the 9 betting rows (player stats view)
 }
 
 // ─── Scroll arrow button (shared style) ───────────────────────────────────────
@@ -345,23 +391,32 @@ export default function GambchopChart({
   viewYear, viewMonth, onPrevMonth, onNextMonth, canPrevMonth, canNextMonth,
   memberTier, isPro, onJoin, onUpgrade,
   accent = C.green, starredBetTypes, onStarClick, lastUpdated,
+  statRowConfigs, hideBettingRows,
 }: Props) {
   const [showBanner, setShowBanner] = useState(false)
   const { visibleRows, setVisibleRows, filterChips, isFiltered, activeCount, resetFilters } = useFilters()
-  const allRowsHidden = Object.values(visibleRows).every(v => !v)
 
   const tier: MemberTier = memberTier ?? (isPro ? 'pro' : 'free')
   const handleUpgrade = () => { if (onUpgrade) onUpgrade(); else setShowBanner(true) }
   const handleJoin    = () => { if (onJoin) onJoin() }
 
+  // allRowsHidden only triggers if betting rows are being shown AND all are hidden
+  const allRowsHidden = !hideBettingRows && Object.values(visibleRows).every(v => !v)
+
   const daysInMonth    = new Date(viewYear, viewMonth, 0).getDate()
   const contentMinWidth = LABEL_W + daysInMonth * COL_W + 24
 
-  // ── Shared scroll state ─────────────────────────────────────────────────────
-  // All per-team containers + the header container share the same scrollLeft.
-  // atStart/atEnd drive arrow/gradient visibility — only updated on boundary cross
-  // to avoid re-rendering 30 teams on every scroll tick.
+  // ── Inline stat-line editing ────────────────────────────────────────────────
+  const [editingStatKey, setEditingStatKey] = useState<string | null>(null)
+  const [editValue,      setEditValue]      = useState('')
 
+  function commitStatEdit(cfg: StatRowConfig) {
+    const n = parseFloat(editValue)
+    if (!isNaN(n) && n >= 0) cfg.onLineChange(n)
+    setEditingStatKey(null)
+  }
+
+  // ── Shared scroll state ─────────────────────────────────────────────────────
   const [atStart, setAtStart] = useState(true)
   const [atEnd,   setAtEnd]   = useState(false)
   const scrollPosRef  = useRef(0)
@@ -370,7 +425,6 @@ export default function GambchopChart({
   const isSyncing     = useRef(false)
   const syncTimer     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Keep teamRefs + glowRefs sized to match current data
   if (teamRefs.current.length !== data.length) {
     teamRefs.current = new Array(data.length).fill(null)
   }
@@ -389,7 +443,6 @@ export default function GambchopChart({
     if (newEnd   !== atEnd)   setAtEnd(newEnd)
   }
 
-  // Sync all containers to pos, skipping the source container (sourceIdx = -1 means header)
   function syncAllTo(pos: number, skipEl: HTMLDivElement | null) {
     clearTimeout(syncTimer.current)
     isSyncing.current = true
@@ -417,7 +470,6 @@ export default function GambchopChart({
     for (const el of allScrollRefs()) {
       if (el) el.scrollTo({ left: targetPos, behavior: 'smooth' })
     }
-    // After smooth scroll animation (~400ms), re-check edges and release lock
     syncTimer.current = setTimeout(() => {
       isSyncing.current = false
       const firstEl = teamRefs.current.find(r => r !== null)
@@ -425,7 +477,6 @@ export default function GambchopChart({
     }, 450)
   }
 
-  // Union of all game days (for date header highlights and auto-scroll target)
   const allPopulatedDays = new Set<number>()
   for (const team of data) {
     for (const g of team.games) {
@@ -433,8 +484,15 @@ export default function GambchopChart({
       if (day > 0) allPopulatedDays.add(day)
     }
   }
+  // Also include days from stat row data (important for player stats view)
+  if (statRowConfigs?.length) {
+    for (const cfg of statRowConfigs) {
+      for (const [day] of cfg.dayData) {
+        if (cfg.dayData.get(day) !== null) allPopulatedDays.add(day)
+      }
+    }
+  }
 
-  // Auto-scroll on mount and month change
   useEffect(() => {
     if (data.length === 0) return
     const raf = requestAnimationFrame(() => {
@@ -462,13 +520,11 @@ export default function GambchopChart({
     return () => cancelAnimationFrame(raf)
   }, [viewYear, viewMonth, data.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-check edges after data loads (scroll width may change)
   useEffect(() => {
     const firstEl = teamRefs.current.find(r => r !== null)
     if (firstEl) updateEdges(scrollPosRef.current, firstEl)
   }, [data.length, daysInMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // IntersectionObserver — only animate glow on visible team cards
   useEffect(() => {
     const els = glowRefs.current.filter((el): el is HTMLDivElement => el !== null)
     if (!els.length) return
@@ -492,7 +548,7 @@ export default function GambchopChart({
       <Legend lastUpdated={lastUpdated} />
 
       {/* Active filters bar */}
-      {isFiltered && tier !== 'none' && (
+      {isFiltered && !hideBettingRows && tier !== 'none' && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           padding: '8px 20px', background: '#0b0b10', borderBottom: '1px solid #1a1a24',
@@ -542,15 +598,13 @@ export default function GambchopChart({
         </div>
       )}
 
-      {/* ── Per-team containers — each has its own scroll + synced arrows ── */}
+      {/* ── Per-team containers ─────────────────────────────────────────────── */}
       <div style={{ position: 'relative' }}>
-        {/* No-member blur over the whole body */}
         {tier === 'none' && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 10, filter: 'blur(6px)', pointerEvents: 'none' }} aria-hidden />
         )}
 
         {data.map((team, ti) => {
-          // Build day → games lookup for this team
           const dayMap = new Map<number, GameEntry[]>()
           for (const g of team.games) {
             const day = parseInt(g.rawDate.split('-')[2] ?? '0', 10)
@@ -561,9 +615,21 @@ export default function GambchopChart({
           }
 
           const populatedDays = Array.from(dayMap.keys()).sort((a, b) => a - b)
+
+          // For player stats view, also include stat data days in the populated set
+          const statDays = new Set<number>()
+          if (statRowConfigs?.length) {
+            for (const cfg of statRowConfigs) {
+              for (const [day, val] of cfg.dayData) {
+                if (val !== null) statDays.add(day)
+              }
+            }
+          }
+          const allPopDays = Array.from(new Set([...populatedDays, ...statDays])).sort((a, b) => a - b)
+
           const visibleDaySet = tier === 'pro'
-            ? new Set(populatedDays)
-            : new Set(populatedDays.slice(-FREE_COLS))
+            ? new Set(allPopDays)
+            : new Set(allPopDays.slice(-FREE_COLS))
 
           const seasonTeam  = (seasonData ?? []).find(t => t.teamName === team.teamName)
           const seasonGames = seasonTeam?.games ?? team.games
@@ -575,7 +641,8 @@ export default function GambchopChart({
             moneyline: mlStreak, spread: spStreak, ou: ouStreak,
           }
 
-          const visibleRowList = ROWS.filter(row => visibleRows[ROW_VISIBLE_KEY[row.key]])
+          // Betting rows — empty when hideBettingRows
+          const visibleRowList = hideBettingRows ? [] : ROWS.filter(row => visibleRows[ROW_VISIBLE_KEY[row.key]])
 
           const teamColors = TEAM_COLORS[team.teamName]
 
@@ -591,7 +658,7 @@ export default function GambchopChart({
                 '--team-secondary': teamColors?.secondary ?? '#ffffff',
               } as React.CSSProperties}
             >
-              {/* Edge gradients per team */}
+              {/* Edge gradients */}
               {!atStart && (
                 <div style={{ position: 'absolute', left: LABEL_W, top: 0, bottom: 0, width: 48, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to right, #0a0a0f, transparent)' }} />
               )}
@@ -599,11 +666,11 @@ export default function GambchopChart({
                 <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 64, zIndex: 25, pointerEvents: 'none', background: 'linear-gradient(to left, #0a0a0f, transparent)' }} />
               )}
 
-              {/* Per-team scroll arrows */}
+              {/* Scroll arrows */}
               {!atStart && <ScrollArrow dir="left"  onClick={() => scrollWeek(-1)} />}
               {!atEnd   && <ScrollArrow dir="right" onClick={() => scrollWeek(1)}  />}
 
-              {/* Team scroll container */}
+              {/* Scroll container */}
               <div
                 ref={el => { teamRefs.current[ti] = el }}
                 onScroll={() => handleTeamScroll(ti)}
@@ -612,29 +679,32 @@ export default function GambchopChart({
               >
                 <div style={{ minWidth: contentMinWidth }}>
                   <DateHeader year={viewYear} month={viewMonth} daysInMonth={daysInMonth} populatedDays={allPopulatedDays} />
+
                   {/* Team label row */}
                   <div style={{ display: 'flex', alignItems: 'stretch' }}>
                     <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 20, background: '#0a0a0f', display: 'flex', alignItems: 'center' }}>
                       <div style={{ width: 3, alignSelf: 'stretch', background: accent, marginRight: 16, borderRadius: '0 2px 2px 0', minHeight: 46 }} />
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.3 }}>{team.teamName}</div>
-                        <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{populatedDays.length} Games</div>
+                        <div style={{ fontSize: 9, color: '#ffffff', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{allPopDays.length} Games</div>
                       </div>
                     </div>
                     <div style={{ flex: 1, height: 46, alignSelf: 'center', background: `linear-gradient(to right, ${accent}0d 0%, transparent 60%)`, borderTop: '1px solid #1a1a24', borderBottom: '1px solid #1a1a24', marginTop: 8 }} />
                   </div>
 
-                  {allRowsHidden && (
+                  {/* No rows message (only when betting rows visible and all hidden) */}
+                  {allRowsHidden && !statRowConfigs?.length && (
                     <div style={{ padding: '14px 20px', fontSize: 10, color: '#ffffff', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                       No rows selected — open filters to enable rows
                     </div>
                   )}
 
+                  {/* ── Betting rows ───────────────────────────────────────── */}
                   {visibleRowList.map((row, ri) => {
                     const rowBg = ri % 2 === 0 ? '#0a0a0f' : '#0d0d14'
                     return (
                       <div key={row.key} style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
-                        {/* Sticky label column */}
+                        {/* Sticky label */}
                         <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
                           <div style={{ width: 2, height: 12, background: row.accent, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
                           <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>{row.label}</span>
@@ -671,7 +741,7 @@ export default function GambchopChart({
                           })()}
                         </div>
 
-                        {/* Calendar day columns */}
+                        {/* Day columns */}
                         {Array.from({ length: daysInMonth }, (_, i) => {
                           const day   = i + 1
                           const games = (dayMap.get(day) ?? []).sort((a, b) => a.rawTime.localeCompare(b.rawTime))
@@ -693,6 +763,106 @@ export default function GambchopChart({
                             </div>
                           )
                         })}
+                      </div>
+                    )
+                  })}
+
+                  {/* ── Stat rows ──────────────────────────────────────────── */}
+                  {(statRowConfigs ?? []).map((cfg, sri) => {
+                    const rowBg = (visibleRowList.length + sri) % 2 === 0 ? '#0a0a0f' : '#0d0d14'
+
+                    // Compute O/U record for this stat from all available dayData
+                    let statO = 0, statU = 0
+                    for (const [, actual] of cfg.dayData) {
+                      if (actual === null) continue
+                      if (actual > cfg.line) statO++
+                      else if (actual < cfg.line) statU++
+                    }
+
+                    // Separator line before first stat row
+                    const isFirst = sri === 0
+
+                    return (
+                      <div key={cfg.key}>
+                        {isFirst && (
+                          <div style={{ height: 1, background: '#1a1a2a', margin: '2px 0' }} />
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
+                          {/* Sticky label with inline edit */}
+                          <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: rowBg, height: 34, display: 'flex', alignItems: 'center', paddingLeft: 19 }}>
+                            <div style={{ width: 2, height: 12, background: STAT_OVER, borderRadius: 2, marginRight: 10, flexShrink: 0, opacity: 0.85 }} />
+
+                            {editingStatKey === cfg.key ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500 }}>
+                                  {cfg.label}
+                                </span>
+                                <input
+                                  autoFocus
+                                  type="number"
+                                  step="0.5"
+                                  min="0"
+                                  value={editValue}
+                                  onChange={e => setEditValue(e.target.value)}
+                                  onBlur={() => commitStatEdit(cfg)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter')  commitStatEdit(cfg)
+                                    if (e.key === 'Escape') setEditingStatKey(null)
+                                  }}
+                                  style={{
+                                    width: 52, background: '#1a1a24',
+                                    border: `1px solid ${STAT_OVER}66`,
+                                    borderRadius: 3, color: '#f4f4f5',
+                                    fontSize: 11, padding: '2px 5px',
+                                    outline: 'none', fontFamily: 'inherit',
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <span style={{ fontSize: 10, color: '#ffffff', letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                  {cfg.label} ({cfg.line})
+                                </span>
+                                <span style={{ fontSize: 9, color: STAT_OVER, fontWeight: 700, marginLeft: 3, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                                  &nbsp;({statO}-{statU})
+                                </span>
+                                <button
+                                  onClick={() => { setEditingStatKey(cfg.key); setEditValue(String(cfg.line)) }}
+                                  title="Edit line"
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    padding: '2px 5px', color: '#3a3a4a', fontSize: 11,
+                                    lineHeight: 1, marginLeft: 2, flexShrink: 0,
+                                    transition: 'color 0.15s', fontFamily: 'inherit',
+                                  }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = '#7a7a8a')}
+                                  onMouseLeave={e => (e.currentTarget.style.color = '#3a3a4a')}
+                                >
+                                  ✎
+                                </button>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Day columns for stat row */}
+                          {Array.from({ length: daysInMonth }, (_, i) => {
+                            const day     = i + 1
+                            const actual  = cfg.dayData.get(day) ?? null
+                            const hasData = actual !== null
+                            const locked  = tier !== 'none' && hasData && !visibleDaySet.has(day)
+                            const dateStr = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                            return (
+                              <div key={day} style={{
+                                width: COL_W, minWidth: COL_W, flexShrink: 0, background: rowBg,
+                                filter:        locked ? 'blur(3px)' : 'none',
+                                opacity:       locked ? 0.35 : 1,
+                                pointerEvents: locked ? 'none' : 'auto',
+                              }}>
+                                <StatValueCell actual={actual} line={cfg.line} label={cfg.label} dateStr={dateStr} />
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )
                   })}
@@ -738,15 +908,9 @@ export default function GambchopChart({
         .cell       { display:flex; align-items:center; justify-content:center; height:34px; margin:0 3px; border-radius:5px; font-size:11px; letter-spacing:0.1em; }
         .cell-half  { flex:1; display:flex; align-items:stretch; }
         .cell-half .cell { height:100%; border-radius:0; margin:0; flex:1; }
-
-        /* Hide scrollbars on all chart scroll containers — gradients serve as indicators */
         .chart-scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
         .chart-scroll-hidden::-webkit-scrollbar { display: none; }
-
-        /* Scroll arrow hover glow */
         .scroll-arrow:hover { border-color: #22c55e99 !important; box-shadow: 0 0 14px #22c55e44 !important; }
-
-        /* Hide arrows on narrow mobile — rely on touch swipe */
         @media (max-width: 600px) { .scroll-arrow { display: none !important; } }
       `}</style>
     </div>
