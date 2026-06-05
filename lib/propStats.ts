@@ -1,23 +1,27 @@
 import { supabaseAdmin } from './supabase-admin'
 
-// ─── Player prop history ──────────────────────────────────────────────────────
-// Returns all result rows for a player + prop type, newest first.
+// ─── Player game stat history ─────────────────────────────────────────────────
+// Returns raw stat rows for a player + player type, newest first.
+// player_type: 'batter' | 'pitcher'
+// The threshold comparison (over/under a user-set line) happens in the UI.
 
-export async function getPlayerPropHistory(
+export async function getPlayerStatHistory(
   playerName: string,
-  propType:   string,
+  playerType: 'batter' | 'pitcher' = 'batter',
+  league = 'MLB',
   limit = 20,
 ) {
   const { data, error } = await supabaseAdmin
-    .from('player_prop_results')
-    .select('game_date, prop_type, line, actual_value, result, team_name')
+    .from('player_game_stats')
+    .select('game_date, player_type, team_name, hits, home_runs, rbis, strikeouts, walks, at_bats, innings_pitched, earned_runs')
     .eq('player_name', playerName)
-    .eq('prop_type',   propType)
+    .eq('player_type', playerType)
+    .eq('league', league)
     .order('game_date', { ascending: false })
     .limit(limit)
 
   if (error) {
-    console.error('[propStats] getPlayerPropHistory:', error.message)
+    console.error('[propStats] getPlayerStatHistory:', error.message)
     return []
   }
   return data ?? []
@@ -34,35 +38,13 @@ export async function getTeamStatHistory(
 ) {
   const { data, error } = await supabaseAdmin
     .from('team_game_stats')
-    .select(`game_date, ${statType}`)
+    .select(`game_date, home_or_away, opponent, ${statType}`)
     .eq('team_name', teamName)
     .order('game_date', { ascending: false })
     .limit(limit)
 
   if (error) {
     console.error('[propStats] getTeamStatHistory:', error.message)
-    return []
-  }
-  return data ?? []
-}
-
-// ─── Today's prop lines ───────────────────────────────────────────────────────
-// Returns all prop lines for today (or for a specific player).
-
-export async function getTodayPropLines(playerName?: string) {
-  const today = new Date().toISOString().slice(0, 10)
-
-  let q = supabaseAdmin
-    .from('player_prop_lines')
-    .select('player_name, team_name, game_date, game_id, prop_type, line, over_odds, under_odds')
-    .eq('game_date', today)
-    .order('player_name', { ascending: true })
-
-  if (playerName) q = q.eq('player_name', playerName)
-
-  const { data, error } = await q
-  if (error) {
-    console.error('[propStats] getTodayPropLines:', error.message)
     return []
   }
   return data ?? []
