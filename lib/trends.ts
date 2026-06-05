@@ -19,7 +19,20 @@ export interface TeamGameRow {
   runs:       number | null
   strikeouts: number | null
   walks:      number | null
+  at_bats:    number | null
 }
+
+export interface PlayerGameRow {
+  game_date:  string
+  hits:       number | null
+  home_runs:  number | null
+  rbis:       number | null
+  strikeouts: number | null
+  walks:      number | null
+  at_bats:    number | null
+}
+
+export type PlayerEntry = { team: string; games: PlayerGameRow[] }
 
 // ─── Pure computation helpers ─────────────────────────────────────────────────
 
@@ -60,7 +73,7 @@ export async function fetchAllTeamGameStats(
 ): Promise<Record<string, TeamGameRow[]>> {
   const { data, error } = await supabase
     .from('team_game_stats')
-    .select('team_name, game_date, hits, home_runs, runs, strikeouts, walks')
+    .select('team_name, game_date, hits, home_runs, runs, strikeouts, walks, at_bats')
     .eq('league', league)
     .order('game_date', { ascending: true })
 
@@ -74,6 +87,31 @@ export async function fetchAllTeamGameStats(
     const { team_name, ...row } = raw
     if (!result[team_name]) result[team_name] = []
     result[team_name].push(row)
+  }
+  return result
+}
+
+export async function fetchAllPlayerGameStats(
+  league = 'MLB',
+): Promise<Record<string, PlayerEntry>> {
+  const { data, error } = await supabase
+    .from('player_game_stats')
+    .select('player_name, team_name, game_date, hits, home_runs, rbis, strikeouts, walks, at_bats')
+    .eq('league', league)
+    .eq('player_type', 'batter')
+    .order('game_date', { ascending: true })
+
+  if (error) {
+    console.error('[trends] fetchAllPlayerGameStats:', error.message)
+    return {}
+  }
+
+  type RawPlayerRow = { player_name: string; team_name: string } & PlayerGameRow
+  const result: Record<string, PlayerEntry> = {}
+  for (const raw of (data ?? []) as RawPlayerRow[]) {
+    const { player_name, team_name, ...row } = raw
+    if (!result[player_name]) result[player_name] = { team: team_name, games: [] }
+    result[player_name].games.push(row)
   }
   return result
 }
