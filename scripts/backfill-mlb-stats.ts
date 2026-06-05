@@ -1,10 +1,12 @@
 // scripts/backfill-mlb-stats.ts
 //
-// Backfills player_game_stats and team_game_stats for a range of dates
-// by calling the MLB Stats API (boxscore hydration) for each date.
+// Backfills player_game_stats and team_game_stats for a range of dates.
+// Step 1: fetch schedule to get gamePks of Final games.
+// Step 2: fetch /api/v1/game/{gamePk}/boxscore for each game (schedule endpoint
+//         does not embed boxscore even with hydrate=boxscore — fetched separately).
 //
 // Run:
-//   npx tsx --env-file=.env.local scripts/backfill-mlb-stats.ts --start 2026-05-15 --end 2026-06-04
+//   npx tsx --env-file=.env.local scripts/backfill-mlb-stats.ts --start 2026-05-15 --end 2026-06-05
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -73,13 +75,16 @@ type MLBTeamBox = {
 }
 
 type MLBScheduleGame = {
-  gamePk:       number
-  status:       { abstractGameState: string }
-  boxscore?:    { teams: { home: MLBTeamBox; away: MLBTeamBox } }
+  gamePk: number
+  status: { abstractGameState: string }
 }
 
 type MLBScheduleResponse = {
   dates?: Array<{ games: MLBScheduleGame[] }>
+}
+
+type MLBBoxscoreResponse = {
+  teams: { home: MLBTeamBox; away: MLBTeamBox }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -93,14 +98,12 @@ function parseInningsPitched(raw: string | undefined): number | null {
 // ─── Process one date ─────────────────────────────────────────────────────────
 
 async function processDate(gameDate: string): Promise<{ teams: number; players: number }> {
-  const url =
-    `${MLB_BASE}/api/v1/schedule?sportId=1&date=${gameDate}` +
-    `&gameType=R&hydrate=boxscore,linescore`
+  // Step 1: schedule — get gamePks of Final regular-season games
+  const schedUrl = `${MLB_BASE}/api/v1/schedule?sportId=1&date=${gameDate}&gameType=R`
+  const schedRes = await fetch(schedUrl)
+  if (!schedRes.ok) throw new Error(`MLB Schedule API HTTP ${schedRes.status} for ${gameDate}`)
 
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`MLB Stats API HTTP ${res.status} for ${gameDate}`)
-
-  const schedule   = await res.json() as MLBScheduleResponse
+  const schedule   = await schedRes.json() as MLBScheduleResponse
   const allGames   = schedule.dates?.flatMap(d => d.games) ?? []
   const finalGames = allGames.filter(g => g.status.abstractGameState === 'Final')
 
@@ -108,8 +111,14 @@ async function processDate(gameDate: string): Promise<{ teams: number; players: 
   let players = 0
 
   for (const game of finalGames) {
-    const box = game.boxscore
-    if (!box) continue
+    // Step 2: fetch boxscore for this game individually
+    const boxUrl = `${MLB_BASE}/api/v1/game/${game.gamePk}/boxscore`
+    const boxRes = await fetch(boxUrl)
+    if (!boxRes.ok) {
+      console.warn(`  ${gameDate} gamePk ${game.gamePk}: boxscore HTTP ${boxRes.status} — skipping`)
+      continue
+    }
+    const box = await boxRes.json() as MLBBoxscoreResponse
 
     const homeTeamName = box.teams.home.team.name
     const awayTeamName = box.teams.away.team.name
