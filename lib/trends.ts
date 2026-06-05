@@ -13,15 +13,12 @@ export interface TrendCell {
 }
 
 export interface TeamGameRow {
-  game_date:    string
-  hits:         number | null
-  home_runs:    number | null
-  runs:         number | null
-  strikeouts:   number | null   // batter strikeouts
-  walks:        number | null
-  at_bats:      number | null
-  home_or_away: string | null
-  opponent:     string | null
+  game_date:  string
+  hits:       number | null
+  home_runs:  number | null
+  runs:       number | null
+  strikeouts: number | null
+  walks:      number | null
 }
 
 // ─── Pure computation helpers ─────────────────────────────────────────────────
@@ -63,7 +60,7 @@ export async function fetchAllTeamGameStats(
 ): Promise<Record<string, TeamGameRow[]>> {
   const { data, error } = await supabase
     .from('team_game_stats')
-    .select('team_name, game_date, hits, home_runs, runs, strikeouts, walks, at_bats, home_or_away, opponent')
+    .select('team_name, game_date, hits, home_runs, runs, strikeouts, walks')
     .eq('league', league)
     .order('game_date', { ascending: true })
 

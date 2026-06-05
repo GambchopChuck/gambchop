@@ -73,6 +73,7 @@ const TEAM_PIT_COLS: ColDef<TeamPitRow>[] = [
   { key: 'sho',  label: 'SHO',  title: 'Shutouts' },
   { key: 'qs',   label: 'QS',   title: 'Quality Starts' },
   { key: 'ip',   label: 'IP',   title: 'Innings Pitched' },
+  { key: 'pc',   label: 'PC',   title: 'Pitch Count' },
   { key: 'h',    label: 'H',    title: 'Hits Allowed', defaultDir: 'asc' },
   { key: 'er',   label: 'ER',   title: 'Earned Runs', defaultDir: 'asc' },
   { key: 'hr',   label: 'HR',   title: 'Home Runs Allowed', defaultDir: 'asc' },
@@ -103,6 +104,7 @@ const GLOSSARY_BAT = [
 ]
 
 const GLOSSARY_PIT = [
+  { abbr: 'PC',   def: 'Pitch Count — total pitches thrown' },
   { abbr: 'ERA',  def: 'Earned Run Average — (Earned Runs × 9) ÷ Innings Pitched' },
   { abbr: 'SV',   def: 'Saves' },
   { abbr: 'CG',   def: 'Complete Games — pitcher finishes the entire game' },

@@ -4,11 +4,11 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import {
   fetchAllTeamGameStats,
-  computeTrends,
   computeSeasonAvg,
   computeTrendDirection,
   type TeamGameRow,
   type TrendCell,
+  type TrendResult,
 } from '@/lib/trends'
 import { TEAM_COLORS } from '@/lib/teamColors'
 
@@ -61,13 +61,6 @@ interface StatConfig {
 
 const BAT_STATS: StatConfig[] = [
   {
-    key: 'avg', label: 'AVG', lowerIsBetter: false,
-    getValue:  r => (r.at_bats && r.at_bats > 0 && r.hits !== null) ? r.hits / r.at_bats : null,
-    fmtAvg:    v => `.${String(Math.round(v * 1000)).padStart(3, '0')}`,
-    fmtVal:    v => `.${String(Math.round(v * 1000)).padStart(3, '0')}`,
-    unit:      '',
-  },
-  {
     key: 'hits', label: 'HITS', lowerIsBetter: false,
     getValue: r => r.hits,
     fmtAvg:  v => `${v.toFixed(1)}/g`,
@@ -96,7 +89,7 @@ const BAT_STATS: StatConfig[] = [
     unit:    '/g',
   },
   {
-    key: 'strikeouts', label: 'K', lowerIsBetter: true,  // batter Ks — fewer is better
+    key: 'strikeouts', label: 'K', lowerIsBetter: true,
     getValue: r => r.strikeouts,
     fmtAvg:  v => `${v.toFixed(1)}/g`,
     fmtVal:  v => String(Math.round(v)),
@@ -208,73 +201,80 @@ function TrendCellView({ cell, lowerIsBetter, onEnter, onLeave }: {
 }
 
 // ─── Stat row (cells + sparkline) ─────────────────────────────────────────────
-const LABEL_W = 160
+const LABEL_W  = 160
+const CELL_COL = 32   // matches .cell width
+const THRESHOLD = 5   // % deviation to count as above/below
 
-function StatRow({ cfg, cells, isPro, onEnter, onLeave }: {
+function StatRow({ cfg, rows, isPro, onEnter, onLeave, rowBg }: {
   cfg:     StatConfig
-  cells:   TrendCell[]
+  rows:    TeamGameRow[]
   isPro:   boolean
   onEnter: (e: React.MouseEvent, cell: TrendCell, cfg: StatConfig) => void
   onLeave: () => void
+  rowBg:   string
 }) {
-  if (!cells.length) return null
+  const rawValues  = rows.map(r => cfg.getValue(r))
+  const seasonAvg  = computeSeasonAvg(rawValues)
+  if (seasonAvg === 0) return null
 
-  const lockBefore = isPro ? 0 : Math.max(0, cells.length - FREE_CELLS)
-  const values     = cells.map(c => c.actual_value)
-  const sparkVals  = values.slice(-SPARK_LAST_N)
-  const direction  = computeTrendDirection(values, cfg.lowerIsBetter)
+  const lockBefore = isPro ? 0 : Math.max(0, rows.length - FREE_CELLS)
+  const validValues = rawValues.filter((v): v is number => v !== null)
+  const sparkVals   = validValues.slice(-SPARK_LAST_N)
+  const direction   = computeTrendDirection(validValues, cfg.lowerIsBetter)
+
+  // Build one cell per row (null = placeholder for missing data)
+  const cells: (TrendCell | null)[] = rows.map(row => {
+    const actual = cfg.getValue(row)
+    if (actual === null) return null
+    const pctDiff = ((actual - seasonAvg) / seasonAvg) * 100
+    const result: TrendResult =
+      pctDiff > THRESHOLD ? 'above' : pctDiff < -THRESHOLD ? 'below' : 'average'
+    return { game_date: row.game_date, actual_value: actual, season_avg: seasonAvg, result, pct_diff: pctDiff }
+  })
+
+  if (!cells.some(Boolean)) return null
 
   return (
-    <div style={{ marginBottom: 2 }}>
-      {/* Row: label + cells */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        {/* Sticky-style label */}
+    <div>
+      {/* Cells row — no own scroll; parent scroll container handles it */}
+      <div style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
+        {/* Sticky label */}
         <div style={{
           width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
-          display: 'flex', alignItems: 'center', gap: 0, paddingLeft: 16, height: 34,
+          position: 'sticky', left: 0, zIndex: 2, background: rowBg,
+          display: 'flex', alignItems: 'center', paddingLeft: 16, height: 34,
         }}>
           <div style={{
             width: 2, height: 12, borderRadius: 2, marginRight: 8, flexShrink: 0,
             background: cfg.lowerIsBetter ? CLR_BELOW : CLR_ABOVE, opacity: 0.8,
           }} />
-          <span style={{
-            fontSize: 10, color: TEXT, fontFamily: MONO,
-            letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500,
-            whiteSpace: 'nowrap',
-          }}>
-            {cfg.label} · {cfg.fmtAvg(cells[0].season_avg)}
+          <span style={{ fontSize: 10, color: TEXT, fontFamily: MONO, letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            {cfg.label} · {cfg.fmtAvg(seasonAvg)}
           </span>
         </div>
 
-        {/* Scrollable cells */}
-        <div style={{ display: 'flex', gap: 3, overflowX: 'auto', flex: 1, paddingRight: 12, scrollbarWidth: 'none' }}>
+        {/* One cell per row */}
+        <div style={{ display: 'flex', paddingRight: 12 }}>
           {cells.map((cell, i) => {
             const locked = i < lockBefore
+            if (!cell) {
+              return <div key={rows[i]?.game_date ?? i} style={{ width: CELL_COL, height: 34, margin: '0 1px', flexShrink: 0 }} />
+            }
             return (
               <div
                 key={cell.game_date}
-                style={{
-                  filter:        locked ? 'blur(3px)' : 'none',
-                  opacity:       locked ? 0.35 : 1,
-                  pointerEvents: locked ? 'none' : 'auto',
-                  flexShrink: 0,
-                }}
+                style={{ filter: locked ? 'blur(3px)' : 'none', opacity: locked ? 0.35 : 1, pointerEvents: locked ? 'none' : 'auto', flexShrink: 0 }}
               >
-                <TrendCellView
-                  cell={cell}
-                  lowerIsBetter={cfg.lowerIsBetter}
-                  onEnter={(e, c) => onEnter(e, c, cfg)}
-                  onLeave={onLeave}
-                />
+                <TrendCellView cell={cell} lowerIsBetter={cfg.lowerIsBetter} onEnter={(e, c) => onEnter(e, c, cfg)} onLeave={onLeave} />
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* Sparkline (full width under the row, offset by label width) */}
+      {/* Sparkline below cells row */}
       <div style={{ paddingLeft: LABEL_W, paddingRight: 12, background: '#09090e', borderBottom: `1px solid ${BORDER}` }}>
-        <Sparkline values={sparkVals} seasonAvg={cells[0].season_avg} direction={direction} />
+        <Sparkline values={sparkVals} seasonAvg={seasonAvg} direction={direction} />
       </div>
     </div>
   )
@@ -285,23 +285,23 @@ function SummaryBar({ rows, tab }: { rows: TeamGameRow[]; tab: TabType }) {
   const cards = useMemo(() => {
     if (tab !== 'batting' || !rows.length) return []
 
-    const gameAvgs = rows
-      .filter(r => r.at_bats && r.at_bats > 0 && r.hits !== null)
-      .map(r => (r.hits as number) / (r.at_bats as number))
+    const hitsPerGame = rows
+      .filter(r => r.hits !== null)
+      .map(r => r.hits as number)
 
-    if (!gameAvgs.length) return []
+    if (!hitsPerGame.length) return []
 
-    const seasonAvg = gameAvgs.reduce((a, b) => a + b, 0) / gameAvgs.length
-    const last10    = gameAvgs.slice(-10).reduce((a, b) => a + b, 0) / Math.min(10, gameAvgs.length)
-    const high      = Math.max(...gameAvgs)
-    const low       = Math.min(...gameAvgs)
-    const fmt       = (v: number) => `.${String(Math.round(v * 1000)).padStart(3, '0')}`
+    const seasonAvg = hitsPerGame.reduce((a, b) => a + b, 0) / hitsPerGame.length
+    const last10    = hitsPerGame.slice(-10).reduce((a, b) => a + b, 0) / Math.min(10, hitsPerGame.length)
+    const high      = Math.max(...hitsPerGame)
+    const low       = Math.min(...hitsPerGame)
+    const fmt       = (v: number) => `${v.toFixed(1)}`
 
     return [
-      { label: 'SEASON AVG',  value: fmt(seasonAvg), color: ACCENT  },
+      { label: 'HITS/G AVG',  value: fmt(seasonAvg), color: ACCENT    },
       { label: 'LAST 10 AVG', value: fmt(last10),    color: '#7DD3FC' },
-      { label: 'SEASON HIGH', value: fmt(high),      color: CLR_ABOVE },
-      { label: 'SEASON LOW',  value: fmt(low),       color: CLR_BELOW },
+      { label: 'SEASON HIGH', value: String(high),   color: CLR_ABOVE },
+      { label: 'SEASON LOW',  value: String(low),    color: CLR_BELOW },
     ]
   }, [rows, tab])
 
@@ -337,8 +337,9 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave }: {
   onEnter:  (e: React.MouseEvent, cell: TrendCell, cfg: StatConfig) => void
   onLeave:  () => void
 }) {
-  const glowRef = useRef<HTMLDivElement>(null)
-  const colors  = TEAM_COLORS[teamName]
+  const glowRef  = useRef<HTMLDivElement>(null)
+  const colors   = TEAM_COLORS[teamName]
+  const HEADER_BG = '#0d0d14'
 
   useEffect(() => {
     const el = glowRef.current
@@ -350,13 +351,6 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave }: {
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
-
-  // Pre-compute all stat trends
-  const statCells = useMemo(() => {
-    return Object.fromEntries(
-      BAT_STATS.map(cfg => [cfg.key, computeTrends(rows, cfg.getValue)])
-    )
-  }, [rows])
 
   if (!rows.length) {
     return (
@@ -379,42 +373,62 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave }: {
       } as React.CSSProperties}
     >
       {/* Team header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px', borderBottom: `1px solid ${BORDER}`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: colors?.primary ?? ACCENT, flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: OSWALD, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            {teamName}
-          </span>
-          <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em' }}>
-            {rows.length} Games
-          </span>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${BORDER}` }}>
+        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: colors?.primary ?? ACCENT, flexShrink: 0 }} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: OSWALD, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          {teamName}
+        </span>
+        <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em' }}>
+          {rows.length} Games
+        </span>
       </div>
 
       {/* Summary bar */}
       <SummaryBar rows={rows} tab={tab} />
 
-      {/* Chart rows */}
       {tab === 'batting' ? (
-        <div style={{ padding: '4px 0' }}>
-          {BAT_STATS.map(cfg => (
-            <StatRow
-              key={cfg.key}
-              cfg={cfg}
-              cells={statCells[cfg.key] ?? []}
-              isPro={isPro}
-              onEnter={onEnter}
-              onLeave={onLeave}
-            />
-          ))}
+        <>
+          {/* Single shared scroll container: date header + stat rows */}
+          <div style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
+            <div>
+              {/* Date header row */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '4px 0 3px', borderBottom: `1px solid ${BORDER}`, background: HEADER_BG }}>
+                <div style={{ width: LABEL_W, minWidth: LABEL_W, flexShrink: 0, position: 'sticky', left: 0, background: HEADER_BG, zIndex: 2, paddingLeft: 16 }}>
+                  <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Game Date</span>
+                </div>
+                <div style={{ display: 'flex', paddingRight: 12 }}>
+                  {rows.map(r => {
+                    const parts = r.game_date.split('-')
+                    const m = parseInt(parts[1] ?? '0', 10)
+                    const d = parseInt(parts[2] ?? '0', 10)
+                    return (
+                      <div key={r.game_date} style={{ width: CELL_COL, minWidth: CELL_COL, margin: '0 1px', textAlign: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: 8, color: '#a1a1aa', fontFamily: MONO }}>{m}/{d}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Stat rows */}
+              {BAT_STATS.map((cfg, i) => (
+                <StatRow
+                  key={cfg.key}
+                  cfg={cfg}
+                  rows={rows}
+                  isPro={isPro}
+                  onEnter={onEnter}
+                  onLeave={onLeave}
+                  rowBg={i % 2 === 0 ? '#0a0a0f' : '#0d0d14'}
+                />
+              ))}
+            </div>
+          </div>
 
           {/* Free upgrade nudge */}
           {!isPro && rows.length > FREE_CELLS && (
             <div style={{
-              margin: '8px 16px 10px',
+              margin: '0 16px 10px',
               background: `linear-gradient(135deg, ${ACCENT}0d 0%, #8b5cf60d 100%)`,
               border: `1px solid ${ACCENT}33`, borderRadius: 5,
               padding: '7px 12px', display: 'flex',
@@ -430,9 +444,8 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave }: {
               </a>
             </div>
           )}
-        </div>
+        </>
       ) : (
-        /* Pitching tab — data not yet available */
         <div style={{ padding: '32px 16px', textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
             Pitching Trend Data Coming Soon

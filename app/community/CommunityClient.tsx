@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Flame, Heart } from 'lucide-react'
+import { ChevronRight, Flame, Heart, Lock } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import {
   Thread, SortMode, CommunityUser,
@@ -852,9 +852,86 @@ function FavoriteCard({ fav }: { fav: TopFavorite | null }) {
   )
 }
 
+// ─── Featured Cards Row ───────────────────────────────────────────────────────
+
+function FeaturedCardsRow({ topFavorites }: { topFavorites: TopFavorite[] }) {
+  const cardBase: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+    background: G.cardBg,
+    border: `1px solid ${G.cardBorder}`,
+    padding: '16px 14px',
+    display: 'flex',
+    flexDirection: 'column',
+  }
+
+  const favCards: (TopFavorite | null)[] = [
+    ...topFavorites.slice(0, 4),
+    ...Array(Math.max(0, 4 - topFavorites.length)).fill(null),
+  ]
+
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+
+      {/* Card 1 — TOP CONTRIBUTORS */}
+      <div style={cardBase}>
+        <SectionHeader>Top Contributors</SectionHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {TOP_CONTRIBUTORS.slice(0, 3).map((c, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: OSWALD, fontSize: 10, color: i === 0 ? G.accentFull : G.dim, width: 14, textAlign: 'center', flexShrink: 0 }}>
+                {i + 1}
+              </span>
+              <Avatar initial={c.username[0]} size={22} />
+              <span style={{ fontFamily: SANS, fontSize: 11, color: i === 0 ? G.white : G.muted, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                @{c.username}
+              </span>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: i === 0 ? G.accentFull : G.dim, flexShrink: 0 }}>
+                {c.points}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Card 2 — TOP MEMBER FAVORITES */}
+      <div style={cardBase}>
+        <SectionHeader>Top Member Favorites</SectionHeader>
+        <p style={{ fontFamily: SANS, fontSize: 10, color: G.muted, margin: '0 0 10px', lineHeight: 1.5 }}>
+          The most saved chart rows across all members.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, flex: 1 }}>
+          {favCards.map((fav, i) => (
+            <FavoriteCard key={i} fav={fav} />
+          ))}
+        </div>
+      </div>
+
+      {/* Card 3 — TOP MEMBER CHARTS (coming soon) */}
+      <div style={{ ...cardBase, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <Lock size={28} color={G.cardBorder} style={{ marginBottom: 12 }} />
+        <SectionHeader>Top Member Charts</SectionHeader>
+        <p style={{ fontFamily: SANS, fontSize: 10, color: G.muted, margin: 0, lineHeight: 1.6 }}>
+          Custom chart marketplace coming soon — members will be able to buy and sell custom line charts here.
+        </p>
+      </div>
+
+      {/* Card 4 — TOP FADERS (coming soon) */}
+      <div style={{ ...cardBase, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <Flame size={28} color={G.cardBorder} style={{ marginBottom: 12 }} />
+        <SectionHeader>Top Faders</SectionHeader>
+        <p style={{ fontFamily: SANS, fontSize: 10, color: G.muted, margin: 0, lineHeight: 1.6 }}>
+          The fade leaderboard is coming — charts built on fading the most consistently wrong members.
+        </p>
+      </div>
+
+    </div>
+  )
+}
+
 // ─── Right Sidebar ────────────────────────────────────────────────────────────
 
-function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
+function RightSidebar() {
   const [bettorCounts, setBettorCounts] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
@@ -871,11 +948,6 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
         setBettorCounts(counts)
       })
   }, [])
-
-  const cards: (TopFavorite | null)[] = [
-    ...topFavorites.slice(0, 4),
-    ...Array(Math.max(0, 4 - topFavorites.length)).fill(null),
-  ]
 
   return (
     <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -905,19 +977,6 @@ function RightSidebar({ topFavorites }: { topFavorites: TopFavorite[] }) {
               </div>
             )
           })}
-        </div>
-      </div>
-
-      {/* Top Member Favorites */}
-      <div className="comm-card-glow-static" style={{ background: G.cardBg, border: `1px solid ${G.cardBorder}`, padding: '16px 14px' }}>
-        <SectionHeader>Top Member Favorites</SectionHeader>
-        <p style={{ fontFamily: SANS, fontSize: 10, color: G.muted, margin: '0 0 12px', lineHeight: 1.5 }}>
-          The most saved chart rows across all members.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {cards.map((fav, i) => (
-            <FavoriteCard key={i} fav={fav} />
-          ))}
         </div>
       </div>
 
@@ -1150,6 +1209,9 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
             })}
           </div>
 
+          {/* Featured cards row */}
+          <FeaturedCardsRow topFavorites={topFavorites} />
+
           {/* Sort tabs */}
           <div style={{ display: 'flex', gap: 20, marginBottom: 20, paddingBottom: 12, borderBottom: `1px solid ${G.cardBorder}` }}>
             {(['newest', 'popular', 'trending'] as SortMode[]).map(s => {
@@ -1208,7 +1270,7 @@ export default function CommunityClient({ topFavorites, fanFavorite }: { topFavo
 
         {/* RIGHT SIDEBAR */}
         <div className="comm-right-sidebar">
-          <RightSidebar topFavorites={topFavorites} />
+          <RightSidebar />
         </div>
       </div>
 

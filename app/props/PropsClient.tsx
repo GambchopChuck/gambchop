@@ -15,10 +15,14 @@ const BORDER      = '#1a1a24'
 const MUTED       = '#52525b'
 const TEXT        = '#f4f4f5'
 const FREE_CELLS  = 3
+const CELL_W      = 32
+const LABEL_W     = 180
 
 const STAT_OVER  = '#A855F7'
 const STAT_UNDER = '#7DD3FC'
 const STAT_PUSH  = '#FACC15'
+
+type ViewTab = 'team' | 'player'
 
 // ─── MLB team list ────────────────────────────────────────────────────────────
 const MLB_TEAMS = [
@@ -34,13 +38,22 @@ const MLB_TEAMS = [
 
 // ─── Stat configs ─────────────────────────────────────────────────────────────
 type StatKey = 'home_runs' | 'hits' | 'runs' | 'strikeouts' | 'walks'
+type PlayerStatKey = 'home_runs' | 'hits' | 'rbi' | 'strikeouts' | 'walks'
 
 const STAT_CONFIGS: { key: StatKey; label: string; defaultLine: number }[] = [
-  { key: 'home_runs',  label: 'HR',          defaultLine: 1.5 },
-  { key: 'hits',       label: 'HITS',        defaultLine: 8.5 },
-  { key: 'runs',       label: 'RUNS',        defaultLine: 4.5 },
-  { key: 'strikeouts', label: 'STRIKEOUTS',  defaultLine: 7.5 },
-  { key: 'walks',      label: 'WALKS',       defaultLine: 3.5 },
+  { key: 'home_runs',  label: 'HR',         defaultLine: 1.5 },
+  { key: 'hits',       label: 'HITS',       defaultLine: 8.5 },
+  { key: 'runs',       label: 'RUNS',       defaultLine: 4.5 },
+  { key: 'strikeouts', label: 'SO',         defaultLine: 7.5 },
+  { key: 'walks',      label: 'BB',         defaultLine: 3.5 },
+]
+
+const PLAYER_STAT_CONFIGS: { key: PlayerStatKey; label: string; defaultLine: number }[] = [
+  { key: 'home_runs',  label: 'HR',         defaultLine: 0.5 },
+  { key: 'hits',       label: 'HITS',       defaultLine: 1.5 },
+  { key: 'rbi',        label: 'RBI',        defaultLine: 0.5 },
+  { key: 'strikeouts', label: 'SO',         defaultLine: 1.5 },
+  { key: 'walks',      label: 'BB',         defaultLine: 0.5 },
 ]
 
 // ─── Data types ───────────────────────────────────────────────────────────────
@@ -52,8 +65,38 @@ type GameRow = {
   strikeouts: number | null
   walks:      number | null
 }
+type TeamGameMap = Map<string, GameRow>
 
-type TeamGameMap = Map<string, GameRow>  // date → row
+type PlayerGameRow = {
+  game_date:  string
+  home_runs:  number | null
+  hits:       number | null
+  rbi:        number | null
+  strikeouts: number | null
+  walks:      number | null
+}
+type PlayerGameMap = Map<string, PlayerGameRow>
+type PlayerEntry = { team: string; games: PlayerGameMap }
+
+// ─── Props Legend ─────────────────────────────────────────────────────────────
+function PropsLegend() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+      {[
+        { color: STAT_OVER,  label: 'Over line'      },
+        { color: STAT_UNDER, label: 'Under line'     },
+        { color: STAT_PUSH,  label: 'Push / At line' },
+      ].map(({ color, label }) => (
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 10, height: 10, background: color, borderRadius: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: TEXT, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: MONO }}>
+            {label}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // ─── Cell component ───────────────────────────────────────────────────────────
 function PropCell({ actual, line, label, date, isLocked }: {
@@ -63,7 +106,7 @@ function PropCell({ actual, line, label, date, isLocked }: {
   date:     string
   isLocked: boolean
 }) {
-  if (actual === null) return null
+  if (actual === null) return <div style={{ width: CELL_W, height: 36, flexShrink: 0 }} />
   const result = actual > line ? 'over' : actual < line ? 'under' : 'push'
   const s = {
     over:  { bg: STAT_OVER,  glow: `0 0 10px ${STAT_OVER}77`,  letter: 'O' },
@@ -74,13 +117,13 @@ function PropCell({ actual, line, label, date, isLocked }: {
   return (
     <div
       style={{
-        width: 32, height: 36, borderRadius: 4, background: s.bg,
+        width: CELL_W, height: 36, borderRadius: 4, background: s.bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 11, fontWeight: 900, color: '#000', flexShrink: 0,
         boxShadow: s.glow,
-        filter:  isLocked ? 'blur(3px)' : 'none',
-        opacity: isLocked ? 0.35 : 1,
-        cursor:  isLocked ? 'default' : 'default',
+        filter:     isLocked ? 'blur(3px)' : 'none',
+        opacity:    isLocked ? 0.35 : 1,
+        cursor:     'default',
         userSelect: 'none',
       }}
       title={isLocked ? undefined : `${date} · ${actual} ${label.toLowerCase()} · Line: ${line} · ${result.toUpperCase()}`}
@@ -90,31 +133,64 @@ function PropCell({ actual, line, label, date, isLocked }: {
   )
 }
 
-// ─── Stat row for one team ─────────────────────────────────────────────────────
-function PropRow({ statKey, label, line, games, isPro, onEditLine }: {
-  statKey:     StatKey
-  label:       string
-  line:        number
-  games:       GameRow[]  // ordered asc
-  isPro:       boolean
-  onEditLine:  (newLine: number) => void
+// ─── Date header row (shared for team + player sections) ─────────────────────
+function PropsDateHeader({ games, headerBg }: {
+  games:     Array<{ game_date: string }>
+  headerBg:  string
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', padding: '4px 0 2px', borderBottom: `1px solid ${BORDER}`, background: headerBg }}>
+      {/* Sticky label spacer */}
+      <div style={{
+        width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
+        position: 'sticky', left: 0, background: headerBg, zIndex: 2,
+        paddingLeft: 16,
+      }}>
+        <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          Game Date
+        </span>
+      </div>
+      {/* Date cells */}
+      <div style={{ display: 'flex', gap: 3, paddingRight: 16 }}>
+        {games.map(g => {
+          const parts = g.game_date.split('-')
+          const m = parseInt(parts[1] ?? '0', 10)
+          const d = parseInt(parts[2] ?? '0', 10)
+          return (
+            <div key={g.game_date} style={{ width: CELL_W, minWidth: CELL_W, flexShrink: 0, textAlign: 'center' }}>
+              <span style={{ fontSize: 8, color: '#a1a1aa', fontFamily: MONO }}>{m}/{d}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Stat row ─────────────────────────────────────────────────────────────────
+function PropRow({ statKey, label, line, games, isPro, onEditLine, rowBg }: {
+  statKey:    string
+  label:      string
+  line:       number
+  games:      Array<{ game_date: string } & Record<string, number | null | string>>
+  isPro:      boolean
+  onEditLine: (newLine: number) => void
+  rowBg:      string
 }) {
   const [editing,   setEditing]   = useState(false)
   const [editValue, setEditValue] = useState(String(line))
+  const lockBefore = isPro ? 0 : Math.max(0, games.length - FREE_CELLS)
 
-  // Compute over/under record
   const record = useMemo(() => {
     let o = 0, u = 0
     for (const g of games) {
       const v = g[statKey]
-      if (v === null) continue
+      if (typeof v !== 'number') continue
       if (v > line) o++
       else if (v < line) u++
     }
     return { o, u }
   }, [games, statKey, line])
-
-  const lockBefore = isPro ? 0 : Math.max(0, games.length - FREE_CELLS)
 
   function commit() {
     const n = parseFloat(editValue)
@@ -123,14 +199,14 @@ function PropRow({ statKey, label, line, games, isPro, onEditLine }: {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 0, minHeight: 38 }}>
-      {/* Label column */}
+    <div style={{ display: 'flex', alignItems: 'center', minHeight: 38 }}>
+      {/* Sticky label */}
       <div style={{
-        width: 180, minWidth: 180, flexShrink: 0,
+        width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
+        position: 'sticky', left: 0, zIndex: 2, background: rowBg,
         display: 'flex', alignItems: 'center', paddingLeft: 16, gap: 0,
       }}>
         <div style={{ width: 2, height: 12, background: STAT_OVER, borderRadius: 2, marginRight: 8, flexShrink: 0 }} />
-
         {editing ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ fontSize: 10, color: TEXT, fontFamily: MONO, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 500 }}>
@@ -178,12 +254,12 @@ function PropRow({ statKey, label, line, games, isPro, onEditLine }: {
         )}
       </div>
 
-      {/* Cells */}
-      <div style={{ display: 'flex', gap: 3, overflowX: 'auto', flex: 1, paddingRight: 16, scrollbarWidth: 'none' }}>
+      {/* Cells — no overflow here; parent scroll container handles it */}
+      <div style={{ display: 'flex', gap: 3, paddingRight: 16 }}>
         {games.map((g, i) => (
           <PropCell
             key={g.game_date}
-            actual={g[statKey]}
+            actual={typeof g[statKey] === 'number' ? g[statKey] as number : null}
             line={line}
             label={label}
             date={g.game_date}
@@ -214,6 +290,7 @@ function TeamSection({ teamName, games, lines, setLine, isPro, visibleStats, onS
   const colors  = TEAM_COLORS[teamName]
   const href    = TEAM_ROUTES[teamName]
   const stats   = visibleStats === 'all' ? STAT_CONFIGS : STAT_CONFIGS.filter(s => (visibleStats as StatKey[]).includes(s.key))
+  const HEADER_BG = '#0d0d14'
 
   useEffect(() => {
     const el = glowRef.current
@@ -245,12 +322,10 @@ function TeamSection({ teamName, games, lines, setLine, isPro, visibleStats, onS
           }} />
           {href ? (
             <Link href={href} style={{ textDecoration: 'none' }}>
-              <span style={{
-                fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: OSWALD,
-                letterSpacing: '0.04em', textTransform: 'uppercase',
-              }}
-              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = ACCENT)}
-              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = TEXT)}
+              <span
+                style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: OSWALD, letterSpacing: '0.04em', textTransform: 'uppercase' }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = ACCENT)}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = TEXT)}
               >
                 {teamName}
               </span>
@@ -281,23 +356,125 @@ function TeamSection({ teamName, games, lines, setLine, isPro, visibleStats, onS
         )}
       </div>
 
-      {/* Stat rows */}
-      <div style={{ padding: '4px 0 8px' }}>
-        {stats.map((cfg, i) => (
-          <div key={cfg.key} style={{ background: i % 2 === 0 ? '#0a0a0f' : '#0d0d14' }}>
-            <PropRow
-              statKey={cfg.key}
-              label={cfg.label}
-              line={lines[cfg.key]}
-              games={games}
-              isPro={isPro}
-              onEditLine={v => setLine(cfg.key, v)}
-            />
-          </div>
-        ))}
+      {/* Single shared scroll container: date header + stat rows */}
+      <div style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div>
+          {games.length > 0 && <PropsDateHeader games={games} headerBg={HEADER_BG} />}
+
+          {stats.map((cfg, i) => {
+            const rowBg = i % 2 === 0 ? '#0a0a0f' : '#0d0d14'
+            return (
+              <div key={cfg.key} style={{ background: rowBg }}>
+                <PropRow
+                  statKey={cfg.key}
+                  label={cfg.label}
+                  line={lines[cfg.key]}
+                  games={games as Array<{ game_date: string } & Record<string, number | null | string>>}
+                  isPro={isPro}
+                  onEditLine={v => setLine(cfg.key, v)}
+                  rowBg={rowBg}
+                />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Free upgrade nudge */}
+      {!isPro && games.length > FREE_CELLS && (
+        <div style={{
+          margin: '0 16px 10px', padding: '7px 12px',
+          background: `linear-gradient(135deg, ${ACCENT}0d 0%, #8b5cf60d 100%)`,
+          border: `1px solid ${ACCENT}33`, borderRadius: 5,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        }}>
+          <span style={{ fontSize: 9, color: TEXT, fontFamily: MONO }}>
+            🔒 {games.length - FREE_CELLS} older games hidden
+          </span>
+          <Link href="/pricing" style={{ textDecoration: 'none' }}>
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#000', background: ACCENT, padding: '3px 10px', borderRadius: 3, fontFamily: MONO, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Go Pro →
+            </span>
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Player section ───────────────────────────────────────────────────────────
+function PlayerSection({ playerName, teamName, games, lines, setLine, isPro }: {
+  playerName: string
+  teamName:   string
+  games:      PlayerGameRow[]
+  lines:      Record<PlayerStatKey, number>
+  setLine:    (key: PlayerStatKey, v: number) => void
+  isPro:      boolean
+}) {
+  const glowRef = useRef<HTMLDivElement>(null)
+  const colors  = TEAM_COLORS[teamName]
+  const HEADER_BG = '#0d0d14'
+
+  useEffect(() => {
+    const el = glowRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([e]) => e.target.classList.toggle('team-glow-active', e.isIntersecting),
+      { threshold: 0.1 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={glowRef}
+      className="team-glow-border"
+      style={{
+        background: '#0a0a0f', borderRadius: 0, marginBottom: 8,
+        '--team-primary':   colors?.primary   ?? ACCENT,
+        '--team-secondary': colors?.secondary ?? '#ffffff',
+      } as React.CSSProperties}
+    >
+      {/* Player header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 8px', borderBottom: `1px solid ${BORDER}` }}>
+        <span style={{
+          display: 'inline-block', width: 10, height: 10, borderRadius: 2,
+          background: colors?.primary ?? ACCENT, flexShrink: 0,
+        }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: OSWALD, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          {playerName}
+        </span>
+        <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.08em' }}>{teamName}</span>
+        <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', marginLeft: 4 }}>
+          {games.length} Games
+        </span>
+      </div>
+
+      {/* Single shared scroll container */}
+      <div style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div>
+          {games.length > 0 && <PropsDateHeader games={games} headerBg={HEADER_BG} />}
+
+          {PLAYER_STAT_CONFIGS.map((cfg, i) => {
+            const rowBg = i % 2 === 0 ? '#0a0a0f' : '#0d0d14'
+            return (
+              <div key={cfg.key} style={{ background: rowBg }}>
+                <PropRow
+                  statKey={cfg.key}
+                  label={cfg.label}
+                  line={lines[cfg.key]}
+                  games={games as Array<{ game_date: string } & Record<string, number | null | string>>}
+                  isPro={isPro}
+                  onEditLine={v => setLine(cfg.key, v)}
+                  rowBg={rowBg}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {!isPro && games.length > FREE_CELLS && (
         <div style={{
           margin: '0 16px 10px', padding: '7px 12px',
@@ -323,13 +500,18 @@ function TeamSection({ teamName, games, lines, setLine, isPro, visibleStats, onS
 export default function PropsClient() {
   const { isPro, memberTier } = useAuth()
 
-  const [loading,     setLoading]     = useState(true)
-  const [allData,     setAllData]     = useState<Record<string, TeamGameMap>>({})
-  const [teamFilter,  setTeamFilter]  = useState<string>('')
-  const [statFilter,  setStatFilter]  = useState<StatKey | 'all'>('all')
-  const [toast,       setToast]       = useState<string | null>(null)
+  const [viewTab,      setViewTab]      = useState<ViewTab>('team')
+  const [loading,      setLoading]      = useState(true)
+  const [playerLoading, setPlayerLoading] = useState(false)
+  const [allData,      setAllData]      = useState<Record<string, TeamGameMap>>({})
+  const [playerData,   setPlayerData]   = useState<Record<string, PlayerEntry>>({})
+  const [teamFilter,   setTeamFilter]   = useState<string>('')
+  const [statFilter,   setStatFilter]   = useState<StatKey | 'all'>('all')
+  const [playerSearch, setPlayerSearch] = useState<string>('')
+  const [playerTeamFilter, setPlayerTeamFilter] = useState<string>('')
+  const [toast,        setToast]        = useState<string | null>(null)
 
-  // Global stat lines (apply to all teams)
+  // Team stat lines
   const [lines, setLines] = useState<Record<StatKey, number>>({
     home_runs:  1.5,
     hits:       8.5,
@@ -338,11 +520,23 @@ export default function PropsClient() {
     walks:      3.5,
   })
 
+  // Player stat lines (global across all players)
+  const [playerLines, setPlayerLines] = useState<Record<PlayerStatKey, number>>({
+    home_runs:  0.5,
+    hits:       1.5,
+    rbi:        0.5,
+    strikeouts: 1.5,
+    walks:      0.5,
+  })
+
   function setLine(key: StatKey, v: number) {
     setLines(prev => ({ ...prev, [key]: v }))
   }
+  function setPlayerLine(key: PlayerStatKey, v: number) {
+    setPlayerLines(prev => ({ ...prev, [key]: v }))
+  }
 
-  // Fetch all team_game_stats for the season
+  // Load team data
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -371,11 +565,52 @@ export default function PropsClient() {
     load()
   }, [])
 
+  // Load player data when switching to player tab
+  useEffect(() => {
+    if (viewTab !== 'player' || Object.keys(playerData).length > 0) return
+    async function loadPlayers() {
+      setPlayerLoading(true)
+      const { data } = await supabase
+        .from('player_game_stats')
+        .select('player_name, team_name, game_date, home_runs, hits, rbi, strikeouts, walks')
+        .eq('league', 'MLB')
+        .order('game_date', { ascending: true })
+
+      const grouped: Record<string, PlayerEntry> = {}
+      for (const row of (data ?? []) as Array<{ player_name: string; team_name: string } & PlayerGameRow>) {
+        const name = row.player_name
+        if (!grouped[name]) grouped[name] = { team: row.team_name, games: new Map() }
+        grouped[name].games.set(row.game_date, {
+          game_date:  row.game_date,
+          home_runs:  row.home_runs,
+          hits:       row.hits,
+          rbi:        row.rbi,
+          strikeouts: row.strikeouts,
+          walks:      row.walks,
+        })
+      }
+      setPlayerData(grouped)
+      setPlayerLoading(false)
+    }
+    loadPlayers()
+  }, [viewTab]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Teams to display
   const displayTeams = useMemo(() => {
     const teams = teamFilter ? [teamFilter] : MLB_TEAMS
     return teams.filter(t => allData[t] !== undefined || !loading)
   }, [teamFilter, allData, loading])
+
+  // Players to display
+  const displayPlayers = useMemo(() => {
+    return Object.entries(playerData)
+      .filter(([name, entry]) => {
+        const matchSearch = !playerSearch || name.toLowerCase().includes(playerSearch.toLowerCase())
+        const matchTeam   = !playerTeamFilter || entry.team === playerTeamFilter
+        return matchSearch && matchTeam
+      })
+      .sort(([a], [b]) => a.localeCompare(b))
+  }, [playerData, playerSearch, playerTeamFilter])
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 4000) }
 
@@ -386,6 +621,17 @@ export default function PropsClient() {
     cursor: 'pointer', appearance: 'none' as const,
   }
 
+  const tabPillStyle = (active: boolean): React.CSSProperties => ({
+    background:   active ? ACCENT : 'transparent',
+    color:        active ? '#000' : TEXT,
+    border:       active ? 'none' : `1px solid ${BORDER}`,
+    borderRadius: 6, padding: '5px 16px',
+    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+    textTransform: 'uppercase', cursor: 'pointer',
+    fontFamily: MONO, transition: 'all 0.15s',
+    boxShadow: active ? `0 0 12px ${ACCENT}55` : 'none',
+  })
+
   return (
     <div style={{
       paddingLeft: 64, minHeight: '100vh',
@@ -393,6 +639,7 @@ export default function PropsClient() {
     }}>
       <style>{`
         @keyframes propsfadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .props-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* Toast */}
@@ -409,126 +656,186 @@ export default function PropsClient() {
         </div>
       )}
 
-      {/* ── Sticky filter bar ───────────────────────────────────────────────── */}
+      {/* ── Sticky header ───────────────────────────────────────────────────── */}
       <div style={{
         position: 'sticky', top: 64, zIndex: 30,
         background: 'rgba(8,8,13,0.97)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${BORDER}`,
       }}>
+        {/* View tabs */}
+        <div style={{
+          maxWidth: 1400, margin: '0 auto', padding: '0 24px',
+          display: 'flex', alignItems: 'center', gap: 4, height: 52,
+          borderBottom: '1px solid #12121a',
+        }}>
+          <button onClick={() => setViewTab('team')}   style={tabPillStyle(viewTab === 'team')}>   Team Props   </button>
+          <button onClick={() => setViewTab('player')} style={tabPillStyle(viewTab === 'player')}> Player Props </button>
+        </div>
+
+        {/* Filters row */}
         <div style={{
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
           display: 'flex', alignItems: 'center', gap: 12, height: 54, flexWrap: 'wrap',
         }}>
-          {/* Team filter */}
-          <label style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.18em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-            TEAM
-          </label>
-          <select
-            value={teamFilter}
-            onChange={e => setTeamFilter(e.target.value)}
-            style={{ ...selectStyle, width: 210, color: teamFilter ? TEXT : MUTED }}
-          >
-            <option value="">All Teams</option>
-            {MLB_TEAMS.map(t => (
-              <option key={t} value={t} style={{ background: '#0f0f14', color: TEXT }}>{t}</option>
-            ))}
-          </select>
-
-          {/* Stat category pills */}
-          <label style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.18em', textTransform: 'uppercase', whiteSpace: 'nowrap', marginLeft: 8 }}>
-            STAT
-          </label>
-          {([{ key: 'all', label: 'ALL' }, ...STAT_CONFIGS.map(s => ({ key: s.key, label: s.label }))] as { key: StatKey | 'all'; label: string }[]).map(opt => {
-            const on = statFilter === opt.key
-            return (
-              <button
-                key={opt.key}
-                onClick={() => setStatFilter(opt.key)}
-                style={{
-                  background:    on ? ACCENT : 'transparent',
-                  color:         on ? '#000' : '#ffffff',
-                  border:        on ? 'none' : `1px solid ${BORDER}`,
-                  borderRadius:  6, padding: '4px 12px',
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-                  textTransform: 'uppercase', cursor: 'pointer',
-                  fontFamily: MONO, transition: 'all 0.15s',
-                  boxShadow: on ? `0 0 10px ${ACCENT}44` : 'none',
-                }}
+          {viewTab === 'team' ? (
+            <>
+              {/* Team filter */}
+              <label style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.18em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>TEAM</label>
+              <select
+                value={teamFilter}
+                onChange={e => setTeamFilter(e.target.value)}
+                style={{ ...selectStyle, width: 210, color: teamFilter ? TEXT : MUTED }}
               >
-                {opt.label}
-              </button>
-            )
-          })}
+                <option value="">All Teams</option>
+                {MLB_TEAMS.map(t => (
+                  <option key={t} value={t} style={{ background: '#0f0f14', color: TEXT }}>{t}</option>
+                ))}
+              </select>
 
-          {/* Legend dots */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {[
-              { color: STAT_OVER,  label: 'Over'  },
-              { color: STAT_UNDER, label: 'Under' },
-              { color: STAT_PUSH,  label: 'Push'  },
-            ].map(({ color, label }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: 'inline-block' }} />
-                <span style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
-              </span>
-            ))}
+              {/* Stat category pills */}
+              <label style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.18em', textTransform: 'uppercase', whiteSpace: 'nowrap', marginLeft: 8 }}>STAT</label>
+              {([{ key: 'all', label: 'ALL' }, ...STAT_CONFIGS.map(s => ({ key: s.key, label: s.label }))] as { key: StatKey | 'all'; label: string }[]).map(opt => {
+                const on = statFilter === opt.key
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => setStatFilter(opt.key)}
+                    style={{
+                      background:    on ? ACCENT : 'transparent',
+                      color:         on ? '#000' : '#ffffff',
+                      border:        on ? 'none' : `1px solid ${BORDER}`,
+                      borderRadius:  6, padding: '4px 12px',
+                      fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                      textTransform: 'uppercase', cursor: 'pointer',
+                      fontFamily: MONO, transition: 'all 0.15s',
+                      boxShadow: on ? `0 0 10px ${ACCENT}44` : 'none',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </>
+          ) : (
+            <>
+              {/* Player search */}
+              <label style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.18em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>PLAYER</label>
+              <input
+                type="text"
+                placeholder="Search player…"
+                value={playerSearch}
+                onChange={e => setPlayerSearch(e.target.value)}
+                style={{ ...selectStyle, width: 200, padding: '0 10px' }}
+              />
+              {/* Team filter for players */}
+              <label style={{ fontSize: 9, color: MUTED, fontFamily: MONO, letterSpacing: '0.18em', textTransform: 'uppercase', whiteSpace: 'nowrap', marginLeft: 8 }}>TEAM</label>
+              <select
+                value={playerTeamFilter}
+                onChange={e => setPlayerTeamFilter(e.target.value)}
+                style={{ ...selectStyle, width: 210, color: playerTeamFilter ? TEXT : MUTED }}
+              >
+                <option value="">All Teams</option>
+                {MLB_TEAMS.map(t => (
+                  <option key={t} value={t} style={{ background: '#0f0f14', color: TEXT }}>{t}</option>
+                ))}
+              </select>
+            </>
+          )}
+
+          {/* Legend — always visible, right side */}
+          <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+            <PropsLegend />
           </div>
         </div>
       </div>
 
       {/* ── Page header ────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0' }}>
-        <p style={{ fontSize: 10, color: MUTED, letterSpacing: '0.26em', textTransform: 'uppercase', margin: '0 0 6px', fontFamily: MONO }}>
-          MLB · Set your line, see the history
-        </p>
-        <h1 style={{ fontSize: 34, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0, fontFamily: OSWALD }}>
-          PROPS
-        </h1>
-        {memberTier !== 'none' && (
-          <p style={{ fontSize: 10, color: MUTED, fontFamily: MONO, margin: '8px 0 0', letterSpacing: '0.04em' }}>
-            Click <span style={{ color: TEXT }}>✎</span> next to any stat to change the line. Purple = over, blue = under, yellow = push.
-            {!isPro && ' Free members see last 3 games per row.'}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+        <div>
+          <p style={{ fontSize: 10, color: MUTED, letterSpacing: '0.26em', textTransform: 'uppercase', margin: '0 0 6px', fontFamily: MONO }}>
+            MLB · {viewTab === 'team' ? 'Team Props' : 'Player Props'} · Set your line, see the history
           </p>
-        )}
+          <h1 style={{ fontSize: 34, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0, fontFamily: OSWALD }}>
+            PROPS
+          </h1>
+          {memberTier !== 'none' && (
+            <p style={{ fontSize: 10, color: MUTED, fontFamily: MONO, margin: '8px 0 0', letterSpacing: '0.04em' }}>
+              Click <span style={{ color: TEXT }}>✎</span> next to any stat to change the line.
+              {!isPro && ' Free members see last 3 games per row.'}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* ── Team sections ──────────────────────────────────────────────────── */}
+      {/* ── Content ────────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 8px 80px' }}>
-        {loading && (
-          <div style={{ padding: '80px 24px', textAlign: 'center', color: MUTED, fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            Loading stats…
-          </div>
+
+        {/* ── Team Props view ─────────────────────────────────────────────── */}
+        {viewTab === 'team' && (
+          <>
+            {loading && (
+              <div style={{ padding: '80px 24px', textAlign: 'center', color: MUTED, fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Loading stats…
+              </div>
+            )}
+            {!loading && displayTeams.length === 0 && (
+              <div style={{ padding: '80px 24px', textAlign: 'center', color: MUTED, fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                No data available yet — check back after games are processed
+              </div>
+            )}
+            {!loading && displayTeams.map(teamName => {
+              const teamMap = allData[teamName]
+              const games: GameRow[] = teamMap
+                ? Array.from(teamMap.values()).sort((a, b) => a.game_date.localeCompare(b.game_date))
+                : []
+              const visibleStats: StatKey[] | 'all' = statFilter === 'all' ? 'all' : [statFilter as StatKey]
+              return (
+                <TeamSection
+                  key={teamName}
+                  teamName={teamName}
+                  games={games}
+                  lines={lines}
+                  setLine={setLine}
+                  isPro={isPro}
+                  visibleStats={visibleStats}
+                  onSave={() => showToast('Custom chart saving coming soon — this will let you name and share this chart.')}
+                />
+              )
+            })}
+          </>
         )}
 
-        {!loading && displayTeams.length === 0 && (
-          <div style={{ padding: '80px 24px', textAlign: 'center', color: MUTED, fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            No data available yet — check back after games are processed
-          </div>
+        {/* ── Player Props view ───────────────────────────────────────────── */}
+        {viewTab === 'player' && (
+          <>
+            {playerLoading && (
+              <div style={{ padding: '80px 24px', textAlign: 'center', color: MUTED, fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Loading player stats…
+              </div>
+            )}
+            {!playerLoading && displayPlayers.length === 0 && (
+              <div style={{ padding: '80px 24px', textAlign: 'center', color: MUTED, fontFamily: MONO, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                {Object.keys(playerData).length === 0
+                  ? 'No player stats available yet — check back after games are processed'
+                  : 'No players match your search'}
+              </div>
+            )}
+            {!playerLoading && displayPlayers.map(([playerName, entry]) => {
+              const games = Array.from(entry.games.values()).sort((a, b) => a.game_date.localeCompare(b.game_date))
+              return (
+                <PlayerSection
+                  key={playerName}
+                  playerName={playerName}
+                  teamName={entry.team}
+                  games={games}
+                  lines={playerLines}
+                  setLine={setPlayerLine}
+                  isPro={isPro}
+                />
+              )
+            })}
+          </>
         )}
-
-        {!loading && displayTeams.map(teamName => {
-          const teamMap = allData[teamName]
-          const games: GameRow[] = teamMap
-            ? Array.from(teamMap.values()).sort((a, b) => a.game_date.localeCompare(b.game_date))
-            : []
-
-          const visibleStats: StatKey[] | 'all' = statFilter === 'all'
-            ? 'all'
-            : [statFilter as StatKey]
-
-          return (
-            <TeamSection
-              key={teamName}
-              teamName={teamName}
-              games={games}
-              lines={lines}
-              setLine={setLine}
-              isPro={isPro}
-              visibleStats={visibleStats}
-              onSave={() => showToast('Custom chart saving coming soon — this will let you name and share this chart.')}
-            />
-          )
-        })}
       </div>
     </div>
   )
