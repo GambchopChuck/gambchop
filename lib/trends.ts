@@ -34,6 +34,17 @@ export interface PlayerGameRow {
 
 export type PlayerEntry = { team: string; games: PlayerGameRow[] }
 
+// Full-season batting averages sourced from the MLB Stats API (same source as Stats page)
+export interface TeamMLBAvg {
+  hits_per_game:       number
+  runs_per_game:       number
+  home_runs_per_game:  number
+  walks_per_game:      number
+  strikeouts_per_game: number
+  avg:                 number   // parsed from ".257"
+  obp:                 number   // parsed from ".323"
+}
+
 // ─── Pure computation helpers ─────────────────────────────────────────────────
 
 export function computeSeasonAvg(values: (number | null)[]): number {
@@ -114,6 +125,49 @@ export async function fetchAllPlayerGameStats(
     result[player_name].games.push(row)
   }
   return result
+}
+
+// Fetch MLB Stats API season averages — same endpoint used by the Stats page.
+// Used as the correct season-average baseline on the Trends page so the ±5%
+// comparison reflects the full-season average, not just our backfill window.
+export async function fetchMLBTeamAverages(): Promise<Record<string, TeamMLBAvg>> {
+  try {
+    const season = new Date().getFullYear()
+    const res = await fetch(
+      `https://statsapi.mlb.com/api/v1/teams/stats?season=${season}&sportId=1&stats=season&group=hitting`,
+      { next: { revalidate: 10800 } } as RequestInit,
+    )
+    if (!res.ok) return {}
+    const json = await res.json() as {
+      stats?: Array<{
+        splits?: Array<{
+          team: { name: string }
+          stat: {
+            gamesPlayed: number; hits: number; runs: number; homeRuns: number
+            baseOnBalls: number; strikeOuts: number; avg: string; obp: string
+          }
+        }>
+      }>
+    }
+    const result: Record<string, TeamMLBAvg> = {}
+    for (const split of json.stats?.[0]?.splits ?? []) {
+      const gp = split.stat.gamesPlayed
+      if (!gp) continue
+      result[split.team.name] = {
+        hits_per_game:       split.stat.hits         / gp,
+        runs_per_game:       split.stat.runs         / gp,
+        home_runs_per_game:  split.stat.homeRuns     / gp,
+        walks_per_game:      split.stat.baseOnBalls  / gp,
+        strikeouts_per_game: split.stat.strikeOuts   / gp,
+        avg: parseFloat(split.stat.avg),
+        obp: parseFloat(split.stat.obp),
+      }
+    }
+    return result
+  } catch {
+    console.error('[trends] fetchMLBTeamAverages failed')
+    return {}
+  }
 }
 
 // ─── Trend direction (for sparkline color) ────────────────────────────────────

@@ -6,11 +6,13 @@ import { useAuth } from '@/lib/auth-context'
 import {
   fetchAllTeamGameStats,
   fetchAllPlayerGameStats,
+  fetchMLBTeamAverages,
   computeSeasonAvg,
   computeTrendDirection,
   type TeamGameRow,
   type PlayerGameRow,
   type PlayerEntry,
+  type TeamMLBAvg,
   type TrendCell,
   type TrendResult,
 } from '@/lib/trends'
@@ -61,6 +63,7 @@ interface StatConfig<T = TeamGameRow> {
   label:         string
   lowerIsBetter: boolean
   getValue:      (row: T) => number | null
+  getMLBAvg?:    (a: TeamMLBAvg) => number   // full-season avg from MLB Stats API
   fmtAvg:        (avg: number) => string
   fmtVal:        (v: number)   => string
 }
@@ -69,37 +72,43 @@ interface StatConfig<T = TeamGameRow> {
 const BAT_STATS: StatConfig<TeamGameRow>[] = [
   {
     key: 'avg', label: 'AVG', lowerIsBetter: false,
-    getValue: r => (r.at_bats && r.at_bats > 0 && r.hits !== null) ? r.hits / r.at_bats : null,
+    getValue:   r => (r.at_bats && r.at_bats > 0 && r.hits !== null) ? r.hits / r.at_bats : null,
+    getMLBAvg:  a => a.avg,
     fmtAvg: v => `.${String(Math.round(v * 1000)).padStart(3, '0')}`,
     fmtVal: v => `.${String(Math.round(v * 1000)).padStart(3, '0')}`,
   },
   {
     key: 'hits', label: 'HITS', lowerIsBetter: false,
-    getValue: r => r.hits,
+    getValue:  r => r.hits,
+    getMLBAvg: a => a.hits_per_game,
     fmtAvg: v => `${v.toFixed(1)}/g`,
     fmtVal: v => String(Math.round(v)),
   },
   {
     key: 'runs', label: 'RUNS', lowerIsBetter: false,
-    getValue: r => r.runs,
+    getValue:  r => r.runs,
+    getMLBAvg: a => a.runs_per_game,
     fmtAvg: v => `${v.toFixed(1)}/g`,
     fmtVal: v => String(Math.round(v)),
   },
   {
     key: 'home_runs', label: 'HR', lowerIsBetter: false,
-    getValue: r => r.home_runs,
+    getValue:  r => r.home_runs,
+    getMLBAvg: a => a.home_runs_per_game,
     fmtAvg: v => `${v.toFixed(1)}/g`,
     fmtVal: v => String(Math.round(v)),
   },
   {
     key: 'walks', label: 'WALKS', lowerIsBetter: false,
-    getValue: r => r.walks,
+    getValue:  r => r.walks,
+    getMLBAvg: a => a.walks_per_game,
     fmtAvg: v => `${v.toFixed(1)}/g`,
     fmtVal: v => String(Math.round(v)),
   },
   {
     key: 'strikeouts', label: 'SO', lowerIsBetter: true,
-    getValue: r => r.strikeouts,
+    getValue:  r => r.strikeouts,
+    getMLBAvg: a => a.strikeouts_per_game,
     fmtAvg: v => `${v.toFixed(1)}/g`,
     fmtVal: v => String(Math.round(v)),
   },
@@ -109,6 +118,7 @@ const BAT_STATS: StatConfig<TeamGameRow>[] = [
       if (!r.at_bats || r.at_bats === 0 || r.hits === null || r.walks === null) return null
       return (r.hits + r.walks) / (r.at_bats + r.walks)
     },
+    getMLBAvg: a => a.obp,
     fmtAvg: v => `.${String(Math.round(v * 1000)).padStart(3, '0')}`,
     fmtVal: v => `.${String(Math.round(v * 1000)).padStart(3, '0')}`,
   },
@@ -236,16 +246,21 @@ function TrendCellView({ cell, lowerIsBetter, onEnter, onLeave }: {
 }
 
 // ─── Generic stat row (works for both team and player rows) ───────────────────
-function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, onLeave, rowBg }: {
+function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, onLeave, rowBg, mlbAvg }: {
   cfg:     StatConfig<T>
   rows:    T[]
   isPro:   boolean
   onEnter: (e: React.MouseEvent, cell: TrendCell, label: string, fmtVal: (v: number) => string) => void
   onLeave: () => void
   rowBg:   string
+  mlbAvg?: TeamMLBAvg   // full-season baseline from MLB Stats API (team rows only)
 }) {
-  const rawValues  = rows.map(r => cfg.getValue(r))
-  const seasonAvg  = computeSeasonAvg(rawValues)
+  const rawValues = rows.map(r => cfg.getValue(r))
+  // Prefer MLB Stats API season average (correct full-season baseline).
+  // Fall back to computing from available rows only if MLB data is unavailable.
+  const seasonAvg = (mlbAvg && cfg.getMLBAvg)
+    ? cfg.getMLBAvg(mlbAvg)
+    : computeSeasonAvg(rawValues)
   if (seasonAvg === 0) return null
 
   const lockBefore  = isPro ? 0 : Math.max(0, rows.length - FREE_CELLS)
@@ -301,6 +316,42 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
   )
 }
 
+// ─── Stat summary bar ─────────────────────────────────────────────────────────
+function SummaryBar({ rows, mlbAvg }: { rows: TeamGameRow[]; mlbAvg?: TeamMLBAvg }) {
+  const cards = useMemo(() => {
+    if (!rows.length) return []
+
+    const hitsPerGame = rows.filter(r => r.hits !== null).map(r => r.hits as number)
+    if (!hitsPerGame.length) return []
+
+    const seasonAvg = mlbAvg?.hits_per_game ?? (hitsPerGame.reduce((a, b) => a + b, 0) / hitsPerGame.length)
+    const last10    = hitsPerGame.slice(-10).reduce((a, b) => a + b, 0) / Math.min(10, hitsPerGame.length)
+    const high      = Math.max(...hitsPerGame)
+    const low       = Math.min(...hitsPerGame)
+    const fmt       = (v: number) => `${v.toFixed(1)}`
+
+    return [
+      { label: mlbAvg ? 'SEASON AVG (API)' : 'HITS/G AVG', value: fmt(seasonAvg), color: ACCENT    },
+      { label: 'LAST 10 AVG',                               value: fmt(last10),    color: '#7DD3FC' },
+      { label: 'RECENT HIGH',                               value: String(high),   color: CLR_ABOVE },
+      { label: 'RECENT LOW',                                value: String(low),    color: CLR_BELOW },
+    ]
+  }, [rows, mlbAvg])
+
+  if (!cards.length) return null
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 16px', borderBottom: `1px solid ${BORDER}` }}>
+      {cards.map(({ label, value, color }) => (
+        <div key={label} style={{ background: '#0f0f14', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '8px 14px', textAlign: 'center', minWidth: 80 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: OSWALD, lineHeight: 1 }}>{value}</div>
+          <div style={{ fontSize: 8, color: MUTED, fontFamily: MONO, letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 4 }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Date header row ──────────────────────────────────────────────────────────
 function TrendDateHeader({ rows, headerBg }: { rows: Array<{ game_date: string }>; headerBg: string }) {
   return (
@@ -344,13 +395,14 @@ function UpgradeNudge({ count }: { count: number }) {
 }
 
 // ─── Team section ─────────────────────────────────────────────────────────────
-function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave }: {
+function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave, mlbAvg }: {
   teamName: string
   rows:     TeamGameRow[]
   tab:      TabType
   isPro:    boolean
   onEnter:  (e: React.MouseEvent, cell: TrendCell, label: string, fmtVal: (v: number) => string) => void
   onLeave:  () => void
+  mlbAvg?:  TeamMLBAvg
 }) {
   const glowRef   = useRef<HTMLDivElement>(null)
   const colors    = TEAM_COLORS[teamName]
@@ -396,13 +448,15 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave }: {
         </div>
       ) : (
         <>
+          <SummaryBar rows={rows} mlbAvg={mlbAvg} />
           <div style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
             <div>
               <TrendDateHeader rows={rows} headerBg={HEADER_BG} />
               {stats.map((cfg, i) => (
                 <StatRow key={cfg.key} cfg={cfg} rows={rows} isPro={isPro}
                   onEnter={onEnter} onLeave={onLeave}
-                  rowBg={i % 2 === 0 ? '#0a0a0f' : '#0d0d14'} />
+                  rowBg={i % 2 === 0 ? '#0a0a0f' : '#0d0d14'}
+                  mlbAvg={mlbAvg} />
               ))}
             </div>
           </div>
@@ -473,6 +527,7 @@ export default function TrendsClient() {
   const [teamFilter,     setTeamFilter]     = useState('')
   const [loading,        setLoading]        = useState(true)
   const [allData,        setAllData]        = useState<Record<string, TeamGameRow[]>>({})
+  const [mlbAvgs,        setMlbAvgs]        = useState<Record<string, TeamMLBAvg>>({})
   const [playerData,     setPlayerData]     = useState<Record<string, PlayerEntry>>({})
   const [playerLoading,  setPlayerLoading]  = useState(false)
   const [playerSearch,   setPlayerSearch]   = useState('')
@@ -481,7 +536,14 @@ export default function TrendsClient() {
 
   useEffect(() => {
     setLoading(true)
-    fetchAllTeamGameStats('MLB').then(data => { setAllData(data); setLoading(false) })
+    Promise.all([
+      fetchAllTeamGameStats('MLB'),
+      fetchMLBTeamAverages(),
+    ]).then(([gameData, avgData]) => {
+      setAllData(gameData)
+      setMlbAvgs(avgData)
+      setLoading(false)
+    })
   }, [])
 
   useEffect(() => {
@@ -654,7 +716,8 @@ export default function TrendsClient() {
             )}
             {!loading && displayTeams.map(teamName => (
               <TeamSection key={teamName} teamName={teamName} rows={allData[teamName] ?? []}
-                tab={activeTab} isPro={isPro} onEnter={handleEnter} onLeave={handleLeave} />
+                tab={activeTab} isPro={isPro} onEnter={handleEnter} onLeave={handleLeave}
+                mlbAvg={mlbAvgs[teamName]} />
             ))}
           </>
         )}
