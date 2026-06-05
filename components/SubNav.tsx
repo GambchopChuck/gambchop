@@ -4,29 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useChopperTransition } from '@/components/ChopperTransition'
 
-const MONO = 'var(--font-jetbrains), "JetBrains Mono", monospace'
 
-function SoonBadge() {
-  return (
-    <span style={{
-      marginLeft: 8,
-      display: 'inline-block',
-      border: '1px solid #1F1F23',
-      borderRadius: 2,
-      padding: '2px 6px',
-      fontFamily: MONO,
-      fontSize: 9,
-      fontWeight: 500,
-      letterSpacing: '0.15em',
-      textTransform: 'uppercase' as const,
-      color: '#ffffff',
-      lineHeight: 1,
-      verticalAlign: 'middle',
-    }}>
-      SOON
-    </span>
-  )
-}
 
 export default function SubNav() {
   const path = usePathname()
@@ -36,6 +14,7 @@ export default function SubNav() {
   const leaderboardActive = path === '/leaderboard'
   const chopperActive     = path === '/chopper'
   const compareActive     = path === '/compare'
+  const statsActive       = path.startsWith('/stats')
 
   const linkStyle = (active: boolean, accentColor = '#22c55e') => ({
     fontSize: 10,
@@ -91,26 +70,10 @@ export default function SubNav() {
           Chopper — AI Agent
         </a>
 
-        {/* STATS (non-clickable) */}
-        <span style={{
-          fontSize: 10,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: '#ffffff',
-          fontWeight: 500,
-          padding: '0 14px',
-          lineHeight: '36px',
-          display: 'inline-flex',
-          alignItems: 'center',
-          borderBottom: '2px solid transparent',
-          opacity: 0.5,
-          cursor: 'not-allowed',
-          fontFamily: 'var(--font-nunito), sans-serif',
-          userSelect: 'none',
-        }}>
-          Stats
-          <SoonBadge />
-        </span>
+        {/* STATS */}
+        <Link href="/stats" style={{ textDecoration: 'none' }}>
+          <span style={linkStyle(statsActive)}>Stats</span>
+        </Link>
 
       </div>
     </div>
