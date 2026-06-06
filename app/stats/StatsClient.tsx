@@ -16,6 +16,15 @@ const MUTED   = '#52525b'
 const TEXT    = '#f4f4f5'
 const ROW_ALT = '#0d0d14'
 
+// TODO Phase 2: wire NBA, NHL, NFL, WNBA stats endpoints when those leagues are added.
+const LEAGUE_TABS = [
+  { key: 'mlb',  label: 'MLB',  active: true  },
+  { key: 'nba',  label: 'NBA',  active: false },
+  { key: 'nfl',  label: 'NFL',  active: false },
+  { key: 'nhl',  label: 'NHL',  active: false },
+  { key: 'wnba', label: 'WNBA', active: false },
+] as const
+
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 type MainTab = 'team' | 'player'
 type SubTab  = 'batting' | 'pitching'
@@ -359,8 +368,9 @@ interface Props {
 }
 
 export default function StatsClient({ teamBat, teamPit, playerBat, playerPit, season }: Props) {
-  const [mainTab, setMainTab]     = useState<MainTab>('team')
-  const [subTab,  setSubTab]      = useState<SubTab>('batting')
+  const [activeLeague, setActiveLeague] = useState('mlb')
+  const [mainTab, setMainTab]          = useState<MainTab>('team')
+  const [subTab,  setSubTab]           = useState<SubTab>('batting')
 
   // Sort state — separate for each table (stored as plain strings)
   const [tbSortCol, setTbSortCol] = useState('avg')
@@ -407,6 +417,47 @@ export default function StatsClient({ teamBat, teamPit, playerBat, playerPit, se
         background: 'rgba(8,8,13,0.97)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${BORDER}`,
       }}>
+        {/* League tabs */}
+        <div style={{
+          maxWidth: 1400, margin: '0 auto', padding: '0 24px',
+          display: 'flex', alignItems: 'center', gap: 6, height: 48,
+          borderBottom: '1px solid #12121a',
+        }}>
+          {LEAGUE_TABS.map(tab => {
+            const on = activeLeague === tab.key
+            return (
+              <div key={tab.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <button
+                  onClick={() => tab.active && setActiveLeague(tab.key)}
+                  style={{
+                    background:    on ? ACCENT : 'transparent',
+                    color:         on ? '#000' : '#ffffff',
+                    border:        on ? 'none' : `1px solid ${BORDER}`,
+                    borderRadius:  6, padding: '5px 16px',
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', cursor: tab.active ? 'pointer' : 'default',
+                    fontFamily: MONO, transition: 'all 0.15s',
+                    boxShadow: on ? `0 0 12px ${ACCENT}55` : 'none',
+                    opacity: tab.active ? 1 : 0.5,
+                  }}
+                >
+                  {tab.label}
+                </button>
+                {!tab.active && (
+                  <span style={{
+                    fontSize: 7, fontWeight: 700, color: '#fff',
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    fontFamily: MONO, background: '#1a1a24',
+                    padding: '1px 5px', borderRadius: 2,
+                  }}>
+                    SOON
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
         {/* Main tabs */}
         <div style={{
           maxWidth: 1400, margin: '0 auto', padding: '0 24px',
