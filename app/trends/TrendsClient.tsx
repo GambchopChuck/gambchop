@@ -182,19 +182,34 @@ interface TooltipData {
 }
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
-const SPARK_H = 32
-const SPARK_PAD = 4
+// ─── Bar chart (replaces cell row + sparkline — same data, visual format only) ──
+const CHART_H   = 72   // total row height (previously ~66 for cells+sparkline)
+const CELL_UNIT = 34   // 32px cell + 2px margin — matches date header column width
+const PAD_TOP   = 6
+const PAD_BOT   = 4
+const DRAW_H    = CHART_H - PAD_TOP - PAD_BOT  // usable vertical space for bars
 
-function Sparkline({ values, seasonAvg, lowerIsBetter }: {
-  values:        number[]
+function BarChart({ cells, sparkVals, seasonAvg, lockBefore, lowerIsBetter, onEnter, onLeave }: {
+  cells:         (TrendCell | null)[]
+  sparkVals:     number[]
   seasonAvg:     number
+  lockBefore:    number
   lowerIsBetter: boolean
+  onEnter:       (e: React.MouseEvent, cell: TrendCell) => void
+  onLeave:       () => void
 }) {
-  if (values.length < 2) return <div style={{ height: SPARK_H }} />
+  if (!cells.length) return null
 
-  // FIX 2: Color from last 5 data points, 5% threshold, inverted for lowerIsBetter stats
-  const last5  = values.slice(-5)
-  let lineColor = MUTED  // flat / gray
+  // Y-axis scale: 0-based so bars always grow from the floor
+  const maxV  = Math.max(...sparkVals, seasonAvg) * 1.15 || 1
+  const baseY = CHART_H - PAD_BOT                                  // bar floor
+  const toH   = (v: number) => Math.max(2, (v / maxV) * DRAW_H)   // bar height
+  const toTopY = (v: number) => baseY - toH(v)                     // bar top Y
+  const avgY  = toTopY(seasonAvg)
+
+  // Trend line color — last 5 of sparkVals, 5% threshold, lowerIsBetter-aware
+  const last5 = sparkVals.slice(-5)
+  let lineColor = MUTED
   if (last5.length >= 2) {
     const half  = Math.ceil(last5.length / 2)
     const early = last5.slice(0, half)
@@ -203,66 +218,89 @@ function Sparkline({ values, seasonAvg, lowerIsBetter }: {
     const avgL  = late.reduce((a, b) => a + b, 0) / late.length
     const pct   = avgE === 0 ? 0 : ((avgL - avgE) / Math.abs(avgE)) * 100
     if (Math.abs(pct) >= 5) {
-      // For batting (lowerIsBetter=false): values going UP = improving = green
-      // For pitching (lowerIsBetter=true): values going DOWN = improving = green
-      const improving = lowerIsBetter ? pct < 0 : pct > 0
-      lineColor = improving ? CLR_ABOVE : CLR_BELOW
+      lineColor = (lowerIsBetter ? pct < 0 : pct > 0) ? CLR_ABOVE : CLR_BELOW
     }
   }
 
-  const all    = [...values, seasonAvg]
-  const minV   = Math.min(...all)
-  const maxV   = Math.max(...all)
-  const rangeV = maxV - minV || 1
+  // Trend polyline: connects top of each non-null bar
+  type Pt = { x: number; y: number; locked: boolean }
+  const trendPts: Pt[] = []
+  cells.forEach((cell, i) => {
+    if (cell) trendPts.push({ x: i * CELL_UNIT + CELL_UNIT / 2, y: toTopY(cell.actual_value), locked: i < lockBefore })
+  })
+  const trendD = trendPts.length > 1
+    ? trendPts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+    : ''
 
-  // FIX 1 + FIX 5: viewBox sized to actual game count so last point = last cell.
-  // Each game column is 34px (32px cell + 2px margin). Point at center of each column.
-  const SPARK_W = Math.max(values.length * 34, 2)
-  const px      = (i: number) => SPARK_PAD + (i / (values.length - 1)) * (SPARK_W - SPARK_PAD * 2)
-  const py      = (v: number) => SPARK_H - SPARK_PAD - ((v - minV) / rangeV) * (SPARK_H - SPARK_PAD * 2)
-  const avgY    = py(seasonAvg)
-  const pathD   = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')
+  const viewW = cells.length * CELL_UNIT
+
+  // Split into locked (blurred) and visible bars
+  const lockedCells  = cells.slice(0, lockBefore)
+  const visibleCells = cells.slice(lockBefore)
+
+  function renderBar(cell: TrendCell | null, globalIdx: number) {
+    const bx = globalIdx * CELL_UNIT + 1
+    const bw = CELL_UNIT - 2  // 32px — matches CELL_COL
+
+    if (!cell) {
+      // No data for this game — render a 2px floor stub
+      return <rect key={globalIdx} x={bx} y={baseY - 2} width={bw} height={2} fill="#1e1e2e" rx={1} />
+    }
+
+    const isGood = lowerIsBetter ? cell.result === 'below' : cell.result === 'above'
+    const isBad  = lowerIsBetter ? cell.result === 'above' : cell.result === 'below'
+    const fill   = isGood ? CLR_ABOVE : isBad ? CLR_BELOW : CLR_AVERAGE
+    const bh     = toH(cell.actual_value)
+    const by     = baseY - bh
+
+    return (
+      <rect
+        key={globalIdx}
+        x={bx} y={by} width={bw} height={bh}
+        fill={fill} rx={2} opacity={0.85}
+        onMouseEnter={globalIdx >= lockBefore ? (e: React.MouseEvent<SVGRectElement>) => onEnter(e as unknown as React.MouseEvent, cell) : undefined}
+        onMouseLeave={globalIdx >= lockBefore ? onLeave : undefined}
+        style={{ cursor: 'default' }}
+      />
+    )
+  }
 
   return (
     <svg
-      viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+      viewBox={`0 0 ${viewW} ${CHART_H}`}
       preserveAspectRatio="none"
-      style={{ width: '100%', height: SPARK_H, display: 'block', overflow: 'hidden' }}
+      width="100%"
+      height={CHART_H}
+      style={{ display: 'block', overflow: 'hidden' }}
       aria-hidden
     >
-      {/* FIX 3: White dashed season-average rule */}
-      <line x1={0} y1={avgY} x2={SPARK_W} y2={avgY}
-        stroke="rgba(255,255,255,0.5)" strokeDasharray="6,4" strokeWidth={1} />
-      <path d={pathD} fill="none" stroke={lineColor} strokeWidth={1.5}
-        strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
-      {values.map((v, i) => (
-        <circle key={i} cx={px(i)} cy={py(v)} r={2} fill={lineColor} />
+      {/* Locked bars — blurred + dimmed for freemium gate */}
+      {lockBefore > 0 && (
+        <g style={{ filter: 'blur(3px)', opacity: 0.35, pointerEvents: 'none' } as React.CSSProperties}>
+          {lockedCells.map((cell, i) => renderBar(cell, i))}
+        </g>
+      )}
+
+      {/* Visible bars */}
+      {visibleCells.map((cell, i) => renderBar(cell, i + lockBefore))}
+
+      {/* White dashed season-average reference line */}
+      <line
+        x1={0} y1={avgY} x2={viewW} y2={avgY}
+        stroke="rgba(255,255,255,0.5)" strokeDasharray="6,4" strokeWidth={1}
+      />
+
+      {/* Trend polyline — sits on top of bars, connects bar tops */}
+      {trendD && (
+        <path d={trendD} fill="none" stroke={lineColor} strokeWidth={1.5}
+          strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
+      )}
+
+      {/* Dots at each trend point — visible (unlocked) only */}
+      {trendPts.filter(p => !p.locked).map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={2.5} fill={lineColor} opacity={0.9} />
       ))}
     </svg>
-  )
-}
-
-// ─── Trend cell ───────────────────────────────────────────────────────────────
-function TrendCellView({ cell, lowerIsBetter, onEnter, onLeave }: {
-  cell:          TrendCell
-  lowerIsBetter: boolean
-  onEnter:       (e: React.MouseEvent, cell: TrendCell) => void
-  onLeave:       () => void
-}) {
-  const isGood = lowerIsBetter ? cell.result === 'below' : cell.result === 'above'
-  const isBad  = lowerIsBetter ? cell.result === 'above' : cell.result === 'below'
-  const bg     = isGood ? CLR_ABOVE : isBad ? CLR_BELOW : CLR_AVERAGE
-  const symbol = isGood ? '▲' : isBad ? '▼' : '—'
-  const glow   = isGood ? `0 0 10px ${CLR_ABOVE}77` : isBad ? `0 0 10px ${CLR_BELOW}77` : 'none'
-
-  return (
-    <div className="cell"
-      style={{ background: bg, color: '#000', boxShadow: glow, fontWeight: 800, fontSize: 12, cursor: 'default', flexShrink: 0 }}
-      onMouseEnter={e => onEnter(e, cell)}
-      onMouseLeave={onLeave}
-    >
-      {symbol}
-    </div>
   )
 }
 
@@ -274,11 +312,9 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
   onEnter: (e: React.MouseEvent, cell: TrendCell, label: string, fmtVal: (v: number) => string) => void
   onLeave: () => void
   rowBg:   string
-  mlbAvg?: TeamMLBAvg   // full-season baseline from MLB Stats API (team rows only)
+  mlbAvg?: TeamMLBAvg
 }) {
   const rawValues = rows.map(r => cfg.getValue(r))
-  // Prefer MLB Stats API season average (correct full-season baseline).
-  // Fall back to computing from available rows only if MLB data is unavailable.
   const seasonAvg = (mlbAvg && cfg.getMLBAvg)
     ? cfg.getMLBAvg(mlbAvg)
     : computeSeasonAvg(rawValues)
@@ -286,7 +322,6 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
 
   const lockBefore  = isPro ? 0 : Math.max(0, rows.length - FREE_CELLS)
   const validValues = rawValues.filter((v): v is number => v !== null)
-  // FIX 1: use ALL game values for sparkline (same span as the cells above it)
   const sparkVals   = validValues
 
   const cells: (TrendCell | null)[] = rows.map(row => {
@@ -301,37 +336,32 @@ function StatRow<T extends { game_date: string }>({ cfg, rows, isPro, onEnter, o
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', background: rowBg }}>
-        {/* Sticky label */}
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        {/* Sticky label — same height as bar chart */}
         <div style={{
           width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
           position: 'sticky', left: 0, zIndex: 2, background: rowBg,
-          display: 'flex', alignItems: 'center', paddingLeft: 16, height: 34,
+          display: 'flex', alignItems: 'center', paddingLeft: 16,
+          minHeight: CHART_H,
         }}>
           <div style={{ width: 2, height: 12, borderRadius: 2, marginRight: 8, flexShrink: 0, background: cfg.lowerIsBetter ? CLR_BELOW : CLR_ABOVE, opacity: 0.8 }} />
           <span style={{ fontSize: 10, color: TEXT, fontFamily: MONO, letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 500, whiteSpace: 'nowrap' }}>
             {cfg.label} · {cfg.fmtAvg(seasonAvg)}
           </span>
         </div>
-        {/* Cells */}
-        <div style={{ display: 'flex', paddingRight: 12 }}>
-          {cells.map((cell, i) => {
-            const locked = i < lockBefore
-            if (!cell) return <div key={rows[i]?.game_date ?? i} style={{ width: CELL_COL, height: 34, margin: '0 1px', flexShrink: 0 }} />
-            return (
-              <div key={cell.game_date}
-                style={{ filter: locked ? 'blur(3px)' : 'none', opacity: locked ? 0.35 : 1, pointerEvents: locked ? 'none' : 'auto', flexShrink: 0 }}>
-                <TrendCellView cell={cell} lowerIsBetter={cfg.lowerIsBetter}
-                  onEnter={(e, c) => onEnter(e, c, cfg.label, cfg.fmtVal)}
-                  onLeave={onLeave} />
-              </div>
-            )
-          })}
+
+        {/* Bar chart — replaces colored cells + sparkline */}
+        <div style={{ flex: 1, paddingRight: 12, background: '#09090e', borderBottom: `1px solid ${BORDER}` }}>
+          <BarChart
+            cells={cells}
+            sparkVals={sparkVals}
+            seasonAvg={seasonAvg}
+            lockBefore={lockBefore}
+            lowerIsBetter={cfg.lowerIsBetter}
+            onEnter={(e, c) => onEnter(e, c, cfg.label, cfg.fmtVal)}
+            onLeave={onLeave}
+          />
         </div>
-      </div>
-      {/* Sparkline — FIX 2/3/5: lowerIsBetter-aware color, white avg line, clipped */}
-      <div style={{ paddingLeft: LABEL_W, paddingRight: 12, background: '#09090e', borderBottom: `1px solid ${BORDER}` }}>
-        <Sparkline values={sparkVals} seasonAvg={seasonAvg} lowerIsBetter={cfg.lowerIsBetter} />
       </div>
     </div>
   )
