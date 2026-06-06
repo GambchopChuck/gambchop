@@ -15,6 +15,7 @@ import {
   type TrendCell,
   type TrendResult,
 } from '@/lib/trends'
+import { supabase } from '@/lib/supabase'
 import { TEAM_COLORS } from '@/lib/teamColors'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -42,6 +43,44 @@ const LEAGUE_TABS = [
   { key: 'wnba', label: 'WNBA', active: false },
 ] as const
 
+// ─── Per-league primary tab configs ───────────────────────────────────────────
+const MLB_SUB_TABS = [
+  { key: 'batting'  as const, label: 'BATTING TRENDS'  },
+  { key: 'pitching' as const, label: 'PITCHING TRENDS' },
+]
+
+// TODO Phase 2: wire NBA stats endpoints and activate these tabs
+const NBA_SUB_TABS = [
+  { key: 'offensive' as const, label: 'OFFENSIVE TRENDS' },
+  { key: 'defensive' as const, label: 'DEFENSIVE TRENDS' },
+]
+
+// TODO Phase 2: wire WNBA stats endpoints and activate these tabs
+const WNBA_SUB_TABS = [
+  { key: 'offensive' as const, label: 'OFFENSIVE TRENDS' },
+  { key: 'defensive' as const, label: 'DEFENSIVE TRENDS' },
+]
+
+// TODO Phase 2: wire NFL stats endpoints and activate these tabs
+const NFL_SUB_TABS = [
+  { key: 'offensive' as const, label: 'OFFENSIVE TRENDS' },
+  { key: 'defensive' as const, label: 'DEFENSIVE TRENDS' },
+]
+
+// TODO Phase 2: wire NHL stats endpoints and activate these tabs
+const NHL_SUB_TABS = [
+  { key: 'offensive' as const, label: 'OFFENSIVE TRENDS' },
+  { key: 'defensive' as const, label: 'DEFENSIVE TRENDS' },
+]
+
+const LEAGUE_SUB_TABS: Record<string, { key: string; label: string }[]> = {
+  mlb:  MLB_SUB_TABS,
+  nba:  NBA_SUB_TABS,
+  wnba: WNBA_SUB_TABS,
+  nfl:  NFL_SUB_TABS,
+  nhl:  NHL_SUB_TABS,
+}
+
 // ─── MLB teams ────────────────────────────────────────────────────────────────
 const MLB_TEAMS = [
   'Arizona Diamondbacks', 'Atlanta Braves', 'Baltimore Orioles', 'Boston Red Sox',
@@ -55,7 +94,7 @@ const MLB_TEAMS = [
 ]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type TabType = 'batting' | 'pitching' | 'player'
+type TabType = 'batting' | 'pitching' | 'player' | 'offensive' | 'defensive'
 
 interface StatConfig<T = TeamGameRow> {
   key:           string
@@ -445,8 +484,141 @@ function UpgradeNudge({ count }: { count: number }) {
   )
 }
 
+// ─── Starting rotation ────────────────────────────────────────────────────────
+
+type StarterRow = {
+  game_date:       string
+  pitcher_name:    string
+  decision:        string | null
+  innings_pitched: number | null
+  earned_runs:     number | null
+  strikeouts:      number | null
+}
+
+const ROT_WIN  = '#16a34a'
+const ROT_LOSS = '#dc2626'
+const ROT_ND   = '#ca8a04'
+const ROT_NONE = '#09090e'
+
+function getLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/)
+  return parts[parts.length - 1] ?? fullName
+}
+
+function fmtIP(ip: number | null): string {
+  if (ip === null) return ''
+  const whole  = Math.floor(ip)
+  const thirds = Math.round((ip - whole) * 3)
+  return thirds === 0 ? `${whole}` : `${whole}.${thirds}`
+}
+
+function RotationSection({ rows, starters, isPro, teamColor }: {
+  rows:      TeamGameRow[]
+  starters:  StarterRow[]
+  isPro:     boolean
+  teamColor: string
+}) {
+  const lockBefore = isPro ? 0 : Math.max(0, rows.length - FREE_CELLS)
+
+  const starterByDate = useMemo(
+    () => new Map(starters.map(s => [s.game_date, s])),
+    [starters],
+  )
+
+  const pitchers = useMemo(() => {
+    const names = [...new Set(starters.map(s => s.pitcher_name))]
+    return names.sort((a, b) => getLastName(a).localeCompare(getLastName(b)))
+  }, [starters])
+
+  if (!pitchers.length || !rows.length) return null
+
+  return (
+    <div style={{ borderTop: `1px solid ${teamColor}30` }}>
+      {/* Section header */}
+      <div style={{ padding: '10px 16px 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 2, height: 10, background: ACCENT, borderRadius: 1, flexShrink: 0 }} />
+        <span style={{ fontSize: 8, color: ACCENT, fontFamily: MONO, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+          STARTING ROTATION
+        </span>
+      </div>
+
+      <div style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div>
+          <TrendDateHeader rows={rows} headerBg="#0d0d14" />
+          {pitchers.map((pitcher, pi) => {
+            const rowBg   = pi % 2 === 0 ? '#0a0a0f' : '#0d0d14'
+            const lastName = getLastName(pitcher)
+            return (
+              <div key={pitcher} style={{ display: 'flex', alignItems: 'center', minHeight: 36, background: rowBg }}>
+                {/* Sticky label */}
+                <div style={{
+                  width: LABEL_W, minWidth: LABEL_W, flexShrink: 0,
+                  position: 'sticky', left: 0, zIndex: 2, background: rowBg,
+                  display: 'flex', alignItems: 'center', paddingLeft: 24,
+                }}>
+                  <span style={{ fontSize: 10, color: TEXT, fontFamily: MONO, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {lastName}
+                  </span>
+                </div>
+
+                {/* Cells */}
+                <div style={{ display: 'flex', paddingRight: 12 }}>
+                  {rows.map((r, idx) => {
+                    const starter  = starterByDate.get(r.game_date)
+                    const didStart = starter?.pitcher_name === pitcher
+                    const locked   = idx < lockBefore
+
+                    if (!didStart) {
+                      return (
+                        <div key={r.game_date} style={{
+                          width: CELL_COL, minWidth: CELL_COL, height: 34, margin: '0 1px',
+                          background: ROT_NONE, borderRadius: 3, flexShrink: 0,
+                        }} />
+                      )
+                    }
+
+                    const dec    = starter!.decision
+                    const bg     = dec === 'W' ? ROT_WIN : dec === 'L' ? ROT_LOSS : ROT_ND
+                    const letter = dec === 'W' ? 'W' : dec === 'L' ? 'L' : 'ND'
+                    const glow   = dec === 'W' ? `0 0 10px ${ROT_WIN}80` : dec === 'L' ? `0 0 10px ${ROT_LOSS}80` : 'none'
+                    const tooltip = [
+                      pitcher, r.game_date, dec ?? 'ND',
+                      starter!.innings_pitched !== null ? `${fmtIP(starter!.innings_pitched)} IP` : null,
+                      starter!.earned_runs     !== null ? `${starter!.earned_runs} ER` : null,
+                      starter!.strikeouts      !== null ? `${starter!.strikeouts} K` : null,
+                    ].filter(Boolean).join(' · ')
+
+                    return (
+                      <div
+                        key={r.game_date}
+                        style={{
+                          width: CELL_COL, minWidth: CELL_COL, height: 34, margin: '0 1px',
+                          background: bg, borderRadius: 3, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: letter === 'ND' ? 9 : 11, fontWeight: 900, color: '#fff',
+                          boxShadow: locked ? 'none' : glow,
+                          filter:     locked ? 'blur(3px)' : 'none',
+                          opacity:    locked ? 0.35 : 1,
+                          cursor: 'default', userSelect: 'none' as const,
+                        }}
+                        title={locked ? undefined : tooltip}
+                      >
+                        {letter}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Team section ─────────────────────────────────────────────────────────────
-function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave, mlbAvg }: {
+function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave, mlbAvg, starters }: {
   teamName: string
   rows:     TeamGameRow[]
   tab:      TabType
@@ -454,6 +626,7 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave, mlbAvg }: {
   onEnter:  (e: React.MouseEvent, cell: TrendCell, label: string, fmtVal: (v: number) => string) => void
   onLeave:  () => void
   mlbAvg?:  TeamMLBAvg
+  starters?: StarterRow[]
 }) {
   const glowRef   = useRef<HTMLDivElement>(null)
   const colors    = TEAM_COLORS[teamName]
@@ -489,14 +662,25 @@ function TeamSection({ teamName, rows, tab, isPro, onEnter, onLeave, mlbAvg }: {
       </div>
 
       {tab === 'pitching' ? (
-        <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-            Pitching Trend Data Coming Soon
+        <>
+          <div style={{ padding: '24px 16px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: MUTED, fontFamily: MONO, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+              Pitching Trend Data Coming Soon
+            </div>
+            <div style={{ fontSize: 10, color: '#3a3a4a', fontFamily: MONO }}>
+              ERA, WHIP, K, BB Allowed, HR Allowed, Hits Allowed — populates after pitching columns are added.
+            </div>
           </div>
-          <div style={{ fontSize: 10, color: '#3a3a4a', fontFamily: MONO }}>
-            ERA, WHIP, K, BB Allowed, HR Allowed, Hits Allowed — populates after pitching columns are added.
-          </div>
-        </div>
+          {starters && starters.length > 0 && (
+            <RotationSection
+              rows={rows}
+              starters={starters}
+              isPro={isPro}
+              teamColor={TEAM_COLORS[teamName]?.primary ?? ACCENT}
+            />
+          )}
+          {!isPro && rows.length > FREE_CELLS && <UpgradeNudge count={rows.length - FREE_CELLS} />}
+        </>
       ) : (
         <>
           <SummaryBar rows={rows} mlbAvg={mlbAvg} />
@@ -579,11 +763,12 @@ export default function TrendsClient() {
   const [loading,        setLoading]        = useState(true)
   const [allData,        setAllData]        = useState<Record<string, TeamGameRow[]>>({})
   const [mlbAvgs,        setMlbAvgs]        = useState<Record<string, TeamMLBAvg>>({})
-  const [playerData,     setPlayerData]     = useState<Record<string, PlayerEntry>>({})
-  const [playerLoading,  setPlayerLoading]  = useState(false)
-  const [playerSearch,   setPlayerSearch]   = useState('')
+  const [playerData,       setPlayerData]       = useState<Record<string, PlayerEntry>>({})
+  const [playerLoading,    setPlayerLoading]    = useState(false)
+  const [playerSearch,     setPlayerSearch]     = useState('')
   const [playerTeamFilter, setPlayerTeamFilter] = useState('')
-  const [tooltip,        setTooltip]        = useState<TooltipData | null>(null)
+  const [starterData,      setStarterData]      = useState<Record<string, StarterRow[]>>({})
+  const [tooltip,          setTooltip]          = useState<TooltipData | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -601,6 +786,31 @@ export default function TrendsClient() {
     if (activeTab !== 'player' || Object.keys(playerData).length > 0) return
     setPlayerLoading(true)
     fetchAllPlayerGameStats('MLB').then(data => { setPlayerData(data); setPlayerLoading(false) })
+  }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (activeTab !== 'pitching' || Object.keys(starterData).length > 0) return
+    supabase
+      .from('team_game_starters')
+      .select('team_name,game_date,pitcher_name,decision,innings_pitched,earned_runs,strikeouts')
+      .eq('league', 'MLB')
+      .order('game_date', { ascending: true })
+      .then(({ data, error }) => {
+        if (error || !data) return
+        const grouped: Record<string, StarterRow[]> = {}
+        for (const row of data as Array<{ team_name: string } & StarterRow>) {
+          if (!grouped[row.team_name]) grouped[row.team_name] = []
+          grouped[row.team_name].push({
+            game_date:       row.game_date,
+            pitcher_name:    row.pitcher_name,
+            decision:        row.decision,
+            innings_pitched: row.innings_pitched,
+            earned_runs:     row.earned_runs,
+            strikeouts:      row.strikeouts,
+          })
+        }
+        setStarterData(grouped)
+      })
   }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayTeams = useMemo(() => {
@@ -686,11 +896,21 @@ export default function TrendsClient() {
           })}
         </div>
 
-        {/* Primary tabs */}
+        {/* Primary tabs — driven by LEAGUE_SUB_TABS; MLB shows BATTING/PITCHING only */}
         <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 4, height: 44 }}>
-          <button style={tabPill(activeTab === 'batting')}  onClick={() => setActiveTab('batting')}>  BATTING TRENDS  </button>
-          <button style={tabPill(activeTab === 'pitching')} onClick={() => setActiveTab('pitching')}> PITCHING TRENDS </button>
-          <button style={tabPill(activeTab === 'player')}   onClick={() => setActiveTab('player')}>   PLAYER TRENDS   </button>
+          {(LEAGUE_SUB_TABS[activeLeague] ?? MLB_SUB_TABS).map(tab => {
+            const leagueActive = LEAGUE_TABS.find(l => l.key === activeLeague)?.active ?? false
+            const on = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                style={{ ...tabPill(on), cursor: leagueActive ? 'pointer' : 'default', opacity: leagueActive ? 1 : 0.5 }}
+                onClick={() => leagueActive && setActiveTab(tab.key as TabType)}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -768,7 +988,7 @@ export default function TrendsClient() {
             {!loading && displayTeams.map(teamName => (
               <TeamSection key={teamName} teamName={teamName} rows={allData[teamName] ?? []}
                 tab={activeTab} isPro={isPro} onEnter={handleEnter} onLeave={handleLeave}
-                mlbAvg={mlbAvgs[teamName]} />
+                mlbAvg={mlbAvgs[teamName]} starters={starterData[teamName]} />
             ))}
           </>
         )}

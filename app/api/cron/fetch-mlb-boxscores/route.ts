@@ -50,10 +50,14 @@ type MLBTeamBox = {
   team:       MLBTeamRef
   teamStats?: { batting?: MLBBattingStats; pitching?: MLBPitchingStats }
   players?:   Record<string, MLBPlayer>
+  pitchers?:  number[]   // ordered pitcher IDs — index 0 is the starter
 }
 
+type MLBDecision = { id: number; fullName: string }
+
 type MLBBoxscore = {
-  teams: { home: MLBTeamBox; away: MLBTeamBox }
+  teams:      { home: MLBTeamBox; away: MLBTeamBox }
+  decisions?: { winner?: MLBDecision; loser?: MLBDecision; save?: MLBDecision }
 }
 
 // Linescore: each inning has home/away run totals
@@ -143,7 +147,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true, date: gameDate,
         games_processed: 0, team_stats_upserted: 0,
-        player_stats_upserted: 0, linescore_upserted: 0,
+        player_stats_upserted: 0, linescore_upserted: 0, starters_upserted: 0,
         duration_seconds: parseFloat(((Date.now() - startedAt) / 1000).toFixed(1)),
       })
     }
@@ -151,6 +155,7 @@ export async function GET(req: NextRequest) {
     let teamStatsUpserted   = 0
     let playerStatsUpserted = 0
     let linescoreUpserted   = 0
+    let startersUpserted    = 0
 
     for (const game of finalGames) {
       const homeTeamName = game.teams.home.team.name
@@ -246,6 +251,37 @@ export async function GET(req: NextRequest) {
               else playerStatsUpserted++
             }
           }
+
+          // Extract starting pitcher (first in pitchers array) and their decision
+          const pitcherIds = teamBox.pitchers ?? []
+          const starterId  = pitcherIds[0]
+          if (starterId !== undefined) {
+            const starterPlayer = teamBox.players?.[`ID${starterId}`]
+            if (starterPlayer) {
+              const starterName = starterPlayer.person.fullName
+              const pit         = starterPlayer.stats.pitching
+
+              let decision: string
+              if (box.decisions?.winner?.id === starterId)     decision = 'W'
+              else if (box.decisions?.loser?.id === starterId) decision = 'L'
+              else                                              decision = 'ND'
+
+              const { error: sErr } = await supabaseAdmin
+                .from('team_game_starters')
+                .upsert({
+                  team_name:       teamName,
+                  league:          'MLB',
+                  game_date:       gameDate,
+                  pitcher_name:    starterName,
+                  decision,
+                  innings_pitched: pit?.inningsPitched ? parseInningsPitched(pit.inningsPitched) : null,
+                  earned_runs:     pit?.earnedRuns     ?? null,
+                  strikeouts:      pit?.strikeOuts     ?? null,
+                }, { onConflict: 'team_name,league,game_date', ignoreDuplicates: false })
+              if (sErr) console.error(`[fetch-mlb-boxscores] team_game_starters ${teamName}:`, sErr.message)
+              else startersUpserted++
+            }
+          }
         }
       }
 
@@ -293,7 +329,7 @@ export async function GET(req: NextRequest) {
     console.log(
       `[fetch-mlb-boxscores] done — games:${finalGames.length}` +
       ` team_stats:${teamStatsUpserted} player_stats:${playerStatsUpserted}` +
-      ` linescore:${linescoreUpserted} duration:${duration}s`,
+      ` linescore:${linescoreUpserted} starters:${startersUpserted} duration:${duration}s`,
     )
 
     return NextResponse.json({
@@ -303,6 +339,7 @@ export async function GET(req: NextRequest) {
       team_stats_upserted:   teamStatsUpserted,
       player_stats_upserted: playerStatsUpserted,
       linescore_upserted:    linescoreUpserted,
+      starters_upserted:     startersUpserted,
       duration_seconds:      parseFloat(duration),
     })
   } catch (err) {
