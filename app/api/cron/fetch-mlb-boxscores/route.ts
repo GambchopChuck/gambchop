@@ -38,6 +38,11 @@ type MLBPitchingStats = {
   strikeOuts?:     number
   inningsPitched?: string
   earnedRuns?:     number
+  wins?:           number
+  losses?:         number
+  hits?:           number
+  baseOnBalls?:    number
+  homeRuns?:       number
 }
 
 type MLBPlayer = {
@@ -53,11 +58,8 @@ type MLBTeamBox = {
   pitchers?:  number[]   // ordered pitcher IDs — index 0 is the starter
 }
 
-type MLBDecision = { id: number; fullName: string }
-
 type MLBBoxscore = {
-  teams:      { home: MLBTeamBox; away: MLBTeamBox }
-  decisions?: { winner?: MLBDecision; loser?: MLBDecision; save?: MLBDecision }
+  teams: { home: MLBTeamBox; away: MLBTeamBox }
 }
 
 // Linescore: each inning has home/away run totals
@@ -181,6 +183,17 @@ export async function GET(req: NextRequest) {
           const teamName     = teamBox.team.name
           const opponentName = side === 'home' ? awayTeamName : homeTeamName
 
+          const tp    = teamBox.teamStats?.pitching
+          const tpIp  = tp?.inningsPitched ? parseInningsPitched(tp.inningsPitched) : null
+          let era_game:  number | null = null
+          let whip_game: number | null = null
+          if (tpIp !== null && tpIp > 0) {
+            if (tp?.earnedRuns != null)
+              era_game = parseFloat(((tp.earnedRuns * 9) / tpIp).toFixed(2))
+            if (tp?.hits != null && tp?.baseOnBalls != null)
+              whip_game = parseFloat(((tp.hits + tp.baseOnBalls) / tpIp).toFixed(3))
+          }
+
           const tb = teamBox.teamStats?.batting
           if (tb) {
             const { error: tErr } = await supabaseAdmin
@@ -197,6 +210,12 @@ export async function GET(req: NextRequest) {
                 strikeouts:   tb.strikeOuts  ?? null,
                 walks:        tb.baseOnBalls ?? null,
                 at_bats:      tb.atBats      ?? null,
+                era_game,
+                whip_game,
+                k_allowed:    tp?.strikeOuts  ?? null,
+                bb_allowed:   tp?.baseOnBalls ?? null,
+                hr_allowed:   tp?.homeRuns    ?? null,
+                hits_allowed: tp?.hits        ?? null,
               }, { onConflict: 'team_name,game_date', ignoreDuplicates: false })
             if (tErr) console.error(`[fetch-mlb-boxscores] team_game_stats ${teamName}:`, tErr.message)
             else teamStatsUpserted++
@@ -262,9 +281,9 @@ export async function GET(req: NextRequest) {
               const pit         = starterPlayer.stats.pitching
 
               let decision: string
-              if (box.decisions?.winner?.id === starterId)     decision = 'W'
-              else if (box.decisions?.loser?.id === starterId) decision = 'L'
-              else                                              decision = 'ND'
+              if (pit?.wins)        decision = 'W'
+              else if (pit?.losses) decision = 'L'
+              else                  decision = 'ND'
 
               const { error: sErr } = await supabaseAdmin
                 .from('team_game_starters')

@@ -11,6 +11,11 @@ import {
   Favorite, BetType, BET_TYPE_LABELS, BET_TYPE_ACCENTS,
   fetchFavorites, removeFavorite, reorderFavorites,
 } from '@/lib/favorites'
+import {
+  FavoriteCard, FavoriteCardRow, CardSlot,
+  fetchCards, ensureCard, updateCardName, addRowToCard, removeRowFromCard,
+} from '@/lib/favorite-cards'
+import { TEAM_COLORS } from '@/lib/teamColors'
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -343,6 +348,222 @@ function FavoriteRow({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ─── FavoriteCards ────────────────────────────────────────────────────────────
+
+const CARD_ACCENT = '#39ff9a'
+
+function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
+  userId:    string
+  favorites: Favorite[]
+  isPro:     boolean
+  onUpgrade: () => void
+}) {
+  const [slots,       setSlots]       = useState<CardSlot[]>(() => Array.from({ length: 4 }, () => ({ card: null, rows: [] })))
+  const [loadingCards, setLoadingCards] = useState(true)
+  const [editingIdx,  setEditingIdx]  = useState<number | null>(null)
+  const [nameInputs,  setNameInputs]  = useState(['My Picks', 'My Picks', 'My Picks', 'My Picks'])
+  const [addingTo,    setAddingTo]    = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchCards(userId).then(data => {
+      if (cancelled) return
+      setSlots(data)
+      setNameInputs(data.map(d => d.card?.card_name ?? 'My Picks'))
+      setLoadingCards(false)
+    })
+    return () => { cancelled = true }
+  }, [userId])
+
+  async function handleNameBlur(idx: number) {
+    if (editingIdx !== idx) return
+    setEditingIdx(null)
+    const trimmed = nameInputs[idx].trim() || 'My Picks'
+    let card = slots[idx].card
+    if (!card?.id) {
+      card = await ensureCard(userId, idx + 1)
+      if (!card) return
+    }
+    await updateCardName(card.id, trimmed)
+    setSlots(prev => prev.map((s, i) => i === idx ? { ...s, card: { ...card!, card_name: trimmed } } : s))
+  }
+
+  async function handleAddRow(cardIdx: number, favId: string) {
+    const fav = favorites.find(f => f.id === favId)
+    if (!fav) return
+    setAddingTo(null)
+    let slot = slots[cardIdx]
+    let card = slot.card
+    if (!card?.id) {
+      card = await ensureCard(userId, cardIdx + 1)
+      if (!card) return
+      setSlots(prev => prev.map((s, i) => i === cardIdx ? { ...s, card: card! } : s))
+    }
+    if (slot.rows.length >= 8) return
+    const row = await addRowToCard(userId, card.id, fav.team_name, fav.league_name, fav.bet_type)
+    if (row) {
+      setSlots(prev => prev.map((s, i) => i === cardIdx ? { ...s, rows: [...s.rows, row] } : s))
+    }
+  }
+
+  async function handleRemoveRow(cardIdx: number, rowId: string) {
+    const ok = await removeRowFromCard(rowId)
+    if (ok) {
+      setSlots(prev => prev.map((s, i) =>
+        i === cardIdx ? { ...s, rows: s.rows.filter(r => r.id !== rowId) } : s
+      ))
+    }
+  }
+
+  if (!isPro) {
+    return (
+      <div style={{ margin: '0 24px 28px', position: 'relative' }}>
+        <div style={{ filter: 'blur(3px)', pointerEvents: 'none', opacity: 0.35 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            {[1, 2, 3, 4].map(n => (
+              <div key={n} style={{ background: CARD, border: `1px solid ${CARD_ACCENT}33`, borderRadius: 12, padding: '14px 16px', minHeight: 110 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: CARD_ACCENT, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>My Picks</div>
+                <div style={{ fontSize: 9, color: MUTED }}>Add up to 8 favorites to this card</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, color: '#c4b5fd', letterSpacing: '0.06em' }}>Pick Cards are a Pro feature</div>
+          <button onClick={onUpgrade} style={{
+            background: `linear-gradient(135deg, ${PURPLE}, #6d28d9)`, border: 'none', borderRadius: 7,
+            color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
+            cursor: 'pointer', padding: '9px 18px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+            boxShadow: `0 0 16px ${PURPLE}44`,
+          }}>🔒 Go Pro</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (loadingCards) {
+    return <div style={{ margin: '0 24px 20px', fontSize: 10, color: MUTED, letterSpacing: '0.1em' }}>Loading cards…</div>
+  }
+
+  return (
+    <div style={{ margin: '0 24px 28px' }}>
+      <div className="fav-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+        {slots.map((slot, idx) => {
+          const cardName = slot.card?.card_name ?? nameInputs[idx]
+          const isEditing = editingIdx === idx
+          const isAdding  = addingTo  === idx
+
+          return (
+            <div key={idx} style={{
+              background: CARD, border: `1px solid ${CARD_ACCENT}44`, borderRadius: 12,
+              padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8,
+              boxShadow: `0 0 20px ${CARD_ACCENT}0a`,
+            }}>
+              {/* Editable card name */}
+              {isEditing ? (
+                <input
+                  autoFocus
+                  value={nameInputs[idx]}
+                  onChange={e => setNameInputs(prev => prev.map((n, i) => i === idx ? e.target.value : n))}
+                  onBlur={() => handleNameBlur(idx)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleNameBlur(idx) }}
+                  maxLength={32}
+                  style={{
+                    background: 'transparent', border: 'none',
+                    borderBottom: `1px solid ${CARD_ACCENT}`, color: CARD_ACCENT,
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                    padding: '2px 0', outline: 'none', width: '100%',
+                    fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                  }}
+                />
+              ) : (
+                <button
+                  onClick={() => setEditingIdx(idx)}
+                  title="Click to rename"
+                  style={{
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700, color: CARD_ACCENT,
+                    letterSpacing: '0.1em', textTransform: 'uppercase', textAlign: 'left',
+                    fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  {cardName}
+                  <span style={{ fontSize: 9, opacity: 0.5 }}>✎</span>
+                </button>
+              )}
+
+              {/* Rows */}
+              {slot.rows.length === 0 ? (
+                <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.06em', padding: '4px 0' }}>
+                  Add up to 8 favorites to this card
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {slot.rows.map(row => {
+                    const color    = TEAM_COLORS[row.team_name]?.primary ?? CARD_ACCENT
+                    const lastName = row.team_name.split(' ').slice(-1)[0]
+                    const betLabel = BET_TYPE_LABELS[row.bet_type as BetType] ?? row.bet_type
+                    return (
+                      <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, color: TEXT, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {lastName}
+                        </span>
+                        <span style={{ fontSize: 8, color: SUB, letterSpacing: '0.07em', flexShrink: 0 }}>
+                          {betLabel}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveRow(idx, row.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 14, padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
+                        >×</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Add row */}
+              {slot.rows.length < 8 && (
+                isAdding ? (
+                  <select
+                    autoFocus
+                    defaultValue=""
+                    onChange={e => { if (e.target.value) handleAddRow(idx, e.target.value) }}
+                    onBlur={() => setAddingTo(null)}
+                    style={{
+                      background: '#13131e', border: `1px solid ${BORDER}`, borderRadius: 6,
+                      color: TEXT, fontSize: 10, padding: '6px 10px', width: '100%', outline: 'none',
+                      fontFamily: 'var(--font-oswald), "Oswald", sans-serif', cursor: 'pointer',
+                    }}
+                  >
+                    <option value="" disabled>Select a favorite…</option>
+                    {favorites.map(fav => (
+                      <option key={fav.id} value={fav.id}>
+                        {fav.team_name} — {BET_TYPE_LABELS[fav.bet_type]}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={() => setAddingTo(idx)}
+                    style={{
+                      background: 'none', border: `1px dashed ${CARD_ACCENT}44`, borderRadius: 6,
+                      color: CARD_ACCENT, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
+                      cursor: 'pointer', padding: '6px 12px', width: '100%',
+                      fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                    }}
+                  >+ ADD ROW</button>
+                )
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -698,6 +919,25 @@ export default function FavoritesPage() {
         </div>
       )}
 
+      {/* ─── Pick Cards ───────────────────────────────────────────────────── */}
+      {user && (
+        <FavoriteCards
+          userId={user.id}
+          favorites={favorites}
+          isPro={!!isPro}
+          onUpgrade={() => openModal('pro')}
+        />
+      )}
+
+      {/* ─── YOUR FAVORITES heading ───────────────────────────────────────── */}
+      {!loading && favorites.length > 0 && (
+        <div style={{ padding: '0 24px 10px' }}>
+          <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700 }}>
+            Your Favorites
+          </span>
+        </div>
+      )}
+
       {/* ─── Main chart area ──────────────────────────────────────────────── */}
       {loading ? (
         <div style={{ padding: 60, textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.1em' }}>
@@ -830,6 +1070,7 @@ export default function FavoritesPage() {
         .chart-scroll-hidden::-webkit-scrollbar { display: none; }
         .fav-scroll-arrow:hover { border-color: #22c55e99 !important; box-shadow: 0 0 14px #22c55e44 !important; }
         @media (max-width: 600px) { .fav-scroll-arrow { display: none !important; } }
+        @media (max-width: 640px) { .fav-cards-grid { grid-template-columns: 1fr !important; } }
       `}</style>
     </div>
   )
