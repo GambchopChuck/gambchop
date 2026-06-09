@@ -408,20 +408,34 @@ export default async function HomePage() {
                 Yankees OVER 8.5 Runs
               </div>
 
-              {/* Cell row — 6 visible + 4 blurred */}
-              <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-                {(['#a855f7','#a855f7','#a855f7','#67e8f9','#a855f7','#a855f7'] as const).map((color, i) => (
-                  <div key={i} style={{ width: 22, height: 22, borderRadius: 4, background: color, flexShrink: 0 }} />
-                ))}
-                {(['#a855f7','#67e8f9','#a855f7','#67e8f9'] as const).map((color, i) => (
-                  <div key={`b${i}`} style={{ width: 22, height: 22, borderRadius: 4, background: color, flexShrink: 0, filter: 'blur(3px)' }} />
+              {/* Chart grid — blurred to simulate locked preview */}
+              <div style={{ filter: 'blur(3px)', opacity: 0.5, marginBottom: 16 }}>
+                {([
+                  { label: 'Moneyline',  cells: ['#22c55e','#22c55e','#22c55e','#ef4444','#22c55e','#22c55e','#ef4444','#22c55e','#22c55e','#ef4444'] },
+                  { label: 'Spread',     cells: ['#22c55e','#22c55e','#ef4444','#22c55e','#ef4444','#22c55e','#22c55e','#ef4444','#22c55e','#ef4444'] },
+                  { label: 'Over/Under', cells: ['#a855f7','#a855f7','#a855f7','#67e8f9','#a855f7','#a855f7','#a855f7','#a855f7','#67e8f9','#67e8f9'] },
+                  { label: 'Home',       cells: ['#22c55e','#22c55e','#22c55e','#22c55e','#ef4444','#22c55e','#22c55e','#22c55e','#22c55e','#ef4444'] },
+                ] as const).map(({ label, cells }) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{
+                      fontSize: 9, color: '#71717a', letterSpacing: '0.08em',
+                      textTransform: 'uppercase', width: 76, flexShrink: 0,
+                    }}>
+                      {label}
+                    </span>
+                    <div style={{ display: 'flex', gap: 2 }}>
+                      {(cells as readonly string[]).map((color, i) => (
+                        <div key={i} style={{ width: 18, height: 18, borderRadius: 3, background: color, flexShrink: 0 }} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
 
               {/* Badges row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', letterSpacing: '0.08em' }}>
-                  68% HIT RATE
+                  68% MONTHLY HIT RATE
                 </span>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -446,12 +460,11 @@ export default async function HomePage() {
               fontSize: 28, fontWeight: 700, color: '#ffffff',
               margin: '0 0 28px', lineHeight: 1.2, letterSpacing: '0.01em',
             }}>
-              Built for members who actually study the data.
+              Real charts, real data, no false influencers slinging picks.
             </h3>
 
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 36px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {([
-                'Set custom thresholds on any team, player, or stat category',
                 'Publish your chart to thousands of members in the discovery feed',
                 'Your win % is calculated from real data — no fluff, no claims',
                 'Earn real money when your research holds up',
