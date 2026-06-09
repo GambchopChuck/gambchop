@@ -26,9 +26,9 @@ const STREAKS_SMALL = [ROW1.slice(0, 12), ROW2.slice(0, 12)]
 // ─── Leaderboard preview data ─────────────────────────────────────────────────
 
 const LB_ROWS = [
-  { rank: '01', color: '#A855F7', team: 'Yankees', stat: '21' },
-  { rank: '02', color: WIN,       team: 'Dodgers', stat: '19' },
-  { rank: '03', color: '#A855F7', team: 'Astros',  stat: '18' },
+  { rank: '1', color: '#A855F7', team: 'Yankees', stat: '21' },
+  { rank: '2', color: WIN,       team: 'Dodgers', stat: '19' },
+  { rank: '3', color: '#A855F7', team: 'Astros',  stat: '18' },
 ]
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ export default function FeaturedPages({ isProUser = false }: { isProUser?: boole
 
             {/* Block 2: Description */}
             <p style={{ fontFamily: SANS, fontSize: 15, fontWeight: 400, color: '#ffffff', lineHeight: 1.6, margin: '0 0 32px', maxWidth: 380 }}>
-              Last month&apos;s top five teams in every betting category. Who racked up the most overs, the most covers, the most pushes — ranked, charted, and frozen at month-end.
+              Who racked up the most overs, the most covers, the most pushes — ranked, charted, and frozen at month-end.
             </p>
 
             {/* Block 3: Two tags */}
