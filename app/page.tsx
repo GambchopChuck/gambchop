@@ -290,10 +290,15 @@ export default async function HomePage() {
       </section>
 
       {/* ── Creator Marketplace ───────────────────────────────────────────── */}
-      <section
-        className="hiw-section"
-        style={{ background: '#08080d' }}
-      >
+      <section style={{ position: 'relative', overflow: 'hidden' }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: "url('/images/creatormarket-bg.png')",
+          backgroundSize: 'cover', backgroundPosition: 'center',
+          zIndex: 0,
+        }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1 }} />
+        <div className="hiw-section" style={{ position: 'relative', zIndex: 2 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
 
           {/* Eyebrow */}
@@ -377,6 +382,7 @@ export default async function HomePage() {
           </div>
 
         </div>
+        </div>{/* /hiw-section zIndex wrapper */}
       </section>
 
       {/* ── Creator Marketplace — Proof Block ──────────────────────────────── */}
