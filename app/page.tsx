@@ -379,6 +379,107 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Creator Marketplace — Proof Block ──────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#0d0d16' }}>
+        <div style={{
+          maxWidth: 1200, margin: '0 auto',
+          display: 'flex', alignItems: 'center', gap: 64, flexWrap: 'wrap',
+        }}>
+
+          {/* Left — mock chart card */}
+          <div style={{ flex: '1 1 340px' }}>
+            <div style={{
+              background: '#111118', border: '1px solid #1f1f2e',
+              borderRadius: 16, padding: '24px', maxWidth: 400,
+            }}>
+              {/* Creator row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{
+                  display: 'inline-block', width: 8, height: 8,
+                  borderRadius: '50%', background: '#22c55e', flexShrink: 0,
+                }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#a1a1aa' }}>
+                  @sharplines_k
+                </span>
+              </div>
+
+              {/* Chart name */}
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#ffffff', marginBottom: 16 }}>
+                Yankees OVER 8.5 Runs
+              </div>
+
+              {/* Cell row — 6 visible + 4 blurred */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+                {(['#a855f7','#a855f7','#a855f7','#67e8f9','#a855f7','#a855f7'] as const).map((color, i) => (
+                  <div key={i} style={{ width: 22, height: 22, borderRadius: 4, background: color, flexShrink: 0 }} />
+                ))}
+                {(['#a855f7','#67e8f9','#a855f7','#67e8f9'] as const).map((color, i) => (
+                  <div key={`b${i}`} style={{ width: 22, height: 22, borderRadius: 4, background: color, flexShrink: 0, filter: 'blur(3px)' }} />
+                ))}
+              </div>
+
+              {/* Badges row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', letterSpacing: '0.08em' }}>
+                  68% HIT RATE
+                </span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '3px 10px', borderRadius: 9999,
+                  background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)',
+                  color: '#f59e0b', fontSize: 11, fontWeight: 700,
+                }}>
+                  🔥 HOT
+                </span>
+              </div>
+
+              {/* Price */}
+              <div style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 400 }}>
+                $2.99 to unlock
+              </div>
+            </div>
+          </div>
+
+          {/* Right — bullets */}
+          <div style={{ flex: '1 1 340px' }}>
+            <h3 style={{
+              fontSize: 28, fontWeight: 700, color: '#ffffff',
+              margin: '0 0 28px', lineHeight: 1.2, letterSpacing: '0.01em',
+            }}>
+              Built for members who actually study the data.
+            </h3>
+
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 36px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {([
+                'Set custom thresholds on any team, player, or stat category',
+                'Publish your chart to thousands of members in the discovery feed',
+                'Your win % is calculated from real data — no fluff, no claims',
+                'Earn real money when your research holds up',
+              ] as const).map((text, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 16, flexShrink: 0, lineHeight: '1.5' }}>✓</span>
+                  <span style={{ fontSize: 16, color: '#d4d4d8', lineHeight: 1.5 }}>{text}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Coming Soon badge */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <span style={{
+                display: 'inline-block', padding: '8px 24px', borderRadius: 9999,
+                background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.45)',
+                color: '#f59e0b', fontSize: 12, fontWeight: 700,
+                letterSpacing: '0.22em', textTransform: 'uppercase',
+                fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+              }}>
+                Coming Soon
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <ChopperBanner />
 
       {/* ── Leagues section — video bg wraps header + cards ─────────────── */}
