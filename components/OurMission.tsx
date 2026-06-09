@@ -1,5 +1,5 @@
 const PARAGRAPHS = [
-  `Our mission at Gambchop is to help micro-volume sports bettors make more informed decisions by giving them a clearer view of what has been happening across the sports betting landscape. Through simple, color-coded charts, historical market results, streak tracking, team comparisons, news, and AI-assisted chart reading, Gambchop turns scattered betting data into an easier-to-read visual experience.`,
+  `Our mission at Gambchop is to help macro-volume sports bettors make more informed decisions by giving them a clearer view of what has been happening across the sports betting landscape. Through simple, color-coded charts, historical market results, streak tracking, team comparisons, news, and AI-assisted chart reading, Gambchop turns scattered betting data into an easier-to-read visual experience.`,
 
   `We are built for bettors who may not have the time, bankroll, or resources to track every league, team, split, and trend manually, because apparently humans enjoy making life harder by staring at twenty tabs before first pitch. Gambchop helps members quickly understand recent outcomes across moneylines, spreads, totals, home and away performance, favorites, underdogs, and active streaks, so they can better grasp the context behind the games they are already watching.`,
 
