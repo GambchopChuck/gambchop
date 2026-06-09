@@ -610,34 +610,6 @@ function LeftSidebar({ user }: { user: CommunityUser }) {
         </div>
       </div>
 
-      {/* User Contributions */}
-      <div style={{ borderTop: `1px solid ${G.cardBorder}`, paddingTop: 20 }}>
-        <SectionHeader>User Contributions</SectionHeader>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {TOP_CONTRIBUTORS.map((c, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 10px',
-              background: i === 0 ? G.accentFaint : 'transparent',
-              border: i === 0 ? `1px solid ${G.cardBorder}` : '1px solid transparent',
-            }}>
-              <span style={{ fontFamily: OSWALD, fontSize: 11, color: i === 0 ? G.accentFull : G.dim, width: 16, textAlign: 'center' }}>
-                {i + 1}
-              </span>
-              <Avatar initial={c.username[0]} size={24} />
-              <span style={{ fontFamily: SANS, fontSize: 12, color: i === 0 ? G.white : G.muted, flex: 1 }}>
-                @{c.username}
-              </span>
-              <span style={{ fontFamily: MONO, fontSize: 10, color: i === 0 ? G.accentFull : G.dim }}>
-                {c.points}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 16, fontFamily: MONO, fontSize: 9, color: G.dim, letterSpacing: '0.08em' }}>
-          Logged in as <span style={{ color: G.accentText }}>@{user.username}</span>
-        </div>
-      </div>
 
     </div>
   )
