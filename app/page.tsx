@@ -289,6 +289,96 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Creator Marketplace ───────────────────────────────────────────── */}
+      <section
+        className="hiw-section"
+        style={{ background: '#08080d' }}
+      >
+        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
+
+          {/* Eyebrow */}
+          <p style={{
+            fontSize: 14, fontWeight: 500, letterSpacing: '0.22em',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)',
+            margin: '0 0 20px',
+          }}>
+            Creator Marketplace
+          </p>
+
+          {/* Heading */}
+          <h2 className="hiw-heading">
+            Turn your research into income.
+          </h2>
+
+          {/* Feature cards */}
+          <div className="hiw-cards">
+            {([
+              {
+                n: '01',
+                heading: 'Build your charts',
+                body: 'Pick a row or set your own threshold, and Gambchop generates a custom color-coded chart straight from real historical data.',
+              },
+              {
+                n: '02',
+                heading: 'Win % on display',
+                body: "Your chart's monthly hit rate is calculated automatically and shown publicly — other members can see exactly how often your chart has been hitting and purchase it if they feel confident the charts will continue at a high win rate.",
+              },
+              {
+                n: '03',
+                heading: 'Set your price. Get paid.',
+                body: 'Price your chart. Every time a member unlocks it, you earn. The sharper your charts, the more your charts sell.',
+              },
+            ] as const).map(({ n, heading, body }) => (
+              <div key={n} className="league-card" style={{
+                '--accent': '#22c55e',
+                borderRadius: 12,
+                padding: '28px 28px 32px',
+              } as React.CSSProperties}>
+                <div style={{
+                  fontSize: 14, fontWeight: 500, color: '#22c55e',
+                  letterSpacing: '0.18em', textTransform: 'uppercase',
+                  marginBottom: 18,
+                }}>
+                  {n}
+                </div>
+                <h3 style={{
+                  fontSize: 26, fontWeight: 600, color: '#ffffff',
+                  margin: '0 0 14px', letterSpacing: '0.01em', lineHeight: 1.2,
+                }}>
+                  {heading}
+                </h3>
+                <p style={{
+                  fontSize: 16, fontWeight: 400, color: '#ffffff',
+                  lineHeight: 1.5, margin: 0,
+                }}>
+                  {body}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Coming Soon badge */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 48 }}>
+            <span style={{
+              display: 'inline-block',
+              padding: '8px 24px',
+              borderRadius: 9999,
+              background: 'rgba(245,158,11,0.12)',
+              border: '1px solid rgba(245,158,11,0.45)',
+              color: '#f59e0b',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+            }}>
+              Coming Soon
+            </span>
+          </div>
+
+        </div>
+      </section>
+
       <ChopperBanner />
 
       {/* ── Leagues section — video bg wraps header + cards ─────────────── */}
