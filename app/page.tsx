@@ -244,18 +244,18 @@ export default async function HomePage() {
             {([
               {
                 n: '01',
-                heading: 'Read the chart',
-                body: 'Every game becomes a colored square — green for wins, red for losses, purple for overs, baby blue for unders, amber for pushes. Scan a team\'s row and the streaks, slumps, and patterns show themselves.',
+                heading: 'Analyze the Charts',
+                body: 'Use Gambchop\'s color-coded historic charts to fast-track what\'s hot and what\'s not. Every game becomes a colored cell — read the streaks, slumps, and patterns at a glance, or hand it off to Chopper, your Gambchop AI assistant, for a deeper breakdown. Built for high-volume bettors who move fast.',
               },
               {
                 n: '02',
-                heading: 'Track your favorites',
-                body: 'Pin up to 16 team-and-bet-type combos to your favorites. Your most-watched matchups and markets stay one click away, side by side, so comparisons are instant.',
+                heading: 'Do Your Research',
+                body: 'Dig into the Stats, Leaderboard, and Streaks on Streaks to see who\'s running hot across every market. The Trends and Props pages give you a different angle — perfect if you\'re building something unique. Need a head-to-head? Use Compare to size up any two teams and let Chopper walk you through the matchup.',
               },
               {
                 n: '03',
-                heading: 'Build your bet',
-                body: 'Stack the visual context with your own research. Spot a team riding a 7-game over streak or a favorite that keeps failing to cover, and walk into your sportsbook with a broader view of what\'s been happening.',
+                heading: 'Build the Chop',
+                body: 'Curate your 32 best betting rows across four personal cards — then cut it down to your sharpest 16. That\'s The CHOP. Your most trusted team and market combinations, displayed side by side in one clean color-coded chart. No noise. Just your best reads, ready to go.',
               },
             ] as const).map(({ n, heading, body }) => (
               <div key={n} className="league-card" style={{
