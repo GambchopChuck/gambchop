@@ -182,6 +182,10 @@ export default function LeaguePage() {
       if (ok) setAllFavorites(prev => prev.filter(f => f.id !== existing.id))
     } else {
       if (memberTier !== 'pro') { router.push('/pricing'); return }
+      window.dispatchEvent(new CustomEvent('gambchop:star-click', {
+        detail: { teamName, leagueId, leagueName: meta.name, betType: bt },
+      }))
+      // Optimistically add to local starred state so the star appears filled
       const result = await addFavorite(
         user.id,
         { team_name: teamName, league_id: leagueId, league_name: meta.name, bet_type: bt },

@@ -186,6 +186,9 @@ export default function TeamPage() {
       if (ok) setTeamFavorites(prev => prev.filter(f => f.id !== existing.id))
     } else {
       if (memberTier !== 'pro') { router.push('/pricing'); return }
+      window.dispatchEvent(new CustomEvent('gambchop:star-click', {
+        detail: { teamName: entity, leagueId, leagueName: meta.name, betType: bt },
+      }))
       const all = await fetchFavorites(user.id)
       const result = await addFavorite(
         user.id,

@@ -18,6 +18,7 @@ export interface FavoriteCardRow {
   league_name:   string | null
   bet_type:      string
   display_order: number
+  in_chop:       boolean
   created_at:    string
 }
 
@@ -50,7 +51,7 @@ export async function ensureCard(userId: string, cardNumber: number): Promise<Fa
 
   const { data, error } = await supabase
     .from('favorite_cards')
-    .insert({ user_id: userId, card_number: cardNumber, card_name: 'My Picks' })
+    .insert({ user_id: userId, card_number: cardNumber, card_name: 'My Favorites' })
     .select()
     .single()
   if (error) { console.error('ensureCard:', error); return null }
@@ -72,7 +73,7 @@ export async function addRowToCard(
 ): Promise<FavoriteCardRow | null> {
   const { data, error } = await supabase
     .from('favorite_card_rows')
-    .insert({ user_id: userId, card_id: cardId, team_name: teamName, league_name: leagueName, bet_type: betType })
+    .insert({ user_id: userId, card_id: cardId, team_name: teamName, league_name: leagueName, bet_type: betType, in_chop: false })
     .select()
     .single()
   if (error) { console.error('addRowToCard:', error); return null }
@@ -83,4 +84,23 @@ export async function removeRowFromCard(rowId: string): Promise<boolean> {
   const { error } = await supabase.from('favorite_card_rows').delete().eq('id', rowId)
   if (error) { console.error('removeRowFromCard:', error); return false }
   return true
+}
+
+export async function setRowInChop(rowId: string, value: boolean): Promise<boolean> {
+  const { error } = await supabase
+    .from('favorite_card_rows')
+    .update({ in_chop: value })
+    .eq('id', rowId)
+  if (error) { console.error('setRowInChop:', error); return false }
+  return true
+}
+
+export async function fetchAllCardRows(userId: string): Promise<FavoriteCardRow[]> {
+  const { data, error } = await supabase
+    .from('favorite_card_rows')
+    .select('*')
+    .eq('user_id', userId)
+    .order('display_order')
+  if (error) { console.error('fetchAllCardRows:', error); return [] }
+  return (data ?? []) as FavoriteCardRow[]
 }

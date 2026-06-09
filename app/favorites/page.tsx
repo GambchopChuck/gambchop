@@ -13,7 +13,7 @@ import {
 } from '@/lib/favorites'
 import {
   FavoriteCard, FavoriteCardRow, CardSlot,
-  fetchCards, ensureCard, updateCardName, addRowToCard, removeRowFromCard,
+  fetchCards, ensureCard, updateCardName, addRowToCard, removeRowFromCard, setRowInChop,
 } from '@/lib/favorite-cards'
 import { TEAM_COLORS } from '@/lib/teamColors'
 
@@ -27,7 +27,7 @@ const MUTED  = '#52525b'
 const SUB    = '#a1a1aa'
 const GREEN  = '#22c55e'
 const PURPLE = '#8b5cf6'
-const GOLD   = '#eab308'
+const AMBER  = '#f59e0b'
 
 const C = {
   green:  '#22c55e', red:    '#ef4444', gold:   '#eab308', orange: '#f97316',
@@ -37,12 +37,15 @@ const C = {
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
-const TOTAL_LABEL_W = 256   // 36px arrow gutter + 220px label content
-const COL_W         = 40
-const SCROLL_WEEK   = 7 * COL_W
-const FREE_COLS     = 3
-const DOW           = ['S','M','T','W','T','F','S']
-const MONTH_NAMES   = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+const TOTAL_LABEL_W   = 256
+const COL_W           = 40
+const SCROLL_WEEK     = 7 * COL_W
+const FREE_COLS       = 3
+const DOW             = ['S','M','T','W','T','F','S']
+const MONTH_NAMES     = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+const MAX_CARD_ROWS   = 32
+const MAX_CHOP        = 16
+const DEFAULT_CARD_NAME = 'My Favorites'
 
 // ─── Sort ─────────────────────────────────────────────────────────────────────
 
@@ -86,7 +89,22 @@ function winRate(games: GameEntry[], bt: BetType): number {
   return t === 0 ? 0 : r.w / t
 }
 
-// ─── Cell components (same logic as GambchopChart) ────────────────────────────
+// ─── cardRowToFav ─────────────────────────────────────────────────────────────
+
+function cardRowToFav(row: FavoriteCardRow): Favorite {
+  return {
+    id:            row.id,
+    user_id:       row.user_id,
+    team_name:     row.team_name,
+    league_id:     (row.league_name ?? '').toLowerCase(),
+    league_name:   row.league_name ?? '',
+    bet_type:      row.bet_type as BetType,
+    display_order: row.display_order,
+    created_at:    row.created_at,
+  }
+}
+
+// ─── Cell components ──────────────────────────────────────────────────────────
 
 function WLCell({ result, winLabel = 'W', lossLabel = 'L' }: { result: BetResult; winLabel?: string; lossLabel?: string }) {
   if (!result) return <div className="fav-cell" style={{ background: C.empty, opacity: 0.3 }} />
@@ -274,7 +292,7 @@ function FavoriteRow({
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', background: rowBg }}>
 
-      {/* Sticky label (includes arrow gutter + label content) */}
+      {/* Sticky label */}
       <div style={{
         width: TOTAL_LABEL_W, minWidth: TOTAL_LABEL_W, flexShrink: 0,
         position: 'sticky', left: 0, zIndex: 10, background: rowBg,
@@ -320,10 +338,10 @@ function FavoriteRow({
           </div>
         </div>
 
-        {/* Star (remove) */}
+        {/* Remove from CHOP */}
         <button
-          onClick={onRemove} title="Remove from favorites"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: GOLD, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}
+          onClick={onRemove} title="Remove from The CHOP"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: GREEN, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}
         >★</button>
       </div>
 
@@ -354,35 +372,35 @@ function FavoriteRow({
 
 // ─── FavoriteCards ────────────────────────────────────────────────────────────
 
-const CARD_ACCENT = '#39ff9a'
-
-function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
-  userId:    string
-  favorites: Favorite[]
-  isPro:     boolean
-  onUpgrade: () => void
+function FavoriteCards({
+  userId, favorites, isPro, onUpgrade,
+  slots, setSlots, loadingCards,
+  chopRowIds, onToggleChop, chopCount,
+}: {
+  userId:       string
+  favorites:    Favorite[]
+  isPro:        boolean
+  onUpgrade:    () => void
+  slots:        CardSlot[]
+  setSlots:     React.Dispatch<React.SetStateAction<CardSlot[]>>
+  loadingCards: boolean
+  chopRowIds:   Set<string>
+  onToggleChop: (rowId: string, currentlyInChop: boolean) => void
+  chopCount:    number
 }) {
-  const [slots,       setSlots]       = useState<CardSlot[]>(() => Array.from({ length: 4 }, () => ({ card: null, rows: [] })))
-  const [loadingCards, setLoadingCards] = useState(true)
-  const [editingIdx,  setEditingIdx]  = useState<number | null>(null)
-  const [nameInputs,  setNameInputs]  = useState(['My Picks', 'My Picks', 'My Picks', 'My Picks'])
-  const [addingTo,    setAddingTo]    = useState<number | null>(null)
+  const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [nameInputs, setNameInputs] = useState<string[]>(() => slots.map(s => s.card?.card_name ?? DEFAULT_CARD_NAME))
+  const [addingTo,   setAddingTo]   = useState<number | null>(null)
+  const [chopError,  setChopError]  = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    fetchCards(userId).then(data => {
-      if (cancelled) return
-      setSlots(data)
-      setNameInputs(data.map(d => d.card?.card_name ?? 'My Picks'))
-      setLoadingCards(false)
-    })
-    return () => { cancelled = true }
-  }, [userId])
+    setNameInputs(slots.map(s => s.card?.card_name ?? DEFAULT_CARD_NAME))
+  }, [slots])
 
   async function handleNameBlur(idx: number) {
     if (editingIdx !== idx) return
     setEditingIdx(null)
-    const trimmed = nameInputs[idx].trim() || 'My Picks'
+    const trimmed = nameInputs[idx].trim() || DEFAULT_CARD_NAME
     let card = slots[idx].card
     if (!card?.id) {
       card = await ensureCard(userId, idx + 1)
@@ -405,29 +423,34 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
     }
     if (slot.rows.length >= 8) return
     const row = await addRowToCard(userId, card.id, fav.team_name, fav.league_name, fav.bet_type)
-    if (row) {
-      setSlots(prev => prev.map((s, i) => i === cardIdx ? { ...s, rows: [...s.rows, row] } : s))
-    }
+    if (row) setSlots(prev => prev.map((s, i) => i === cardIdx ? { ...s, rows: [...s.rows, row] } : s))
   }
 
   async function handleRemoveRow(cardIdx: number, rowId: string) {
     const ok = await removeRowFromCard(rowId)
-    if (ok) {
-      setSlots(prev => prev.map((s, i) =>
-        i === cardIdx ? { ...s, rows: s.rows.filter(r => r.id !== rowId) } : s
-      ))
+    if (ok) setSlots(prev => prev.map((s, i) =>
+      i === cardIdx ? { ...s, rows: s.rows.filter(r => r.id !== rowId) } : s
+    ))
+  }
+
+  function handleStarCard(rowId: string, currentlyInChop: boolean) {
+    if (!currentlyInChop && chopCount >= MAX_CHOP) {
+      setChopError('The CHOP is full — remove a row below to make room')
+      setTimeout(() => setChopError(null), 3500)
+      return
     }
+    onToggleChop(rowId, currentlyInChop)
   }
 
   if (!isPro) {
     return (
       <div style={{ margin: '0 24px 28px', position: 'relative' }}>
         <div style={{ filter: 'blur(3px)', pointerEvents: 'none', opacity: 0.35 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[1, 2, 3, 4].map(n => (
-              <div key={n} style={{ background: CARD, border: `1px solid ${CARD_ACCENT}33`, borderRadius: 12, padding: '14px 16px', minHeight: 110 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: CARD_ACCENT, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>My Picks</div>
-                <div style={{ fontSize: 9, color: MUTED }}>Add up to 8 favorites to this card</div>
+              <div key={n} style={{ background: CARD, border: `1px solid ${GREEN}22`, borderRadius: 12, padding: '14px 16px', minHeight: 110 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>{DEFAULT_CARD_NAME}</div>
+                <div style={{ fontSize: 9, color: MUTED }}>Add up to 8 rows to this card</div>
               </div>
             ))}
           </div>
@@ -451,7 +474,12 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
 
   return (
     <div style={{ margin: '0 24px 28px' }}>
-      <div className="fav-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+      {chopError && (
+        <div style={{ marginBottom: 10, padding: '8px 14px', background: `${AMBER}11`, border: `1px solid ${AMBER}44`, borderRadius: 8, fontSize: 11, color: AMBER }}>
+          {chopError}
+        </div>
+      )}
+      <div className="fav-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {slots.map((slot, idx) => {
           const cardName = slot.card?.card_name ?? nameInputs[idx]
           const isEditing = editingIdx === idx
@@ -459,9 +487,9 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
 
           return (
             <div key={idx} style={{
-              background: CARD, border: `1px solid ${CARD_ACCENT}44`, borderRadius: 12,
+              background: CARD, border: `1px solid ${GREEN}33`, borderRadius: 12,
               padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8,
-              boxShadow: `0 0 20px ${CARD_ACCENT}0a`,
+              boxShadow: `0 0 18px ${GREEN}08`,
             }}>
               {/* Editable card name */}
               {isEditing ? (
@@ -473,10 +501,9 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
                   onKeyDown={e => { if (e.key === 'Enter') handleNameBlur(idx) }}
                   maxLength={32}
                   style={{
-                    background: 'transparent', border: 'none',
-                    borderBottom: `1px solid ${CARD_ACCENT}`, color: CARD_ACCENT,
-                    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                    padding: '2px 0', outline: 'none', width: '100%',
+                    background: 'transparent', border: 'none', borderBottom: `1px solid ${GREEN}`,
+                    color: GREEN, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', padding: '2px 0', outline: 'none', width: '100%',
                     fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                   }}
                 />
@@ -486,37 +513,45 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
                   title="Click to rename"
                   style={{
                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                    fontSize: 11, fontWeight: 700, color: CARD_ACCENT,
-                    letterSpacing: '0.1em', textTransform: 'uppercase', textAlign: 'left',
+                    fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', textAlign: 'left',
                     fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                     display: 'flex', alignItems: 'center', gap: 6,
                   }}
                 >
-                  {cardName}
-                  <span style={{ fontSize: 9, opacity: 0.5 }}>✎</span>
+                  {cardName}<span style={{ fontSize: 9, opacity: 0.5 }}>✎</span>
                 </button>
               )}
 
               {/* Rows */}
               {slot.rows.length === 0 ? (
                 <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.06em', padding: '4px 0' }}>
-                  Add up to 8 favorites to this card
+                  Add up to 8 rows to this card
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {slot.rows.map(row => {
-                    const color    = TEAM_COLORS[row.team_name]?.primary ?? CARD_ACCENT
+                    const color    = TEAM_COLORS[row.team_name]?.primary ?? GREEN
                     const lastName = row.team_name.split(' ').slice(-1)[0]
                     const betLabel = BET_TYPE_LABELS[row.bet_type as BetType] ?? row.bet_type
+                    const inChop   = chopRowIds.has(row.id)
                     return (
-                      <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
+                      <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {/* Star to promote/demote from The CHOP */}
+                        <button
+                          onClick={() => handleStarCard(row.id, inChop)}
+                          title={inChop ? 'Remove from The CHOP' : 'Add to The CHOP'}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: 12, color: inChop ? GREEN : MUTED,
+                            padding: '0 1px', lineHeight: 1, flexShrink: 0,
+                          }}
+                        >{inChop ? '★' : '☆'}</button>
+                        <div style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
                         <span style={{ fontSize: 10, fontWeight: 700, color: TEXT, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {lastName}
                         </span>
-                        <span style={{ fontSize: 8, color: SUB, letterSpacing: '0.07em', flexShrink: 0 }}>
-                          {betLabel}
-                        </span>
+                        <span style={{ fontSize: 8, color: SUB, letterSpacing: '0.07em', flexShrink: 0 }}>{betLabel}</span>
                         <button
                           onClick={() => handleRemoveRow(idx, row.id)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 14, padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
@@ -531,8 +566,7 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
               {slot.rows.length < 8 && (
                 isAdding ? (
                   <select
-                    autoFocus
-                    defaultValue=""
+                    autoFocus defaultValue=""
                     onChange={e => { if (e.target.value) handleAddRow(idx, e.target.value) }}
                     onBlur={() => setAddingTo(null)}
                     style={{
@@ -552,8 +586,8 @@ function FavoriteCards({ userId, favorites, isPro, onUpgrade }: {
                   <button
                     onClick={() => setAddingTo(idx)}
                     style={{
-                      background: 'none', border: `1px dashed ${CARD_ACCENT}44`, borderRadius: 6,
-                      color: CARD_ACCENT, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
+                      background: 'none', border: `1px dashed ${GREEN}44`, borderRadius: 6,
+                      color: GREEN, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
                       cursor: 'pointer', padding: '6px 12px', width: '100%',
                       fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
                     }}
@@ -577,10 +611,10 @@ function LoginGate() {
       <div style={{ textAlign: 'center', maxWidth: 420 }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>⭐</div>
         <h1 style={{ fontSize: 24, fontWeight: 900, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>
-          Favorites
+          The Chop
         </h1>
         <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.8, margin: '0 0 28px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif' }}>
-          Track any team × bet type combination across all supported leagues. Sign in to get started.
+          Build your 32, then cut it to your best 16. Sign in to get started.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={() => openModal('join')} style={{
@@ -607,16 +641,40 @@ export default function FavoritesPage() {
 
   const [mounted,      setMounted]      = useState(false)
   const [favorites,    setFavorites]    = useState<Favorite[]>([])
+  const [slots,        setSlots]        = useState<CardSlot[]>(() => Array.from({ length: 4 }, () => ({ card: null, rows: [] })))
+  const [loadingCards, setLoadingCards] = useState(true)
   const [loading,      setLoading]      = useState(true)
   const [gamesLoading, setGamesLoading] = useState(false)
   const [sortMode,     setSortMode]     = useState<SortMode>('selected')
   const [toast,        setToast]        = useState<string | null>(null)
 
-  // Per-favorite game data keyed by fav.id
   const [monthGames,  setMonthGames]  = useState<Record<string, GameEntry[]>>({})
   const [seasonGames, setSeasonGames] = useState<Record<string, GameEntry[]>>({})
 
-  // ── Month navigation ────────────────────────────────────────────────────────
+  // ── Derived chop data ────────────────────────────────────────────────────────
+
+  const chopRowIds = useMemo(() => {
+    const s = new Set<string>()
+    for (const slot of slots) {
+      for (const row of slot.rows) {
+        if (row.in_chop) s.add(row.id)
+      }
+    }
+    return s
+  }, [slots])
+
+  const chopFavs = useMemo(() => {
+    const rows: FavoriteCardRow[] = []
+    for (const slot of slots) for (const row of slot.rows) if (row.in_chop) rows.push(row)
+    rows.sort((a, b) => a.display_order - b.display_order)
+    return rows.map(cardRowToFav)
+  }, [slots])
+
+  const totalCardRows = useMemo(() => slots.reduce((acc, s) => acc + s.rows.length, 0), [slots])
+  const chopCount     = chopRowIds.size
+
+  // ── Month navigation ─────────────────────────────────────────────────────────
+
   const today = new Date()
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1)
@@ -636,7 +694,7 @@ export default function FavoritesPage() {
     setViewMonth(m => { if (m === 12) { setViewYear(y => y + 1); return 1 } return m + 1 })
   }
 
-  const daysInMonth    = new Date(viewYear, viewMonth, 0).getDate()
+  const daysInMonth     = new Date(viewYear, viewMonth, 0).getDate()
   const contentMinWidth = TOTAL_LABEL_W + daysInMonth * COL_W
 
   // ── Data fetching ────────────────────────────────────────────────────────────
@@ -665,14 +723,23 @@ export default function FavoritesPage() {
     setSeasonGames(Object.fromEntries(entries))
   }, [])
 
-  const loadFavorites = useCallback(async () => {
-    if (!user?.id) { setLoading(false); return }
+  const loadAll = useCallback(async () => {
+    if (!user?.id) { setLoading(false); setLoadingCards(false); return }
     setLoading(true)
-    const data = await fetchFavorites(user.id)
-    setFavorites(data)
-    // Fetch both concurrently; season data arrives in background (no gamesLoading spinner needed for it)
-    await fetchMonthData(data, viewYear, viewMonth)
-    fetchSeasonData(data)
+    const [favData, cardData] = await Promise.all([
+      fetchFavorites(user.id),
+      fetchCards(user.id),
+    ])
+    setFavorites(favData)
+    setSlots(cardData)
+    setLoadingCards(false)
+
+    const initialChopRows: FavoriteCardRow[] = []
+    for (const slot of cardData) for (const row of slot.rows) if (row.in_chop) initialChopRows.push(row)
+    initialChopRows.sort((a, b) => a.display_order - b.display_order)
+    const initial = initialChopRows.map(cardRowToFav)
+    await fetchMonthData(initial, viewYear, viewMonth)
+    fetchSeasonData(initial)
     setLoading(false)
   }, [user?.id, viewYear, viewMonth, fetchMonthData, fetchSeasonData]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -684,16 +751,36 @@ export default function FavoritesPage() {
   }, [])
 
   useEffect(() => {
-    if (mounted && !authLoading) loadFavorites()
+    if (mounted && !authLoading) loadAll()
   }, [mounted, authLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch month data when month changes (season data stays constant)
   useEffect(() => {
-    if (!mounted || authLoading || favorites.length === 0) return
-    fetchMonthData(favorites, viewYear, viewMonth)
+    if (!mounted || authLoading || chopFavs.length === 0) return
+    fetchMonthData(chopFavs, viewYear, viewMonth)
   }, [viewYear, viewMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Scroll sync (single container) ──────────────────────────────────────────
+  // Re-fetch when chop membership changes
+  useEffect(() => {
+    if (!mounted || loading) return
+    fetchMonthData(chopFavs, viewYear, viewMonth)
+    fetchSeasonData(chopFavs)
+  }, [chopRowIds.size]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Toggle in_chop ───────────────────────────────────────────────────────────
+
+  async function handleToggleChop(rowId: string, currentlyInChop: boolean) {
+    const newValue = !currentlyInChop
+    const ok = await setRowInChop(rowId, newValue)
+    if (ok) {
+      setSlots(prev => prev.map(s => ({
+        ...s,
+        rows: s.rows.map(r => r.id === rowId ? { ...r, in_chop: newValue } : r),
+      })))
+    }
+  }
+
+  // ── Scroll sync ──────────────────────────────────────────────────────────────
+
   const scrollRef    = useRef<HTMLDivElement | null>(null)
   const scrollPosRef = useRef(0)
   const syncTimer    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -725,7 +812,6 @@ export default function FavoritesPage() {
     syncTimer.current = setTimeout(() => updateEdges(el.scrollLeft, el), 450)
   }
 
-  // Union of populated days across all favorites for DateHeader highlights
   const allPopulatedDays = useMemo(() => {
     const s = new Set<number>()
     for (const games of Object.values(monthGames)) {
@@ -737,7 +823,6 @@ export default function FavoritesPage() {
     return s
   }, [monthGames])
 
-  // Auto-scroll to latest game day on month/data change
   useEffect(() => {
     const el = scrollRef.current
     if (!el || allPopulatedDays.size === 0) return
@@ -757,63 +842,33 @@ export default function FavoritesPage() {
     return () => cancelAnimationFrame(raf)
   }, [viewYear, viewMonth, allPopulatedDays.size]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-check edges after data/layout changes
   useEffect(() => {
     const el = scrollRef.current
     if (el) updateEdges(scrollPosRef.current, el)
-  }, [daysInMonth, favorites.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [daysInMonth, chopFavs.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sort ─────────────────────────────────────────────────────────────────────
+
   const handleSortChange = (mode: SortMode) => {
     setSortMode(mode)
     localStorage.setItem(SORT_LS_KEY, mode)
   }
 
-  const displayFavorites = useMemo(() => {
-    if (sortMode === 'selected') return favorites
-    const withData = favorites.map(f => ({ fav: f, sg: seasonGames[f.id] ?? [] }))
+  const displayChopFavs = useMemo(() => {
+    if (sortMode === 'selected') return chopFavs
+    const withData = chopFavs.map(f => ({ fav: f, sg: seasonGames[f.id] ?? [] }))
     switch (sortMode) {
       case 'az':     return [...withData].sort((a, b) => a.fav.team_name.localeCompare(b.fav.team_name)).map(x => x.fav)
       case 'za':     return [...withData].sort((a, b) => b.fav.team_name.localeCompare(a.fav.team_name)).map(x => x.fav)
       case 'wtl':    return [...withData].sort((a, b) => winRate(b.sg, b.fav.bet_type) - winRate(a.sg, a.fav.bet_type)).map(x => x.fav)
       case 'ltw':    return [...withData].sort((a, b) => winRate(a.sg, a.fav.bet_type) - winRate(b.sg, b.fav.bet_type)).map(x => x.fav)
       case 'league': return [...withData].sort((a, b) => a.fav.league_name.localeCompare(b.fav.league_name)).map(x => x.fav)
-      default:       return favorites
+      default:       return chopFavs
     }
-  }, [favorites, sortMode, seasonGames])
-
-  // ── Favorite mutations ───────────────────────────────────────────────────────
-  const handleRemove = async (fav: Favorite) => {
-    const ok = await removeFavorite(fav.id)
-    if (ok) {
-      setFavorites(prev => prev.filter(f => f.id !== fav.id))
-      setMonthGames(prev  => { const n = { ...prev };  delete n[fav.id]; return n })
-      setSeasonGames(prev => { const n = { ...prev };  delete n[fav.id]; return n })
-    }
-  }
-
-  const handleMoveUp = async (idx: number) => {
-    if (idx === 0) return
-    const next = [...favorites]
-    ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
-    setFavorites(next)
-    await reorderFavorites(next.map(f => f.id))
-  }
-
-  const handleMoveDown = async (idx: number) => {
-    if (idx === favorites.length - 1) return
-    const next = [...favorites]
-    ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
-    setFavorites(next)
-    await reorderFavorites(next.map(f => f.id))
-  }
-
-  const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3000)
-  }
+  }, [chopFavs, sortMode, seasonGames])
 
   // ── Render ───────────────────────────────────────────────────────────────────
+
   if (!mounted || authLoading) return null
 
   if (!isMember) return (
@@ -834,28 +889,37 @@ export default function FavoritesPage() {
           <h1 style={{
             fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1,
             letterSpacing: '0.06em', textTransform: 'uppercase',
-            background: `linear-gradient(135deg, ${TEXT} 40%, ${PURPLE})`,
+            background: `linear-gradient(135deg, ${TEXT} 40%, ${GREEN})`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
           }}>
-            Favorites
+            The Chop
           </h1>
-          <p style={{ fontSize: 10, color: MUTED, marginTop: 8, marginBottom: 0 }}>
-            Track any team × bet type across all leagues.
+          <p style={{ fontSize: 10, color: MUTED, marginTop: 8, marginBottom: 0, maxWidth: 560 }}>
+            Build your 32 — then cut it to your best 16. The CHOP is your sharpest rows, all in one chart.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          {/* Cap indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Two pill counters */}
           <div style={{
             background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8,
-            padding: '8px 14px', fontSize: 10,
-            color: favorites.length >= 16 ? '#ef4444' : SUB,
+            padding: '7px 12px', fontSize: 10, letterSpacing: '0.08em',
+            color: totalCardRows >= MAX_CARD_ROWS ? '#ef4444' : SUB,
             fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
           }}>
-            {favorites.length} <span style={{ color: MUTED }}>/</span> 16
+            CARDS: {totalCardRows}/{MAX_CARD_ROWS}
+          </div>
+          <div style={{
+            background: CARD, border: `1px solid ${GREEN}44`, borderRadius: 8,
+            padding: '7px 12px', fontSize: 10, letterSpacing: '0.08em',
+            color: chopCount >= MAX_CHOP ? '#ef4444' : GREEN,
+            fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+          }}>
+            CHOP: {chopCount}/{MAX_CHOP}
           </div>
 
-          {/* Sort dropdown */}
+          {/* Sort */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>Sort:</span>
             <select
@@ -874,7 +938,6 @@ export default function FavoritesPage() {
             </select>
           </div>
 
-          {/* Browse Teams */}
           <Link href="/teams" style={{
             textDecoration: 'none', fontSize: 10, fontWeight: 700,
             color: GREEN, border: `1px solid ${GREEN}44`, borderRadius: 8,
@@ -913,9 +976,7 @@ export default function FavoritesPage() {
             color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
             cursor: 'pointer', padding: '9px 18px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
             boxShadow: `0 0 16px ${PURPLE}44`, whiteSpace: 'nowrap',
-          }}>
-            🔒 Go Pro
-          </button>
+          }}>🔒 Go Pro</button>
         </div>
       )}
 
@@ -926,45 +987,47 @@ export default function FavoritesPage() {
           favorites={favorites}
           isPro={!!isPro}
           onUpgrade={() => openModal('pro')}
+          slots={slots}
+          setSlots={setSlots}
+          loadingCards={loadingCards}
+          chopRowIds={chopRowIds}
+          onToggleChop={handleToggleChop}
+          chopCount={chopCount}
         />
       )}
 
-      {/* ─── YOUR FAVORITES heading ───────────────────────────────────────── */}
-      {!loading && favorites.length > 0 && (
-        <div style={{ padding: '0 24px 10px' }}>
-          <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700 }}>
-            Your Favorites
-          </span>
-        </div>
-      )}
+      {/* ─── THE CHOP section header ──────────────────────────────────────── */}
+      <div style={{ padding: '0 24px 10px', marginTop: 16 }}>
+        <h2 style={{
+          fontSize: 26, fontWeight: 900, color: GREEN, letterSpacing: '0.1em', textTransform: 'uppercase',
+          margin: '0 0 6px', fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+        }}>
+          The Chop
+        </h2>
+        <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>
+          Your best 16 rows — selected from your cards above. Click ☆ on any card row to add it here.
+        </p>
+      </div>
 
       {/* ─── Main chart area ──────────────────────────────────────────────── */}
       {loading ? (
         <div style={{ padding: 60, textAlign: 'center', color: MUTED, fontSize: 11, letterSpacing: '0.1em' }}>
-          Loading favorites…
+          Loading…
         </div>
-      ) : favorites.length === 0 ? (
-        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⭐</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>
-            No favorites yet
+      ) : chopFavs.length === 0 ? (
+        <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>☆</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
+            The CHOP is empty
           </div>
-          <div style={{ fontSize: 11, color: MUTED, marginBottom: 28 }}>
-            Add any team × bet type combination from any team page
+          <div style={{ fontSize: 11, color: MUTED }}>
+            Add rows to your cards above, then click ☆ on any row to promote it to The CHOP.
           </div>
-          <Link href="/teams" style={{
-            textDecoration: 'none',
-            background: `linear-gradient(135deg, ${GREEN}, #16a34a)`, borderRadius: 8,
-            color: '#000', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase',
-            padding: '13px 28px', display: 'inline-block',
-          }}>
-            Browse Teams →
-          </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: '0 0 24px' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginTop: 16, padding: '0 0 24px' }}>
 
-          {/* Legend sidebar */}
+          {/* Legend sidebar — flush left, aligned with chart top */}
           <div style={{ paddingLeft: 24, flexShrink: 0 }}>
             <ChartLegend />
           </div>
@@ -972,7 +1035,6 @@ export default function FavoritesPage() {
           {/* Chart column */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-            {/* Month navigator */}
             <MonthNav
               year={viewYear} month={viewMonth}
               onPrev={handlePrevMonth} onNext={handleNextMonth}
@@ -985,22 +1047,16 @@ export default function FavoritesPage() {
               </div>
             )}
 
-            {/* Scroll wrapper */}
             <div style={{ position: 'relative' }}>
-
-              {/* Edge gradients */}
               {!atStart && (
                 <div style={{ position: 'absolute', left: TOTAL_LABEL_W, top: 0, bottom: 0, width: 48, zIndex: 25, pointerEvents: 'none', background: `linear-gradient(to right, ${BG}, transparent)` }} />
               )}
               {!atEnd && (
                 <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 64, zIndex: 25, pointerEvents: 'none', background: `linear-gradient(to left, ${BG}, transparent)` }} />
               )}
-
-              {/* Scroll arrows */}
               {!atStart && <ScrollArrow dir="left"  onClick={() => scrollWeek(-1)} />}
               {!atEnd   && <ScrollArrow dir="right" onClick={() => scrollWeek(1)}  />}
 
-              {/* Single scroll container — all rows share one horizontal scroll */}
               <div
                 ref={scrollRef}
                 onScroll={handleScroll}
@@ -1008,38 +1064,26 @@ export default function FavoritesPage() {
                 style={{ overflowX: 'auto' }}
               >
                 <div style={{ minWidth: contentMinWidth, position: 'relative' }}>
-
-                  {/* Shared date header */}
                   <DateHeader
                     year={viewYear} month={viewMonth}
                     daysInMonth={daysInMonth} populatedDays={allPopulatedDays}
                   />
-
-                  {/* Favorite rows */}
-                  {displayFavorites.map((fav, idx) => (
+                  {displayChopFavs.map((fav, idx) => (
                     <FavoriteRow
                       key={fav.id}
                       fav={fav}
                       idx={idx}
-                      total={displayFavorites.length}
+                      total={displayChopFavs.length}
                       games={monthGames[fav.id] ?? []}
                       seasonGames={seasonGames[fav.id] ?? []}
                       daysInMonth={daysInMonth}
                       month={viewMonth}
                       isPro={!!isPro}
-                      onRemove={() => handleRemove(fav)}
-                      onMoveUp={() => {
-                        const realIdx = favorites.findIndex(f => f.id === fav.id)
-                        handleMoveUp(realIdx)
-                      }}
-                      onMoveDown={() => {
-                        const realIdx = favorites.findIndex(f => f.id === fav.id)
-                        handleMoveDown(realIdx)
-                      }}
+                      onRemove={() => handleToggleChop(fav.id, true)}
+                      onMoveUp={() => {}}
+                      onMoveDown={() => {}}
                     />
                   ))}
-
-                  {/* Free-tier Pro nudge (sticky bottom) */}
                   {!isPro && Object.values(monthGames).some(g => g.length > FREE_COLS) && (
                     <div style={{ position: 'sticky', bottom: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 5, paddingTop: 8 }}>
                       <button onClick={() => openModal('pro')} style={{
@@ -1054,7 +1098,6 @@ export default function FavoritesPage() {
                       </button>
                     </div>
                   )}
-
                 </div>
               </div>
             </div>
@@ -1070,7 +1113,7 @@ export default function FavoritesPage() {
         .chart-scroll-hidden::-webkit-scrollbar { display: none; }
         .fav-scroll-arrow:hover { border-color: #22c55e99 !important; box-shadow: 0 0 14px #22c55e44 !important; }
         @media (max-width: 600px) { .fav-scroll-arrow { display: none !important; } }
-        @media (max-width: 640px) { .fav-cards-grid { grid-template-columns: 1fr !important; } }
+        @media (max-width: 900px) { .fav-cards-grid { grid-template-columns: 1fr !important; } }
       `}</style>
     </div>
   )
