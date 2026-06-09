@@ -11,8 +11,6 @@ const LINKS = [
   { href: '/stats',        label: 'Stats'     },
   { href: '/props',        label: 'Props'     },
   { href: '/trends',       label: 'Trends'    },
-  { href: '/news',         label: 'News'      },
-  { href: '/pricing',      label: 'Pricing'   },
   { href: '/faq',          label: 'FAQ'       },
 ]
 
