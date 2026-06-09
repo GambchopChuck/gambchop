@@ -225,7 +225,7 @@ export default async function HomePage() {
 
           {/* Heading */}
           <h2 className="hiw-heading">
-            Spot the patterns. Build smarter tickets.
+            A unique approach to building better pleys.
           </h2>
 
           {/* Intro */}
